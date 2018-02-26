@@ -1,0 +1,10 @@
+﻿Site,Plot,Salinity,Elevation,Longitude,Latitude
+SERC,HSLE,High,Low,,
+SERC,MSLE,Medium,Low,,
+SERC,LSLE,Low,Low,,
+SERC,HSME,High,Medium,,
+SERC,HSHE,High,High,,
+SERC,MSME,Medium,Medium,,
+SERC,MSHE,Medium,High,,
+SERC,LSME,Low,Medium,,
+SERC,LSHE,Low,High,,
