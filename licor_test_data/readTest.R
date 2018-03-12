@@ -5,6 +5,7 @@
 
 setwd("/Users/penn529/Desktop/PREMIS/licor_test_data/")
 library(tidyr)
+library(lubridate)
 
 read_licor_data <- function(filename) {
   file <- readLines(filename)  # Read in file
@@ -21,20 +22,26 @@ read_licor_data <- function(filename) {
   sdate <- separate(data.frame(date), date, into = c("type", "etime", "date", "time"), 
                      sep = "[:space:]" , extra = "drop") 
   
+  tstamp <- ymd_hms((paste(sdate$date, sdate$time)))  # Parse into "POSIXct/POSIXt" - formatted timestamp
+  
   ## NOTE: Create warning for length mismatch, decide what to do if true
   #if (nrow(slabel) != nrow(flux)) {
   #warning("Row lengths do not match")
   #}
   
-  slabel <- data.frame(slabel$label)  ## NOTE: Figure out if there is a way to consolidate this
-  sflux <- data.frame(sflux$flux)
-  sr2 <- data.frame(sr2$r2)
-  sdate <- sdate[, c("date", "time")]
+  test <<- data.frame(Label = slabel$label,
+                     Timestamp = tstamp,
+                     Flux = as.numeric(sflux$flux),
+                     R2 = as.numeric(sr2$r2))
   
-  test <<- cbind(slabel, sdate, sflux, sr2)  # Combine data
-  colnames(test) <<- c("Core No.", "Date", "Timestamp", "Flux", "R^2")
   return(test)
 }
 
 read_licor_data("Test51117.81x")
 read_licor_data("SampleMultiplex.81x")
+read_licor_data("SR_burn_28_july-201720910.81x")
+
+
+
+# Label will hold collar #
+# We will join (merge) this with 
