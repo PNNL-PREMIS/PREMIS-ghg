@@ -16,18 +16,27 @@ read_licor_data <- function(filename) {
   nobs <- length(file[grepl("^Obs#:", file)])
   date <- file[which(grepl("^Type", file)) + 1]
   
-  slabel <- separate(data.frame(label), label,into = c("name", "label"), sep = "\\t")  # Separate into data frame
-  sflux <- separate(data.frame(flux), flux, into = c("name", "flux"), sep = "\\t")
-  sr2 <- separate(data.frame(r2), r2, into = c("name", "r2"), sep = "\\t")
-  sdate <- separate(data.frame(date), date, into = c("type", "etime", "date", "time"), 
+  sLabel <- separate(data.frame(label), label,into = c("name", "label"), sep = "\\t")  # Separate into data frame
+  sFlux <- separate(data.frame(flux), flux, into = c("name", "flux"), sep = "\\t")
+  sR2 <- separate(data.frame(r2), r2, into = c("name", "r2"), sep = "\\t")
+  sDate <- separate(data.frame(date), date, into = c("type", "etime", "date", "time"), 
                      sep = "[:space:]" , extra = "drop") 
   
   tstamp <- ymd_hms((paste(sdate$date, sdate$time)))  # Parse into "POSIXct/POSIXt" - formatted timestamp
   
-  ## NOTE: Create warning for length mismatch, decide what to do if true
-  #if (nrow(slabel) != nrow(flux)) {
-  #warning("Row lengths do not match")
-  #}
+  nLabel <- nrow(sLabel)
+  nFlux <- nrow(sFlux)
+  nR2 <- nrow(sR2)
+  nDate <- nrow(sDate)
+  
+  # Warning if missing a variable at any 
+  if (nLabel != nDate | nLabel != nR2 | nLabel != nFlux | nFlux != nR2 |
+                                         nFlux != nDate | nR2 != nDate) {
+  
+    stop(sprintf("Variable lengths do not match \n nLabel:%s \n nFlux:%s \n nR2:%s \n nDate:%s \n", 
+                 nLabel, nFlux, nR2, nDate))
+    ## NOTE: Need to figure out how to print collar# and missing var name 
+  }
   
   test <<- data.frame(Label = slabel$label,
                      Timestamp = tstamp,
