@@ -22,26 +22,21 @@ read_licor_data <- function(filename) {
   sDate <- separate(data.frame(date), date, into = c("type", "etime", "date", "time"), 
                      sep = "[:space:]" , extra = "drop") 
   
-  tstamp <- ymd_hms((paste(sdate$date, sdate$time)))  # Parse into "POSIXct/POSIXt" - formatted timestamp
+  tstamp <- ymd_hms((paste(sDate$date, sDate$time)))  # Parse into "POSIXct/POSIXt" - formatted timestamp
+
+  lengths <- c(nrow(sLabel),nrow(sFlux), nrow(sR2), nrow(sDate))
   
-  nLabel <- nrow(sLabel)
-  nFlux <- nrow(sFlux)
-  nR2 <- nrow(sR2)
-  nDate <- nrow(sDate)
-  
-  # Warning if missing a variable at any 
-  if (nLabel != nDate | nLabel != nR2 | nLabel != nFlux | nFlux != nR2 |
-                                         nFlux != nDate | nR2 != nDate) {
+  # Warning if missing a variable 
+  if (!all(nrow(sLabel) == lengths)) {
   
     stop(sprintf("Variable lengths do not match \n nLabel:%s \n nFlux:%s \n nR2:%s \n nDate:%s \n", 
-                 nLabel, nFlux, nR2, nDate))
-    ## NOTE: Need to figure out how to print collar# and missing var name 
+                 nrow(sLabel), nrow(sFlux), nrow(sR2), nrow(sDate)))
   }
   
-  test <<- data.frame(Label = slabel$label,
+  test <- data.frame(Label = sLabel$label,
                      Timestamp = tstamp,
-                     Flux = as.numeric(sflux$flux),
-                     R2 = as.numeric(sr2$r2))
+                     Flux = as.numeric(sFlux$flux),
+                     R2 = as.numeric(sR2$r2))
   
   return(test)
 }
