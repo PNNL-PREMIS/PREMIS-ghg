@@ -3,12 +3,8 @@
 
 # Parse a file and return data frame
 
-setwd("/Users/penn529/Desktop/PREMIS/licor_test_data/")
-
-library(tidyr)
-library(lubridate)
-library(ggplot2)
-library(plyr)
+packages <- c("tidyr", "lubridate", "ggplot2", "plyr")
+lapply(packages, library, character.only = TRUE)
 
 read_licor_data <- function(filename) {
   file <- readLines(filename)  # Read in file
@@ -20,14 +16,14 @@ read_licor_data <- function(filename) {
   nobs <- length(file[grepl("^Obs#:", file)])
   date <- file[which(grepl("^Type", file)) + 1]
   
-  sLabel <- separate(data.frame(label), label,into = c("name", "label"), sep = "\\t")  # Separate into data frame
+  # Separate into data frame
+  sLabel <- separate(data.frame(label), label,into = c("name", "label"), sep = "\\t")  
   sFlux <- separate(data.frame(flux), flux, into = c("name", "flux"), sep = "\\t")
   sR2 <- separate(data.frame(r2), r2, into = c("name", "r2"), sep = "\\t")
   sDate <- separate(data.frame(date), date, into = c("type", "etime", "date", "time"), 
                      sep = "[:space:]" , extra = "drop") 
   
   tstamp <- ymd_hms((paste(sDate$date, sDate$time)))  # Parse into "POSIXct/POSIXt" - formatted timestamp
-
   lengths <- c(nrow(sLabel),nrow(sFlux), nrow(sR2), nrow(sDate))
   
   # Warning if missing a variable 
@@ -37,7 +33,7 @@ read_licor_data <- function(filename) {
                  filename, nrow(sLabel), nrow(sFlux), nrow(sR2), nrow(sDate)))
   }
   
-  data.frame(Label = sLabel$label,
+  data.frame(Collar = sLabel$label,
                      Timestamp = tstamp,
                      Flux = as.numeric(sFlux$flux),
                      R2 = as.numeric(sR2$r2),
@@ -48,18 +44,38 @@ read_licor_data("Test51117.81x")
 read_licor_data("SampleMultiplex.81x")
 read_licor_data("SR_burn_28_july-201720910.81x")
 
-
+# Function to loop through directory and call function to read licor data
 read_dir <- function(path) {
   files <<- list.files(path, pattern = ".81x", full.names = TRUE)
   list <- list()
   for (i in files) {
     list[[i]] <- read_licor_data(i)
   }
-  x <<- ldply(list)
+  ldply(list)
 }
 
-read_dir("/Users/penn529/Desktop/PREMIS/licor_test_data/")
-read_dir("/Users/penn529/Desktop/mtdownload1440_2018.03.26_12.25/_From Bond-Lamberty, Benjamin/SJ_6_1_16-20180314T101233Z-001/SJ_6_1_16/")
+apple <- read_dir("apple_data/")
+x <- read_dir("/Users/penn529/Desktop/PREMIS/licor_test_data/")
+read_dir("/Users/penn529/Desktop/PREMIS/licor_test_data/SJ_6_1_16/")
 
-# Label will hold collar #
-# We will join (merge) this with 
+
+# Create practice df with 50-60 collars
+# merge with cores_collars.csv
+# practice plotting with ggplot
+d <- data.frame(Timestamp = rep(1:5, times = 12), Flux = runif(120), Collar = rep(1:120, each = 5))
+collardata <- read.csv("../design/cores_collars.csv")
+y <- merge(d, collardata)
+
+color = grDevices::colors()[grep('gr(a|e)y', grDevices::colors(), invert = T)]
+
+# Reorder facet levels
+y$Plot <- factor(y$Plot, levels = c("HSLE", "MSLE", "LSLE", "HSME", "MSME", "LSME", "HSHE", "MSHE", "LSHE"))
+
+gg <- ggplot(y, aes(x = Timestamp, y = Flux, color = Experiment, group = Collar)) 
+gg1 <- gg + geom_point(data = y, size = 1)
+gg2 <- gg1 + geom_line(data = y, size = 0.5) + scale_color_brewer(palette = "Set1")
+#+ scale_color_gradientn(colors = primary.colors(15, steps = 3, no.white = TRUE))
+gg3 <- gg2 + facet_wrap(~ Plot) 
+#scale_color_manual(values = c("darkolivegreen3", "coral3"))  #plot separately based on Label
+#+ geom_text(data = y, mapping = aes(x = Timestamp, y = Flux, label = Collar)) 
+
