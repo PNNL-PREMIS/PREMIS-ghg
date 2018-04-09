@@ -31,3 +31,8 @@ vignettes/*.pdf
 # Temporary files created by R markdown
 *.utf8.md
 *.knit.md
+<<<<<<< HEAD
+licor_test_data/readTest.R
+=======
+.Rproj.user
+>>>>>>> 4dee3d353af58e00bb2d5980fddb5a770bb9e6e3
