@@ -33,18 +33,17 @@ read_licor_data <- function(filename) {
                  filename, nrow(sLabel), nrow(sFlux), nrow(sR2), nrow(sDate)))
   }
   
-  data.frame(Collar = as.numeric(sLabel$label),
-             Timestamp = tstamp,
-             Flux = as.numeric(sFlux$flux),
-             R2 = as.numeric(sR2$r2),
-             Temperature = as.numeric(sTemp$temp),
-             stringsAsFactors = FALSE)
+  tibble(Collar = as.numeric(sLabel$label),
+         Timestamp = tstamp,
+         Flux = as.numeric(sFlux$flux),
+         R2 = as.numeric(sR2$r2),
+         Temperature = as.numeric(sTemp$temp))
 }
 
 # Test function with sample data
-read_licor_data("Test51117.81x")
-read_licor_data("SampleMultiplex.81x")
-read_licor_data("SR_burn_28_july-201720910.81x")
+#read_licor_data("Test51117.81x")
+#read_licor_data("SampleMultiplex.81x")
+#read_licor_data("SR_burn_28_july-201720910.81x")
 
 #----- Function to loop through directory and call function to read licor data -----
 read_dir <- function(path) {
@@ -53,7 +52,7 @@ read_dir <- function(path) {
   for (i in files) {
     list[[i]] <- read_licor_data(i)
   }
-  ldply(list)
+  bind_rows(list)
 }
 
 licorDat <- read_dir("../licor_data/")
