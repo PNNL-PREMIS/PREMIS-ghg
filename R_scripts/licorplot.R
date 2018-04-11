@@ -3,8 +3,8 @@
 
 # Run read_dir function with licor data, merge with cores_collars.csv
 #d <- data.frame(Timestamp = rep(1:5, times = 12), Flux = runif(120), Collar = rep(1:120, each = 5))
-licorDat <- read_dir("/Users/penn529/Documents/GitHub/PREMIS-ghg/licor_data/")
-collarDat <- read.csv("/Users/penn529/Desktop/PREMIS/cores_collars.csv")
+licorDat <- read_dir("../licor_data/")
+collarDat <- read.csv("../design/cores_collars.csv")
 dat <- left_join(licorDat, collarDat)
 
 # For any transplant core X, we know (in "Core_placement") the hole in which it ended up (or
