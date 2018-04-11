@@ -48,7 +48,7 @@ ggE <- ggplot(dat, aes(x = Timestamp, y = Flux, color = Lookup_Plot, group = Plo
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 #----- Plot temperature vs. flux with regression line -----
-temp <- ggplot(dat, aes(x = Timestamp, y = Temperature)) +
+temp <- ggplot(dat, aes(x = Temperature, y = Flux)) +
   geom_point(data = dat, size = 1) +
   geom_line(data = dat, size = 1) +
   geom_smooth(method = "lm")
