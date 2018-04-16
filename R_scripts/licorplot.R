@@ -28,11 +28,13 @@ dat$Elevation <- factor(dat$Elevation, levels = c("L", "M", "H"))
 err <- sd(dat$Flux)
 
 #----- Plot time vs. flux -----
-gg <- ggplot(dat, aes(x = Timestamp, y = Flux, color = Lookup_Plot, group = Collar)) +
+timeflux_plot <- ggplot(dat, aes(x = Timestamp, y = Flux, color = Lookup_Plot, group = Collar)) +
   geom_point(data = dat, size = 1) +
   geom_line(data = dat, size = 1) +
   facet_grid(Elevation ~ Salinity) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+print(timeflux_plot)
+ggsave("../outputs/timeflux.pdf")
 
 #geom_text_repel(data = dat, mapping = aes(x = Timestamp, y = Flux, label = Collar)) 
 #scale_color_gradientn(colors = blue2green2red(100))
@@ -48,7 +50,9 @@ ggE <- ggplot(dat, aes(x = Timestamp, y = Flux, color = Lookup_Plot, group = Plo
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 #----- Plot temperature vs. flux with regression line -----
-temp <- ggplot(dat, aes(x = Temperature, y = Flux)) +
+q10_plot <- ggplot(dat, aes(x = Temperature, y = Flux)) +
   geom_point(data = dat, size = 1) +
   geom_line(data = dat, size = 1) +
   geom_smooth(method = "lm")
+print(q10_plot)
+ggsave("../outputs/q10.pdf")
