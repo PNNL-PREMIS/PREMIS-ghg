@@ -20,19 +20,29 @@ lookup_table <- collarDat %>%
 dat <- left_join(dat, lookup_table, by = c("Core_placement" = "Collar"))
 
 # Extract salinity and elevation information
-dat$Salinity <- substr(dat$Plot, 1, 1)
-dat$Salinity <- factor(dat$Salinity, levels = c("H", "M", "L"))
-dat$Elevation <- substr(dat$Plot, 3, 3)
-dat$Elevation <- factor(dat$Elevation, levels = c("L", "M", "H"))
+dat$Lookup_Salinity <- substr(dat$Lookup_Plot, 1, 1)
+dat$Lookup_Salinity <- factor(dat$Lookup_Salinity, levels = c("H", "M", "L"))
+dat$Lookup_Elevation <- substr(dat$Lookup_Plot, 3, 3)
+dat$Lookup_Elevation <- factor(dat$Lookup_Elevation, levels = c("L", "M", "H"))
+
+# Extract salinity and elevation information
+dat$Plot_Salinity <- substr(dat$Plot, 1, 1)
+dat$Plot_Salinity <- factor(dat$Plot_Salinity, levels = c("H", "M", "L"))
+dat$Plot_Elevation <- substr(dat$Plot, 3, 3)
+dat$Plot_Elevation <- factor(dat$Plot_Elevation, levels = c("L", "M", "H"))
 
 err <- sd(dat$Flux)
 
 #----- Plot time vs. flux -----
-gg <- ggplot(dat, aes(x = Timestamp, y = Flux, color = Lookup_Plot, group = Collar)) +
+# .. shows plots at end destinations color coded with original plot
+gg <- ggplot(dat, aes(x = Timestamp, y = Flux, color = Plot, group = Collar)) +
   geom_point(data = dat, size = 1) +
   geom_line(data = dat, size = 1) +
-  facet_grid(Elevation ~ Salinity) +
+  facet_grid(Lookup_Elevation ~ Lookup_Salinity) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+print(gg)
+#title with location, annotation with date graph was generated
+#save using ggsave()
 
 #geom_text_repel(data = dat, mapping = aes(x = Timestamp, y = Flux, label = Collar)) 
 #scale_color_gradientn(colors = blue2green2red(100))
@@ -40,15 +50,30 @@ gg <- ggplot(dat, aes(x = Timestamp, y = Flux, color = Lookup_Plot, group = Coll
 #scale_color_manual(values = c("darkolivegreen3", "coral3"))
 
 #----- Plot time vs. flux with error bars -----
-ggE <- ggplot(dat, aes(x = Timestamp, y = Flux, color = Lookup_Plot, group = Plot)) +
+ggE <- ggplot(dat, aes(x = Timestamp, y = Flux, color = Lookup_Plot, group = Lookup_Plot)) +
   geom_point(data = dat, size = 1) +
   geom_line(data = dat, size = 1) +
   geom_errorbar(data = dat, aes(x = Timestamp, ymin = Flux - err, ymax = Flux + err), color = "black") +
-  facet_grid(Elevation ~ Salinity) +
+  facet_grid(Lookup_Elevation ~ Lookup_Salinity) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
+print(ggE)
 
 #----- Plot temperature vs. flux with regression line -----
 temp <- ggplot(dat, aes(x = Temperature, y = Flux)) +
   geom_point(data = dat, size = 1) +
   geom_line(data = dat, size = 1) +
-  geom_smooth(method = "lm")
+  geom_smooth(method = "lm") +
+  ggtitle("Temperature vs. Flux") +
+  labs(x = "Temperature (°C)", y = "Flux (µmol m-2 s-1)")
+print(temp)
+
+#----- Plot time vs. flux -----
+# .. shows plots at original locations color coded with end destination plot
+
+gg2 <- ggplot(dat, aes(x = Timestamp, y = Flux, color = Lookup_Plot, group = Collar)) +
+  geom_point(data = dat, size = 1) +
+  geom_line(data = dat, size = 1) +
+  facet_grid(Plot_Elevation ~ Plot_Salinity) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+print(gg2)
+
