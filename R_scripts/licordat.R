@@ -2,7 +2,7 @@
 # Stephanie Pennington | March 2018
 
 #----- Function to parse a file and return data frame -----
-packages <- c("tidyr", "lubridate", "ggplot2", "plyr", "dplyr")
+packages <- c("tidyr", "lubridate", "ggplot2", "plyr", "dplyr", "tibble")
 lapply(packages, library, character.only = TRUE)
 
 read_licor_data <- function(filename) {
@@ -15,8 +15,19 @@ read_licor_data <- function(filename) {
   nobs <- length(file[grepl("^Obs#:", file)])
   date <- file[which(grepl("^Type", file)) + 1]
   temp20 <- file[grepl("^Comments:", file)]
-  #pull out Tcham and V4(T5)
 
+  tablestarts <- grep("^Type", file)
+  tablestops <- grep("^CrvFitStatus", file)
+  tcham <- matrix()
+  t5 <- matrix()
+  
+  for (i in 1:length(tablestarts)) {
+    df <- read.table(filename, skip = tablestarts[i] - 1, header = TRUE, 
+               nrows = tablestops[i] - tablestarts[i] - 1)
+    tcham[i] <- round(mean(df$Pressure), digits = 2)
+    t5[i] <- round(mean(df$LATITUDE), digits = 2)
+  }
+  
   # Separate into data frame
   sLabel <- separate(data.frame(label), label,into = c("name", "label"), sep = "\\t")  
   sFlux <- separate(data.frame(flux), flux, into = c("name", "flux"), sep = "\\t")
@@ -38,7 +49,9 @@ read_licor_data <- function(filename) {
          Timestamp = tstamp,
          Flux = as.numeric(sFlux$flux),
          R2 = as.numeric(sR2$r2),
-         T20 = as.numeric(sTemp20$temp20))
+         T20 = as.numeric(sTemp20$temp20),
+         T5 = as.numeric(t5),
+         Tcham = as.numeric(tcham))
 }
 
 # Test function with sample data
