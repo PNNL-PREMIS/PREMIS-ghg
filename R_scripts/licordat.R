@@ -2,7 +2,7 @@
 # Stephanie Pennington | March 2018
 
 #----- Function to parse a file and return data frame -----
-packages <- c("tidyr", "lubridate", "ggplot2", "plyr", "dplyr", "colorRamps")
+packages <- c("tidyr", "lubridate", "ggplot2", "plyr", "dplyr", "tibble")
 lapply(packages, library, character.only = TRUE)
 
 read_licor_data <- function(filename) {
@@ -14,7 +14,19 @@ read_licor_data <- function(filename) {
   r2 <- file[grepl("^Lin_R2:", file)]
   nobs <- length(file[grepl("^Obs#:", file)])
   date <- file[which(grepl("^Type", file)) + 1]
-  temp <- file[grepl("^Comments:", file)]
+  temp20 <- file[grepl("^Comments:", file)]
+
+  tablestarts <- grep("^Type", file)
+  tablestops <- grep("^CrvFitStatus", file)
+  tcham <- matrix()
+  t5 <- matrix()
+  
+  for (i in 1:length(tablestarts)) {
+    df <- read.table(filename, skip = tablestarts[i] - 1, header = TRUE, 
+               nrows = tablestops[i] - tablestarts[i] - 1)
+    tcham[i] <- round(mean(df$Pressure), digits = 2)
+    t5[i] <- round(mean(df$LATITUDE), digits = 2)
+  }
   
   # Separate into data frame
   sLabel <- separate(data.frame(label), label,into = c("name", "label"), sep = "\\t")  
@@ -22,7 +34,7 @@ read_licor_data <- function(filename) {
   sR2 <- separate(data.frame(r2), r2, into = c("name", "r2"), sep = "\\t")
   sDate <- separate(data.frame(date), date, into = c("type", "etime", "date", "time"), 
                     sep = "[:space:]" , extra = "drop") 
-  sTemp <- separate(data.frame(temp), temp, into = c("name", "temp"), sep = "\\t")
+  sTemp20 <- separate(data.frame(temp20), temp20, into = c("name", "temp20"), sep = "\\t")
   
   tstamp <- ymd_hms((paste(sDate$date, sDate$time)))  # Parse into "POSIXct/POSIXt" - formatted timestamp
   lengths <- c(nrow(sLabel),nrow(sFlux), nrow(sR2), nrow(sDate))
@@ -37,7 +49,9 @@ read_licor_data <- function(filename) {
          Timestamp = tstamp,
          Flux = as.numeric(sFlux$flux),
          R2 = as.numeric(sR2$r2),
-         Temperature = as.numeric(sTemp$temp))
+         T20 = as.numeric(sTemp20$temp20),
+         T5 = as.numeric(t5),
+         Tcham = as.numeric(tcham))
 }
 
 # Test function with sample data
