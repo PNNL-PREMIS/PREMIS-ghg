@@ -2,7 +2,7 @@
 # Stephanie Pennington | March 2018
 
 #----- Function to parse a file and return data frame -----
-packages <- c("tidyr", "lubridate", "plyr", "dplyr", "tibble")
+packages <- c("tidyr", "lubridate", "dplyr")
 lapply(packages, library, character.only = TRUE)
 
 read_licor_data <- function(filename) {
