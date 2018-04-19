@@ -2,7 +2,7 @@
 # Stephanie Pennington | March 2018
 
 #----- Function to parse a file and return data frame -----
-packages <- c("tidyr", "lubridate", "ggplot2", "plyr", "dplyr", "tibble")
+packages <- c("tidyr", "lubridate", "plyr", "dplyr", "tibble")
 lapply(packages, library, character.only = TRUE)
 
 read_licor_data <- function(filename) {
@@ -16,12 +16,14 @@ read_licor_data <- function(filename) {
   date <- file[which(grepl("^Type", file)) + 1]
   temp20 <- file[grepl("^Comments:", file)]
 
+  # Find beginning and end indices of raw data for each measurment
   tablestarts <- grep("^Type", file)
   tablestops <- grep("^CrvFitStatus", file)
+  
+  # Average values and place in matrix to be added to final df
   tcham <- matrix()
   t5 <- matrix()
-  
-  for (i in 1:length(tablestarts)) {
+  for (i in seq_along(tablestarts)) {
     df <- read.table(filename, skip = tablestarts[i] - 1, header = TRUE, 
                nrows = tablestops[i] - tablestarts[i] - 1)
     tcham[i] <- round(mean(df$Pressure), digits = 2)
