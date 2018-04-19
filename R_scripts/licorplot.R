@@ -73,14 +73,13 @@ q10_plot <- ggplot(dat, aes(x = T20, y = Flux)) +
   geom_line(data = dat, size = 1) +
   geom_smooth(method = "lm") +
   ggtitle("Temperature vs. Flux") +
-  labs(x = "Temperature (?C)", y = "Flux (?mol m-2 s-1)")
+  labs(x = "Temperature (oC)", y = "Flux (umol m-2 s-1)")
 print(q10_plot)
 ggsave("../outputs/q10.pdf")
 
 #----- Plot collar vs. CV with regression line -----
 ggCV <- ggplot(data = cv, aes(x = Collar, y = CV, color = n)) +
-  geom_point(data = cv) +
-  #geom_text_repel(data = cv, aes(label = Collar)) +
-  geom_smooth(method = "lm")
+  geom_point()
+  #geom_text_repel(data = cv, aes(label = Collar))
 print(ggCV)
 ggsave("../outputs/cv/pdf")
