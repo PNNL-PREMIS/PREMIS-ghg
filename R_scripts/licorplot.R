@@ -83,3 +83,12 @@ ggCV <- ggplot(data = cv, aes(x = Collar, y = CV, color = n)) +
   #geom_text_repel(data = cv, aes(label = Collar))
 print(ggCV)
 ggsave("../outputs/cv/pdf")
+
+#----- Plot time vs. soil moisture -----
+timesm_plot <- ggplot(dat, aes(x = Timestamp, y = SMoisture, color = Origin_Plot, group = Collar)) +
+  geom_point(data = dat, size = 1) +
+  geom_line(data = dat, size = 0.5) +
+  facet_grid(Dest_Elevation ~ Dest_Salinity) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+print(timesm_plot)
+ggsave("../outputs/timesm.pdf")
