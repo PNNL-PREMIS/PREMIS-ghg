@@ -1,6 +1,10 @@
 # Script to graph and visualize licor data
 # Stephanie Pennington | created April 2018
 
+library("ggplot2")
+library("ggrepel")
+library("lubridate")
+
 # Run read_dir function with licor data, merge with cores_collars.csv
 #d <- data.frame(Timestamp = rep(1:5, times = 12), Flux = runif(120), Collar = rep(1:120, each = 5))
 licorDat <- read_dir("../licor_data/")
@@ -32,17 +36,20 @@ dat$Origin_Salinity <- factor(dat$Origin_Salinity, levels = c("H", "M", "L"))
 dat$Origin_Elevation <- substr(dat$Origin_Plot, 3, 3)
 dat$Origin_Elevation <- factor(dat$Origin_Elevation, levels = c("L", "M", "H"))
 
-#dat$month <- month(dat$Timestamp)
-#dat$day <- day(dat$Timestamp)
+dat$month <- month(dat$Timestamp)
+dat$day <- day(dat$Timestamp)
 err <- dat %>% group_by(month, day, Destination_Plot, Origin_Plot, Collar) %>% 
   summarise(n = n(), Flux = mean(Flux), Timestamp = mean(Timestamp)) %>% 
   summarise(meanflux = mean(Flux), sdflux=sd(Flux))
 
+cv <- dat %>% group_by(month, Collar) %>% 
+  summarise(CV = sd(Flux)/mean(Flux), n = n())
+
 #----- Plot time vs. flux -----
-timeflux_plot <- ggplot(dat, aes(x = Timestamp, y = Flux, color = Plot, group = Collar)) +
+timeflux_plot <- ggplot(dat, aes(x = Timestamp, y = Flux, color = Origin_Plot, group = Collar)) +
   geom_point(data = dat, size = 1) +
-  geom_line(data = dat, size = 1) +
-  facet_grid(Lookup_Elevation ~ Lookup_Salinity) +
+  geom_line(data = dat, size = 0.5) +
+  facet_grid(Dest_Elevation ~ Dest_Salinity) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
 print(timeflux_plot)
 ggsave("../outputs/timeflux.pdf")
@@ -61,11 +68,18 @@ ggE <- ggplot(err, aes(x = err$day, y = err$meanflux, color = Destination_Plot, 
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 #----- Plot temperature vs. flux with regression line -----
-q10_plot <- ggplot(dat, aes(x = Temperature, y = Flux)) +
+q10_plot <- ggplot(dat, aes(x = T20, y = Flux)) +
   geom_point(data = dat, size = 1) +
   geom_line(data = dat, size = 1) +
   geom_smooth(method = "lm") +
   ggtitle("Temperature vs. Flux") +
-  labs(x = "Temperature (°C)", y = "Flux (µmol m-2 s-1)")
-print(q10plot)
+  labs(x = "Temperature (oC)", y = "Flux (umol m-2 s-1)")
+print(q10_plot)
 ggsave("../outputs/q10.pdf")
+
+#----- Plot collar vs. CV with regression line -----
+ggCV <- ggplot(data = cv, aes(x = Collar, y = CV, color = n)) +
+  geom_point()
+  #geom_text_repel(data = cv, aes(label = Collar))
+print(ggCV)
+ggsave("../outputs/cv/pdf")
