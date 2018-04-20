@@ -23,11 +23,13 @@ read_licor_data <- function(filename) {
   # Average values and place in matrix to be added to final df
   tcham <- matrix()
   t5 <- matrix()
+  smoist <- matrix()
   for (i in seq_along(tablestarts)) {
     df <- read.table(filename, skip = tablestarts[i] - 1, header = TRUE, 
                nrows = tablestops[i] - tablestarts[i] - 1, sep = "\t", fill = TRUE)
     tcham[i] <- round(mean(df$Tcham), digits = 2)
     t5[i] <- round(mean(df$V4), digits = 2)
+    smoist[i] <- round(mean(df$V3), digits = 2)
   }
   
   # Separate into data frame
@@ -53,7 +55,8 @@ read_licor_data <- function(filename) {
          R2 = as.numeric(sR2$r2),
          T20 = as.numeric(sTemp20$temp20),
          T5 = as.numeric(t5),
-         Tcham = as.numeric(tcham))
+         Tcham = as.numeric(tcham),
+         SMoisture = as.numeric(smoist))
 }
 
 # Test function with sample data
