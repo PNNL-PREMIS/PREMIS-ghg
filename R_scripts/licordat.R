@@ -25,9 +25,9 @@ read_licor_data <- function(filename) {
   t5 <- matrix()
   for (i in seq_along(tablestarts)) {
     df <- read.table(filename, skip = tablestarts[i] - 1, header = TRUE, 
-               nrows = tablestops[i] - tablestarts[i] - 1)
-    tcham[i] <- round(mean(df$Pressure), digits = 2)
-    t5[i] <- round(mean(df$LATITUDE), digits = 2)
+               nrows = tablestops[i] - tablestarts[i] - 1, sep = "\t", fill = TRUE)
+    tcham[i] <- round(mean(df$Tcham), digits = 2)
+    t5[i] <- round(mean(df$V4), digits = 2)
   }
   
   # Separate into data frame
