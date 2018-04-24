@@ -11,7 +11,7 @@ More info [here!]()
 
 [Link to data diagnostics](https://github.com/PNNL-PREMIS/PREMIS-ghg/tree/master/diagnostics)
 
-![](https://github.com/PNNL-PREMIS/PREMIS-ghg/blob/steph/cores_in_cart.jpeg) ![](https://github.com/PNNL-PREMIS/PREMIS-ghg/blob/steph/photos/BBL_SP_snow.jpeg) ![](https://github.com/PNNL-PREMIS/PREMIS-ghg/blob/steph/cores_in_ground.jpeg)
+![](https://github.com/PNNL-PREMIS/PREMIS-ghg/blob/steph/photos/cores_in_cart.jpeg) ![](https://github.com/PNNL-PREMIS/PREMIS-ghg/blob/steph/photos/BBL_SP_snow.jpeg) ![](https://github.com/PNNL-PREMIS/PREMIS-ghg/blob/steph/photos/cores_in_ground.jpeg)
 
 
 
