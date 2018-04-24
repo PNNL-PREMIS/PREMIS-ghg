@@ -36,14 +36,21 @@ dat$Origin_Salinity <- factor(dat$Origin_Salinity, levels = c("H", "M", "L"))
 dat$Origin_Elevation <- substr(dat$Origin_Plot, 3, 3)
 dat$Origin_Elevation <- factor(dat$Origin_Elevation, levels = c("L", "M", "H"))
 
-dat$month <- month(dat$Timestamp)
-dat$day <- day(dat$Timestamp)
-err <- dat %>% group_by(month, day, Destination_Plot, Origin_Plot, Collar) %>% 
+dat$Month <- month(dat$Timestamp)
+dat$Day <- day(dat$Timestamp)
+
+# Calculate standard deviation between collars at each plot
+err <- dat %>% group_by(Month, Day, Destination_Plot, Origin_Plot, Collar) %>% 
   summarise(n = n(), Flux = mean(Flux), Timestamp = mean(Timestamp)) %>% 
   summarise(meanflux = mean(Flux), sdflux=sd(Flux))
 
-cv <- dat %>% group_by(month, Collar) %>% 
+# Calculate CV for flux measurements
+cv <- dat %>% group_by(Month, Collar) %>% 
   summarise(CV = sd(Flux)/mean(Flux), n = n())
+
+# Calculate mean flux of all 3 observations in the meas. and the first 2 obs. in the meas.
+fmean <- dat %>% group_by(Month, Day, Collar) %>%
+  summarize(mean3 = mean(Flux), mean2 = mean(Flux[1:2]))
 
 #----- Plot time vs. flux -----
 timeflux_plot <- ggplot(dat, aes(x = Timestamp, y = Flux, color = Origin_Plot, group = Collar)) +
@@ -82,7 +89,7 @@ ggCV <- ggplot(data = cv, aes(x = Collar, y = CV, color = n)) +
   geom_point()
   #geom_text_repel(data = cv, aes(label = Collar))
 print(ggCV)
-ggsave("../outputs/cv/pdf")
+ggsave("../outputs/cv.pdf")
 
 #----- Plot time vs. soil moisture -----
 timesm_plot <- ggplot(dat, aes(x = Timestamp, y = SMoisture, color = Origin_Plot, group = Collar)) +
@@ -92,3 +99,14 @@ timesm_plot <- ggplot(dat, aes(x = Timestamp, y = SMoisture, color = Origin_Plot
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
 print(timesm_plot)
 ggsave("../outputs/timesm.pdf")
+
+#----- Plot mean flux with all 3 measurements vs. mean flux with only first two meas. -----
+# This is to test whether reducing observation size from 3 to 2 observations per measurement changes..
+# .. the flux
+var_test <- ggplot(fmean, aes(x = mean3, y = mean2)) + 
+  geom_abline(slope = 1, intercept = 0, color = "blue") +
+  geom_point() + 
+  labs(x = "Mean flux of all measurements", y = "Mean flux of first 2 measurements") +
+  ggtitle("Mean Flux Per Collar (umol m-2 s-1)")
+print(var_test)
+ggsave("../diagnostics/mean_test.png")
