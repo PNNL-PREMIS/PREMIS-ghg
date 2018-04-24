@@ -27,9 +27,10 @@ read_licor_data <- function(filename) {
   for (i in seq_along(tablestarts)) {
     df <- read.table(filename, skip = tablestarts[i] - 1, header = TRUE, 
                nrows = tablestops[i] - tablestarts[i] - 1, sep = "\t", fill = TRUE)
-    tcham[i] <- round(mean(df$Tcham), digits = 2)
-    t5[i] <- round(mean(df$V4), digits = 2)
-    smoist[i] <- round(mean(df$V3), digits = 2)
+    index <- which(df$Type == 1)
+    tcham[i] <- round(mean(df$Tcham[index]), digits = 2)
+    t5[i] <- round(mean(df$V4[index]), digits = 2)
+    smoist[i] <- round(mean(df$V3[index]), digits = 2)
   }
   
   # Separate into data frame
