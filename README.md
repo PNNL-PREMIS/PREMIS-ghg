@@ -10,3 +10,8 @@ We are testing soil response to salt water intrusion by monitoring soil respirat
 More info [here!]()
 
 [Link to data diagnostics](https://github.com/PNNL-PREMIS/PREMIS-ghg/tree/master/diagnostics)
+
+![](/Users/penn529/Pictures/cores_in_cart.jpeg) ![](/Users/penn529/Pictures/BBL_SP_snow.jpeg) ![](/Users/penn529/Pictures/cores_in_ground.jpeg)
+
+
+
