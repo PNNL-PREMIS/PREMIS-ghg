@@ -75,4 +75,3 @@ read_dir <- function(path) {
   bind_rows(list)
 }
 
-licorDat <- read_dir("../licor_data/")
