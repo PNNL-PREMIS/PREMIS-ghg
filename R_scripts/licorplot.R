@@ -36,14 +36,21 @@ dat$Origin_Salinity <- factor(dat$Origin_Salinity, levels = c("H", "M", "L"))
 dat$Origin_Elevation <- substr(dat$Origin_Plot, 3, 3)
 dat$Origin_Elevation <- factor(dat$Origin_Elevation, levels = c("L", "M", "H"))
 
-dat$month <- month(dat$Timestamp)
-dat$day <- day(dat$Timestamp)
-err <- dat %>% group_by(month, day, Destination_Plot, Origin_Plot, Collar) %>% 
+dat$Month <- month(dat$Timestamp)
+dat$Day <- day(dat$Timestamp)
+
+# Calculate standard deviation between collars at each plot
+err <- dat %>% group_by(Month, Day, Destination_Plot, Origin_Plot, Collar) %>% 
   summarise(n = n(), Flux = mean(Flux), Timestamp = mean(Timestamp)) %>% 
   summarise(meanflux = mean(Flux), sdflux=sd(Flux))
 
-cv <- dat %>% group_by(month, Collar) %>% 
+# Calculate CV for flux measurements
+cv <- dat %>% group_by(Month, Collar) %>% 
   summarise(CV = sd(Flux)/mean(Flux), n = n())
+
+# Calculate mean flux of all 3 observations in the meas. and the first 2 obs. in the meas.
+fmean <- dat %>% group_by(Month, Day, Collar) %>%
+  summarize(mean3 = mean(Flux), mean2 = mean(Flux[1:2]))
 
 #----- Plot time vs. flux -----
 timeflux_plot <- ggplot(dat, aes(x = Timestamp, y = Flux, color = Origin_Plot, group = Collar)) +
@@ -51,8 +58,8 @@ timeflux_plot <- ggplot(dat, aes(x = Timestamp, y = Flux, color = Origin_Plot, g
   geom_line(data = dat, size = 0.5) +
   facet_grid(Dest_Elevation ~ Dest_Salinity) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
-print(timeflux_plot)
-ggsave("../outputs/timeflux.pdf")
+#print(timeflux_plot)
+#ggsave("../outputs/timeflux.pdf")
 
 #geom_text_repel(data = dat, mapping = aes(x = Timestamp, y = Flux, label = Collar)) 
 #scale_color_gradientn(colors = blue2green2red(100))
@@ -60,10 +67,10 @@ ggsave("../outputs/timeflux.pdf")
 #scale_color_manual(values = c("darkolivegreen3", "coral3"))
 
 #----- Plot time vs. flux with error bars -----
-ggE <- ggplot(err, aes(x = err$day, y = err$meanflux, color = Destination_Plot, group = Destination_Plot)) +
+ggE <- ggplot(err, aes(x = err$Day, y = err$meanflux, color = Destination_Plot, group = Destination_Plot)) +
   geom_point(data = err, size = 1) +
   geom_line(data = err, size = 1) +
-  geom_errorbar(data = err, aes(x = err$day, ymin = err$meanflux - err$sdflux, ymax = err$meanflux + err$sdflux), color = "black")# +
+  geom_errorbar(data = err, aes(x = err$Day, ymin = err$meanflux - err$sdflux, ymax = err$meanflux + err$sdflux), color = "black")# +
   facet_grid(Dest_Elevation ~ Dest_Salinity) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
@@ -74,21 +81,33 @@ q10_plot <- ggplot(dat, aes(x = T20, y = Flux)) +
   geom_smooth(method = "lm") +
   ggtitle("Temperature vs. Flux") +
   labs(x = "Temperature (oC)", y = "Flux (umol m-2 s-1)")
-print(q10_plot)
-ggsave("../outputs/q10.pdf")
+#print(q10_plot)
+#ggsave("../outputs/q10.pdf")
 
 #----- Plot collar vs. CV with regression line -----
 ggCV <- ggplot(data = cv, aes(x = Collar, y = CV, color = n)) +
   geom_point()
   #geom_text_repel(data = cv, aes(label = Collar))
-print(ggCV)
-ggsave("../outputs/cv/pdf")
+#print(ggCV)
+#ggsave("../outputs/cv.pdf")
 
 #----- Plot time vs. soil moisture -----
 timesm_plot <- ggplot(dat, aes(x = Timestamp, y = SMoisture, color = Origin_Plot, group = Collar)) +
   geom_point(data = dat, size = 1) +
   geom_line(data = dat, size = 0.5) +
   facet_grid(Dest_Elevation ~ Dest_Salinity) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
-print(timesm_plot)
-ggsave("../outputs/timesm.pdf")
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("Soil Moisture Over Time")
+#print(timesm_plot)
+#ggsave("../outputs/timesm.pdf")
+
+#----- Plot mean flux with all 3 measurements vs. mean flux with only first two meas. -----
+# This is to test whether reducing observation size from 3 to 2 observations per measurement changes..
+# .. the flux
+var_test <- ggplot(fmean, aes(x = mean3, y = mean2)) + 
+  geom_abline(slope = 1, intercept = 0, color = "blue") +
+  geom_point() + 
+  labs(x = "Mean flux of all measurements", y = "Mean flux of first 2 measurements") +
+  ggtitle("Mean Flux Per Collar (umol m-2 s-1)")
+#print(var_test)
+#ggsave("../diagnostics/mean_test.png")
