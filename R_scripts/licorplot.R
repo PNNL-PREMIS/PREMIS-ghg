@@ -38,9 +38,9 @@ dat$Origin_Elevation <- factor(dat$Origin_Elevation, levels = c("L", "M", "H"))
 
 dat$Month <- month(dat$Timestamp)
 dat$Day <- day(dat$Timestamp)
-
+dat$Time <- time(dat$Timestamp)
 # Calculate standard deviation between collars at each plot
-err <- dat %>% group_by(Month, Day, Destination_Plot, Origin_Plot, Collar) %>% 
+err <- dat %>% group_by(Month,Day, Destination_Plot, Origin_Plot, Collar) %>% 
   summarise(n = n(), Flux = mean(Flux), Timestamp = mean(Timestamp)) %>% 
   summarise(meanflux = mean(Flux), sdflux=sd(Flux))
 
@@ -57,7 +57,8 @@ timeflux_plot <- ggplot(dat, aes(x = Timestamp, y = Flux, color = Origin_Plot, g
   geom_point(data = dat, size = 1) +
   geom_line(data = dat, size = 0.5) +
   facet_grid(Dest_Elevation ~ Dest_Salinity) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+  ggtitle("Temperature vs. Flux") +
+  labs(x = "Date", y = "Flux (umol m-2 s-1)")
 #print(timeflux_plot)
 #ggsave("../outputs/timeflux.pdf")
 
@@ -67,12 +68,14 @@ timeflux_plot <- ggplot(dat, aes(x = Timestamp, y = Flux, color = Origin_Plot, g
 #scale_color_manual(values = c("darkolivegreen3", "coral3"))
 
 #----- Plot time vs. flux with error bars -----
-ggE <- ggplot(err, aes(x = err$Day, y = err$meanflux, color = Destination_Plot, group = Destination_Plot)) +
+ggE <- ggplot(err, aes(x = err$Day, y = err$meanflux, color = Destination_Plot)) +
   geom_point(data = err, size = 1) +
   geom_line(data = err, size = 1) +
-  geom_errorbar(data = err, aes(x = err$Day, ymin = err$meanflux - err$sdflux, ymax = err$meanflux + err$sdflux), color = "black")# +
-  facet_grid(Dest_Elevation ~ Dest_Salinity) +
+  geom_errorbar(data = err, aes(x = err$Day, ymin = err$meanflux - err$sdflux, ymax = err$meanflux + err$sdflux), color = "black") #+
+  facet_grid(Dest_Elevation ~ Dest_Salinity) #+
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
+#print(ggE)
+
 
 #----- Plot temperature vs. flux with regression line -----
 q10_plot <- ggplot(dat, aes(x = T20, y = Flux)) +
@@ -86,7 +89,8 @@ q10_plot <- ggplot(dat, aes(x = T20, y = Flux)) +
 
 #----- Plot collar vs. CV with regression line -----
 ggCV <- ggplot(data = cv, aes(x = Collar, y = CV, color = n)) +
-  geom_point()
+  geom_point() +
+    ggtitle("Coefficient of Variation")
   #geom_text_repel(data = cv, aes(label = Collar))
 #print(ggCV)
 #ggsave("../outputs/cv.pdf")
@@ -111,3 +115,12 @@ var_test <- ggplot(fmean, aes(x = mean3, y = mean2)) +
   ggtitle("Mean Flux Per Collar (umol m-2 s-1)")
 #print(var_test)
 #ggsave("../diagnostics/mean_test.png")
+
+figures <- list()
+figures$timesm_plot <- timesm_plot 
+figures$var_test <- var_test
+figures$ggCV <- ggCV
+figures$q10_plot <- q10_plot
+figures$ggE <- ggE
+figures$timeflux_plot <- timeflux_plot
+save(figures, file = "../outputs/figures.rda")
