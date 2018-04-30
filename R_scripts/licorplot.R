@@ -10,6 +10,7 @@ library(readr)
 
 # Run read_dir function with licor data, merge with cores_collars.csv
 #d <- data.frame(Timestamp = rep(1:5, times = 12), Flux = runif(120), Collar = rep(1:120, each = 5))
+source("licordat.R")
 licorDat <- read_dir("../licor_data/")
 collarDat <- read_csv("../design/cores_collars.csv")
 dat <- left_join(licorDat, collarDat, by = "Collar") %>% 

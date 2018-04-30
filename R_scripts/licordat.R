@@ -1,10 +1,11 @@
 # Read a test file - parse it for "Label" and "Lin_Flux" lines 
 # Stephanie Pennington | March 2018
 
-#----- Function to parse a file and return data frame -----
-packages <- c("tidyr", "lubridate", "dplyr")
-lapply(packages, library, character.only = TRUE)
+library(tidyr)
+library(lubridate)
+library(dplyr)
 
+#----- Function to parse a file and return data frame -----
 read_licor_data <- function(filename) {
   file <- readLines(filename)  # Read in file
   cat("Reading...", filename, " lines =", length(file), "\n")
@@ -25,8 +26,13 @@ read_licor_data <- function(filename) {
   t5 <- matrix()
   smoist <- matrix()
   for (i in seq_along(tablestarts)) {
-    df <- read.table(filename, skip = tablestarts[i] - 1, header = TRUE, 
-               nrows = tablestops[i] - tablestarts[i] - 1, sep = "\t", fill = TRUE)
+    df <- readr::read_tsv(filename, skip = tablestarts[i], n_max = tablestops[i] - tablestarts[i] - 1,
+                   col_names = c("Type", "Etime", "Date", "Tcham", "Pressure", "H2O", "CO2", 
+                               "Cdry", "Tbench", "T1", "T2", "T3", "T4", "V1", "V2", "V3",
+                               "V4", "LATITUDE", "LONGITUDE", "STATUS", "SPEED", "COURSE", 
+                               "RH", "Tboard", "Vin", "CO2ABS", "H2OABS", "Hour", "DOY",
+                               "RAWCO2", "RAWCO2REF", "RAWH2O", "RAWH2OREF"),
+                   col_types = "ddTdddddddddddddddddddddddddddddd")
     index <- which(df$Type == 1)
     tcham[i] <- round(mean(df$Tcham[index]), digits = 2)
     t5[i] <- round(mean(df$V4[index]), digits = 2)
@@ -59,11 +65,6 @@ read_licor_data <- function(filename) {
          Tcham = as.numeric(tcham),
          SMoisture = as.numeric(smoist))
 }
-
-# Test function with sample data
-#read_licor_data("Test51117.81x")
-#read_licor_data("SampleMultiplex.81x")
-#read_licor_data("SR_burn_28_july-201720910.81x")
 
 #----- Function to loop through directory and call function to read licor data -----
 read_dir <- function(path) {
