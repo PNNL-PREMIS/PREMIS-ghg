@@ -1,16 +1,19 @@
 # Script to graph and visualize licor data
 # Stephanie Pennington | created April 2018
 
-library("ggplot2")
-library("ggrepel")
-library("lubridate")
+library(ggplot2)
+theme_set(theme_bw())
+library(ggrepel)
+library(lubridate)
+library(dplyr)
+library(readr)
 
 # Run read_dir function with licor data, merge with cores_collars.csv
 #d <- data.frame(Timestamp = rep(1:5, times = 12), Flux = runif(120), Collar = rep(1:120, each = 5))
 licorDat <- read_dir("../licor_data/")
-collarDat <- read.csv("../design/cores_collars.csv")
-dat <- left_join(licorDat, collarDat)
-dat <- plyr::rename(dat, c('Plot' = 'Origin_Plot'))
+collarDat <- read_csv("../design/cores_collars.csv")
+dat <- left_join(licorDat, collarDat, by = "Collar") %>% 
+  rename(Origin_Plot = Plot)
 
 # For any transplant core X, we know (in "Core_placement") the hole in which it ended up (or
 # rather, the core number of the hole). We actually need to know the plot. So create a lookup
@@ -40,16 +43,19 @@ dat$Month <- month(dat$Timestamp)
 dat$Day <- day(dat$Timestamp)
 dat$Time <- time(dat$Timestamp)
 # Calculate standard deviation between collars at each plot
-err <- dat %>% group_by(Month,Day, Destination_Plot, Origin_Plot, Collar) %>% 
+err <- dat %>% 
+  group_by(Month,Day, Destination_Plot, Origin_Plot, Collar) %>% 
   summarise(n = n(), Flux = mean(Flux), Timestamp = mean(Timestamp)) %>% 
   summarise(meanflux = mean(Flux), sdflux=sd(Flux))
 
 # Calculate CV for flux measurements
-cv <- dat %>% group_by(Month, Collar) %>% 
-  summarise(CV = sd(Flux)/mean(Flux), n = n())
+cv <- dat %>% 
+  group_by(Month, Collar) %>% 
+  summarise(CV = sd(Flux) / mean(Flux), n = n())
 
 # Calculate mean flux of all 3 observations in the meas. and the first 2 obs. in the meas.
-fmean <- dat %>% group_by(Month, Day, Collar) %>%
+fmean <- dat %>% 
+  group_by(Month, Day, Collar) %>%
   summarize(mean3 = mean(Flux), mean2 = mean(Flux[1:2]))
 
 #----- Plot time vs. flux -----
@@ -59,8 +65,8 @@ timeflux_plot <- ggplot(dat, aes(x = Timestamp, y = Flux, color = Origin_Plot, g
   facet_grid(Dest_Elevation ~ Dest_Salinity) +
   ggtitle("Temperature vs. Flux") +
   labs(x = "Date", y = "Flux (umol m-2 s-1)")
-#print(timeflux_plot)
-#ggsave("../outputs/timeflux.pdf")
+print(timeflux_plot)
+ggsave("../outputs/timeflux.pdf")
 
 #geom_text_repel(data = dat, mapping = aes(x = Timestamp, y = Flux, label = Collar)) 
 #scale_color_gradientn(colors = blue2green2red(100))
@@ -72,8 +78,8 @@ ggE <- ggplot(err, aes(x = err$Day, y = err$meanflux, color = Destination_Plot))
   geom_point(data = err, size = 1) +
   geom_line(data = err, size = 1) +
   geom_errorbar(data = err, aes(x = err$Day, ymin = err$meanflux - err$sdflux, ymax = err$meanflux + err$sdflux), color = "black") #+
-  facet_grid(Dest_Elevation ~ Dest_Salinity) #+
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+facet_grid(Dest_Elevation ~ Dest_Salinity) #+
+theme(axis.text.x = element_text(angle = 90, hjust = 1))
 #print(ggE)
 
 
@@ -90,8 +96,8 @@ q10_plot <- ggplot(dat, aes(x = T20, y = Flux)) +
 #----- Plot collar vs. CV with regression line -----
 ggCV <- ggplot(data = cv, aes(x = Collar, y = CV, color = n)) +
   geom_point() +
-    ggtitle("Coefficient of Variation")
-  #geom_text_repel(data = cv, aes(label = Collar))
+  ggtitle("Coefficient of Variation")
+#geom_text_repel(data = cv, aes(label = Collar))
 #print(ggCV)
 #ggsave("../outputs/cv.pdf")
 
