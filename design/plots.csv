@@ -3,7 +3,7 @@ SERC,HSHE,High,High,,,800
 SERC,HSLE,High,Low,,,800
 SERC,HSME,High,Medium,,,800
 SERC,LSHE,Low,High,,,
-SERC,LSLE,Low,Low,,,
+SERC,LSLE,Low,Low,,,450
 SERC,LSME,Low,Medium,,,
 SERC,MSHE,Medium,High,,,800
 SERC,MSLE,Medium,Low,,,800
