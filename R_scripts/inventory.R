@@ -9,9 +9,13 @@ library(dplyr)
 
 # Read the inventory data file
 print("Reading the inventory data file...")
-read_csv("../inventory_data/inventory.csv", col_types = "ccicdccc") %>% 
-  mutate(Plot = factor(Plot, levels = c("HSHE", "HSME", "HSLE"))) ->
+read_csv("../inventory_data/inventory.csv", col_types = "ccicdccc") ->
   trees
+
+trees$Salinity <- paste("Salinity", substr(trees$Plot, 1, 1))
+trees$Salinity <- factor(trees$Salinity, levels = paste("Salinity", c("H", "M", "L")))
+trees$Elevation <- paste("Elevation", substr(trees$Plot, 3, 3))
+trees$Elevation <- factor(trees$Elevation, levels = paste("Elevation", c("H", "M", "L")))
 
 # Read the plot data file
 print("Reading the plot data file...")
@@ -21,15 +25,14 @@ read_csv("../design/plots.csv", col_types = "cccccci") ->
 # Histogram of trees by DBH
 p1 <- ggplot(trees, aes(DBH_cm, fill = Species)) + 
   geom_histogram(position = "stack", binwidth = 5) + 
-  facet_grid(Plot ~ Site)
+  facet_grid(Salinity ~ Elevation)
 print(p1)
 ggsave("../outputs/tree_dbh.pdf")
 
 # Compute basal area and stocking
 trees %>% 
   mutate(Plot = as.character(Plot)) %>% 
-  left_join(plots, by = c("Site", "Plot")) %>% 
-  mutate(Plot = factor(Plot, levels = c("HSHE", "HSME", "HSLE"))) ->
+  left_join(plots, by = c("Site", "Plot")) ->
   trees_plots
 
 trees_plots %>% 
