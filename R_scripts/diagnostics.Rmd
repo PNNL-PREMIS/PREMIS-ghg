@@ -1,0 +1,41 @@
+---
+author: "SPennington"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Diagnostics as of:
+```{r, echo = FALSE} 
+date()
+```
+
+```{r, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
+figures <- get(load("../outputs/figures.rda"))
+plots <- read.csv("../design/plots.csv")
+knitr::kable(plots) 
+```
+
+|Location |Expirement           |No. of Collars |
+|:-------:|:-------------------:|:-------------:|
+|SERC     |Control              |56             |
+|SERC     |Salinity transplant  |36             |
+|SERC     |Elevation transplant |32             |
+
+### Flux over time, color is indicating plot each core originated from
+(left to right - High, Medium, Low salinity); (top to bottom - Low, Medium, and High elevation)
+```{r, echo = FALSE}
+figures$timeflux_plot
+```
+
+### Composite temperature and flux data for all cores
+```{r, echo = FALSE, warning = FALSE}
+figures$q10_plot
+```
+
+### CV distribution for each collar, n = number of measurements taken
+```{r, echo = FALSE}
+figures$ggCV
+```
