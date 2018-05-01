@@ -18,7 +18,7 @@ plots <- read.csv("../design/plots.csv")
 knitr::kable(plots) 
 ```
 
-|Location |Expirement           |No. of Collars |
+|Location |Experiment           |No. of Collars |
 |:-------:|:-------------------:|:-------------:|
 |SERC     |Control              |56             |
 |SERC     |Salinity transplant  |36             |
