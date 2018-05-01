@@ -29,16 +29,16 @@ lookup_table <- collarDat %>%
 dat <- left_join(dat, lookup_table, by = c("Core_placement" = "Collar"))
 
 # Extract salinity and elevation information
-dat$Dest_Salinity <- substr(dat$Destination_Plot, 1, 1)
-dat$Dest_Salinity <- factor(dat$Dest_Salinity, levels = c("H", "M", "L"))
-dat$Dest_Elevation <- substr(dat$Destination_Plot, 3, 3)
-dat$Dest_Elevation <- factor(dat$Dest_Elevation, levels = c("L", "M", "H"))
+dat$Dest_Salinity <- paste("Salinity", substr(dat$Destination_Plot, 1, 1))
+dat$Dest_Salinity <- factor(dat$Dest_Salinity, levels = c("Salinity H", "Salinity M", "Salinity L"))
+dat$Dest_Elevation <- paste("Elevation", substr(dat$Destination_Plot, 3, 3))
+dat$Dest_Elevation <- factor(dat$Dest_Elevation, levels = c("Elevation L", "Elevation M", "Elevation H"))
 
 # Extract salinity and elevation information
-dat$Origin_Salinity <- substr(dat$Origin_Plot, 1, 1)
-dat$Origin_Salinity <- factor(dat$Origin_Salinity, levels = c("H", "M", "L"))
-dat$Origin_Elevation <- substr(dat$Origin_Plot, 3, 3)
-dat$Origin_Elevation <- factor(dat$Origin_Elevation, levels = c("L", "M", "H"))
+dat$Origin_Salinity <- paste("Salinity", substr(dat$Origin_Plot, 1, 1))
+dat$Origin_Salinity <- factor(dat$Origin_Salinity, levels = c("Salinity H", "Salinity M", "Salinity L"))
+dat$Origin_Elevation <- paste("Elevation", substr(dat$Origin_Plot, 3, 3))
+dat$Origin_Elevation <- factor(dat$Origin_Elevation, levels = c("Elevation L", "Elevation M", "Elevation H"))
 
 dat$Month <- month(dat$Timestamp)
 dat$Day <- day(dat$Timestamp)
@@ -60,14 +60,16 @@ fmean <- dat %>%
   summarize(mean3 = mean(Flux), mean2 = mean(Flux[1:2]))
 
 #----- Plot time vs. flux -----
-timeflux_plot <- ggplot(dat, aes(x = Timestamp, y = Flux, color = Origin_Plot, group = Collar)) +
+dat$Group <- paste(dat$Origin_Plot, "->", dat$Destination_Plot)
+dat$Group[dat$Experiment == "Control"] <- "Control"
+timeflux_plot <- ggplot(dat, aes(x = Timestamp, y = Flux, color = Group, group = Collar)) +
   geom_point(data = dat, size = 1) +
   geom_line(data = dat, size = 0.5) +
   facet_grid(Dest_Elevation ~ Dest_Salinity) +
   ggtitle("Temperature vs. Flux") +
   labs(x = "Date", y = "Flux (umol m-2 s-1)")
 print(timeflux_plot)
-ggsave("../outputs/timeflux.pdf")
+ggsave("../outputs/timeflux.pdf", width = 8, height = 5)
 
 #geom_text_repel(data = dat, mapping = aes(x = Timestamp, y = Flux, label = Collar)) 
 #scale_color_gradientn(colors = blue2green2red(100))
