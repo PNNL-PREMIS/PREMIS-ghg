@@ -14,8 +14,6 @@ date()
 
 ```{r, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
 figures <- get(load("../outputs/figures.rda"))
-plots <- read.csv("../design/plots.csv")
-knitr::kable(plots) 
 ```
 
 |Location |Experiment           |No. of Collars |
