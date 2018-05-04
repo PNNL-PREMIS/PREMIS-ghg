@@ -28,12 +28,9 @@ lookup_table <- collarDat %>%
 
 # ...and then merge back into main data frame. Now "Lookup_Plot" holds the plot info for
 # where each core ENDED UP, not where it STARTED
-
-dat <- left_join(dat, lookup_table, by = c("Core_placement" = "Collar"))
-# Remove duplicate variables
-dat$Longitude = NULL
-dat$Latitude = NULL
-dat$Plot_area_m2 = NULL
+dat <- left_join(dat, lookup_table, by = c("Core_placement" = "Collar")) %>% 
+  # Remove duplicate variables
+  select(-Longitude, -Latitude, -Plot_area_m2)
 
 dat <- left_join(dat, plots, by = c("Destination_Plot" = "Plot")) %>%
   rename(Dest_Salinity = Salinity, Dest_Elevation = Elevation)
@@ -70,14 +67,16 @@ fmean <- dat %>%
   summarize(mean3 = mean(Flux), mean2 = mean(Flux[1:2]))
 
 #----- Plot time vs. flux -----
-timeflux_plot <- ggplot(daily_dat, aes(x = Day, y = meanFlux, color = Origin_Plot, group = Collar)) +
-  geom_point() +
-  geom_line() +
+dat$Group <- paste(dat$Origin_Plot, "->", dat$Destination_Plot)
+dat$Group[dat$Experiment == "Control"] <- "Control"
+timeflux_plot <- ggplot(dat, aes(x = Timestamp, y = Flux, color = Group, group = Collar)) +
+  geom_point(data = dat, size = 1) +
+  geom_line(data = dat, size = 0.5) +
   facet_grid(Dest_Elevation ~ Dest_Salinity) +
   ggtitle("Temperature vs. Flux") +
   labs(x = "Date", y = "Flux (umol m-2 s-1)")
 print(timeflux_plot)
-ggsave("../outputs/timeflux.pdf")
+ggsave("../outputs/timeflux.pdf", width = 8, height = 5)
 
 #----- Plot time vs. flux with error bars -----
 ggE <- ggplot(collar_to_collar_err, aes(x = Timestamp, y = sdflux/meanflux, color = paste(Experiment, Origin_Plot, Destination_Plot))) +

@@ -7,10 +7,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Diagnostics as of:
-```{r, echo = FALSE} 
-date()
-```
+# Diagnostics as of `r date()`
 
 ```{r, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
 figures <- get(load("../outputs/figures.rda"))
