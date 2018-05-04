@@ -82,7 +82,7 @@ ggsave("../outputs/timeflux.pdf", width = 8, height = 5)
 ggE <- ggplot(collar_to_collar_err, aes(x = Timestamp, y = sdflux/meanflux, color = paste(Experiment, Origin_Plot, Destination_Plot))) +
   geom_point() +
   geom_line() +
-  geom_errorbar(aes(ymin = meanflux - sdflux, ymax = meanflux + sdflux), color = "black") #+
+  geom_errorbar(aes(ymin = sdflux/meanflux - sdflux, ymax = sdflux/meanflux + sdflux), color = "black") #+
 facet_grid(Dest_Elevation ~ Dest_Salinity) #+
 theme(axis.text.x = element_text(angle = 90, hjust = 1))
 print(ggE)
