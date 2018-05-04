@@ -16,9 +16,11 @@ collarDat <- read_csv("../design/cores_collars.csv")
 plots <- read_csv("../design/plots.csv")
 
 dat <- left_join(licorDat, collarDat, by = "Collar") %>% 
-  rename(Origin_Plot = Plot)
+  rename(Origin_Plot = Plot) %>%
+  select(-Site)
 dat <- left_join(dat, plots, by = c("Origin_Plot" = "Plot")) %>%
-  rename(Origin_Salinity = Salinity, Origin_Elevation = Elevation)
+  rename(Origin_Salinity = Salinity, Origin_Elevation = Elevation) %>%
+  select(-Site)
 
 # For any transplant core X, we know (in "Core_placement") the hole in which it ended up (or
 # rather, the core number of the hole). We actually need to know the plot. So create a lookup
@@ -31,7 +33,6 @@ lookup_table <- collarDat %>%
 dat <- left_join(dat, lookup_table, by = c("Core_placement" = "Collar")) %>% 
   # Remove duplicate variables
   select(-Longitude, -Latitude, -Plot_area_m2)
-
 dat <- left_join(dat, plots, by = c("Destination_Plot" = "Plot")) %>%
   rename(Dest_Salinity = Salinity, Dest_Elevation = Elevation)
 
@@ -40,57 +41,57 @@ dat$Origin_Salinity <- factor(dat$Origin_Salinity, levels = c("High", "Medium", 
 dat$Origin_Elevation <- factor(dat$Origin_Elevation, levels = c("Low", "Medium", "High"))
 dat$Dest_Salinity <- factor(dat$Dest_Salinity, levels = c("High", "Medium", "Low"))
 dat$Dest_Elevation <- factor(dat$Dest_Elevation, levels = c("Low", "Medium", "High"))
-dat$Month <- month(dat$Timestamp)
-dat$Day <- day(dat$Timestamp)
+
+dat$Date <- paste(month(dat$Timestamp), "/", day(dat$Timestamp))
+dat$Group <- paste(dat$Origin_Plot, "->", dat$Destination_Plot)
+dat$Group[dat$Experiment == "Control"] <- "Control"
 
 # Calculate daily averages for flux, temp, and soil moisture for each collar
 daily_dat <- dat %>%
-  group_by(Month, Day, Experiment, Destination_Plot, Dest_Salinity, Dest_Elevation,
+  group_by(Date, Experiment, Group, Destination_Plot, Dest_Salinity, Dest_Elevation,
            Origin_Plot, Origin_Salinity, Origin_Elevation,Collar) %>%
   summarise(n = n(), meanFlux = mean(Flux), sdFlux = sd(Flux), meanSM = mean(SMoisture), meanTemp = mean(T5))
 
 # Calculate standard deviation between collars at each plot
 collar_to_collar_err <- dat %>% 
-  group_by(Month, Day, Experiment, Destination_Plot, Origin_Plot, Collar) %>% 
+  group_by(Date, Experiment, Group, Destination_Plot, Origin_Plot, Collar) %>% 
   summarise(n = n(), Flux = mean(Flux), Timestamp = mean(Timestamp)) %>% 
   summarise(n = n(), meanflux = mean(Flux), sdflux=sd(Flux),
             Timestamp = mean(Timestamp), Collars = paste(Collar, collapse = " "))
 
 # Calculate CV for flux measurements
 cv <- dat %>% 
-  group_by(Month, Collar) %>% 
+  group_by(Date, Group, Collar) %>% 
   summarise(CV = sd(Flux) / mean(Flux), n = n())
 
 # Calculate mean flux of all 3 observations in the meas. and the first 2 obs. in the meas.
 fmean <- dat %>% 
-  group_by(Month, Day, Collar) %>%
+  group_by(Date, Group, Collar) %>%
   summarize(mean3 = mean(Flux), mean2 = mean(Flux[1:2]))
 
 #----- Plot time vs. flux -----
-dat$Group <- paste(dat$Origin_Plot, "->", dat$Destination_Plot)
-dat$Group[dat$Experiment == "Control"] <- "Control"
-timeflux_plot <- ggplot(dat, aes(x = Timestamp, y = Flux, color = Group, group = Collar)) +
-  geom_point(data = dat, size = 1) +
-  geom_line(data = dat, size = 0.5) +
-  facet_grid(Dest_Elevation ~ Dest_Salinity) +
-  ggtitle("Temperature vs. Flux") +
-  labs(x = "Date", y = "Flux (umol m-2 s-1)")
-print(timeflux_plot)
-ggsave("../outputs/timeflux.pdf", width = 8, height = 5)
-
-#----- Plot time vs. flux with error bars -----
-ggE <- ggplot(collar_to_collar_err, aes(x = Timestamp, y = sdflux/meanflux, color = paste(Experiment, Origin_Plot, Destination_Plot))) +
+timeflux_plot <- ggplot(daily_dat, aes(x = Date, y = meanFlux, color = Group, group = Collar)) +
   geom_point() +
   geom_line() +
-  geom_errorbar(aes(ymin = sdflux/meanflux - sdflux, ymax = sdflux/meanflux + sdflux), color = "black") #+
-facet_grid(Dest_Elevation ~ Dest_Salinity) #+
-theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  facet_grid(Dest_Elevation ~ Dest_Salinity) +
+  ggtitle("Flux over time") +
+  labs(x = "Date", y = "Flux (umol m-2 s-1)") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+print(timeflux_plot)
+#ggsave("../outputs/timeflux.pdf", width = 8, height = 5)
+
+#----- Plot time vs. flux with error bars -----
+ggE <- ggplot(collar_to_collar_err, aes(x = Timestamp, y = sdflux, color = Group)) +
+  geom_point() +
+  geom_line() +
+  geom_errorbar(aes(ymin = (sdflux/meanflux) - sdflux, ymax = (sdflux/meanflux) + sdflux), color = "black") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
 print(ggE)
 
 #----- Plot temperature vs. flux with regression line -----
-q10_plot <- ggplot(dat, aes(x = T20, y = Flux)) +
-  geom_point(data = dat, size = 1) +
-  geom_line(data = dat, size = 1) +
+q10_plot <- ggplot(daily_dat, aes(x = meanTemp, y = meanFlux)) +
+  geom_point() +
+  geom_line(size = 1) +
   geom_smooth(method = "lm") +
   ggtitle("Temperature vs. Flux") +
   labs(x = "Temperature (oC)", y = "Flux (umol m-2 s-1)")
@@ -102,11 +103,11 @@ ggCV <- ggplot(data = cv, aes(x = Collar, y = CV, color = n)) +
   geom_point() +
   ggtitle("Coefficient of Variation")
 #geom_text_repel(data = cv, aes(label = Collar))
-#print(ggCV)
+print(ggCV)
 #ggsave("../outputs/cv.pdf")
 
 #----- Plot time vs. soil moisture -----
-timesm_plot <- ggplot(daily_dat, aes(x = Day, y = meanSM, color = Origin_Plot, group = Collar)) +
+timesm_plot <- ggplot(daily_dat, aes(x = Date, y = meanSM, color = Group, group = Collar)) +
   geom_point() +
   geom_line() +
   facet_grid(Dest_Elevation ~ Dest_Salinity) +
@@ -123,7 +124,7 @@ var_test <- ggplot(fmean, aes(x = mean3, y = mean2)) +
   geom_point() + 
   labs(x = "Mean flux of all measurements", y = "Mean flux of first 2 measurements") +
   ggtitle("Mean Flux Per Collar (umol m-2 s-1)")
-#print(var_test)
+print(var_test)
 #ggsave("../diagnostics/mean_test.png")
 
 figures <- list()
