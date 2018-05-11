@@ -74,7 +74,7 @@ timeflux_plot <- ggplot(dat, aes(x = Timestamp, y = Flux, color = Group, group =
   geom_line(data = dat, size = 0.5) +
   facet_grid(Dest_Elevation ~ Dest_Salinity) +
   ggtitle("Temperature vs. Flux") +
-  labs(x = "Date", y = "Flux (umol m-2 s-1)")
+  labs(x = "Date", y = "Flux (µmol m-2 s-1)")
 print(timeflux_plot)
 ggsave("../outputs/timeflux.pdf", width = 8, height = 5)
 
@@ -93,7 +93,7 @@ q10_plot <- ggplot(dat, aes(x = T20, y = Flux)) +
   geom_line(data = dat, size = 1) +
   geom_smooth(method = "lm") +
   ggtitle("Temperature vs. Flux") +
-  labs(x = "Temperature (oC)", y = "Flux (umol m-2 s-1)")
+  labs(x = "Temperature (degC)", y = "Flux (µmol m-2 s-1)")
 print(q10_plot)
 #ggsave("../outputs/q10.pdf")
 
@@ -122,7 +122,7 @@ var_test <- ggplot(fmean, aes(x = mean3, y = mean2)) +
   geom_abline(slope = 1, intercept = 0, color = "blue") +
   geom_point() + 
   labs(x = "Mean flux of all measurements", y = "Mean flux of first 2 measurements") +
-  ggtitle("Mean Flux Per Collar (umol m-2 s-1)")
+  ggtitle("Mean Flux Per Collar (µmol m-2 s-1)")
 #print(var_test)
 #ggsave("../diagnostics/mean_test.png")
 

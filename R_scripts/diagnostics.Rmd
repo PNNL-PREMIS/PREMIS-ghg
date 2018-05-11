@@ -13,14 +13,19 @@ knitr::opts_chunk$set(echo = TRUE)
 figures <- get(load("../outputs/figures.rda"))
 ```
 
-|Location |Experiment           |No. of Collars |
-|:-------:|:-------------------:|:-------------:|
-|SERC     |Control              |56             |
-|SERC     |Salinity transplant  |36             |
-|SERC     |Elevation transplant |32             |
+```{r, echo = FALSE, message = FALSE}
+# Auto-generate the sample size table
+library(dplyr)
+read.csv("../design/cores_collars.csv") %>% 
+  group_by(Site, Experiment) %>% 
+  summarise(N = n()) %>% 
+  knitr::kable()
+```
 
-### Flux over time, color is indicating plot each core originated from
-(left to right - High, Medium, Low salinity); (top to bottom - Low, Medium, and High elevation)
+### CO2 flux over time
+
+Color indicates origin/destination plot pairings. Panels: left to right - High, Medium, Low salinity; top to bottom - Low, Medium, and High elevation.
+
 ```{r, echo = FALSE}
 figures$timeflux_plot
 ```
