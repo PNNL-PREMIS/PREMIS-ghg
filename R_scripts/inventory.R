@@ -9,7 +9,7 @@ library(dplyr)
 
 # Read the inventory data file
 print("Reading the inventory data file...")
-read_csv("../inventory_data/inventory.csv", col_types = "ccicdccc") ->
+read_csv("../inventory_data/inventory.csv", col_types = "ccccdccc") ->
   trees
 
 trees$Salinity <- paste("Salinity", substr(trees$Plot, 1, 1))
