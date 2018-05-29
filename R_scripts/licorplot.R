@@ -13,16 +13,11 @@ dat <- get(load("../outputs/licordat.rda"))
 # Calculate daily averages for flux, temp, and soil moisture for each collar
 daily_dat <- dat %>%
   group_by(Date, Experiment, Group, Destination_Plot, Dest_Salinity, Dest_Elevation,
-<<<<<<< HEAD
-           Origin_Plot, Origin_Salinity, Origin_Elevation, Collar) %>%
-  summarise(n = n(), meanFlux = mean(Flux), sdFlux = sd(Flux), meanSM = mean(SMoisture), meanTemp = mean(T5))
-=======
            Origin_Plot, Origin_Salinity, Origin_Elevation,Collar) %>%
   summarise(n = n(), 
             Timestamp = mean(Timestamp),
             meanFlux = mean(Flux), sdFlux = sd(Flux), 
             meanSM = mean(SMoisture), meanTemp = mean(T5))
->>>>>>> d5449efa767c194ef999b8d092e7fa188b4ea94f
 
 # Calculate standard deviation between collars at each plot
 collar_to_collar_err <- dat %>% 
