@@ -1,56 +1,28 @@
 # Script to graph and visualize licor data
 # Stephanie Pennington | created April 2018
 
+library(tidyr)
 library(ggplot2)
 theme_set(theme_bw())
 library(ggrepel)
-library(lubridate)
 library(dplyr)
 library(readr)
 
-# Run read_dir function with licor data, merge with cores_collars.csv
-#d <- data.frame(Timestamp = rep(1:5, times = 12), Flux = runif(120), Collar = rep(1:120, each = 5))
-source("licordat.R")
-licorDat <- read_dir("../licor_data/")
-collarDat <- read_csv("../design/cores_collars.csv")
-plots <- read_csv("../design/plots.csv")
-
-dat <- left_join(licorDat, collarDat, by = "Collar") %>% 
-  rename(Origin_Plot = Plot) %>%
-  select(-Site)
-dat <- left_join(dat, plots, by = c("Origin_Plot" = "Plot")) %>%
-  rename(Origin_Salinity = Salinity, Origin_Elevation = Elevation) %>%
-  select(-Site)
-
-# For any transplant core X, we know (in "Core_placement") the hole in which it ended up (or
-# rather, the core number of the hole). We actually need to know the plot. So create a lookup
-# table for this...
-lookup_table <- collarDat %>% 
-  select(Collar, Destination_Plot = Plot)
-
-# ...and then merge back into main data frame. Now "Lookup_Plot" holds the plot info for
-# where each core ENDED UP, not where it STARTED
-dat <- left_join(dat, lookup_table, by = c("Core_placement" = "Collar")) %>% 
-  # Remove duplicate variables
-  select(-Longitude, -Latitude, -Plot_area_m2)
-dat <- left_join(dat, plots, by = c("Destination_Plot" = "Plot")) %>%
-  rename(Dest_Salinity = Salinity, Dest_Elevation = Elevation)
-
-# Reorder labels
-dat$Origin_Salinity <- factor(dat$Origin_Salinity, levels = c("High", "Medium", "Low"))
-dat$Origin_Elevation <- factor(dat$Origin_Elevation, levels = c("Low", "Medium", "High"))
-dat$Dest_Salinity <- factor(dat$Dest_Salinity, levels = c("High", "Medium", "Low"))
-dat$Dest_Elevation <- factor(dat$Dest_Elevation, levels = c("Low", "Medium", "High"))
-
-dat$Date <- paste(month(dat$Timestamp), "/", day(dat$Timestamp))
-dat$Group <- paste(dat$Origin_Plot, "->", dat$Destination_Plot)
-dat$Group[dat$Experiment == "Control"] <- "Control"
+dat <- get(load("../outputs/licordat.rda"))
 
 # Calculate daily averages for flux, temp, and soil moisture for each collar
 daily_dat <- dat %>%
   group_by(Date, Experiment, Group, Destination_Plot, Dest_Salinity, Dest_Elevation,
-           Origin_Plot, Origin_Salinity, Origin_Elevation,Collar) %>%
+<<<<<<< HEAD
+           Origin_Plot, Origin_Salinity, Origin_Elevation, Collar) %>%
   summarise(n = n(), meanFlux = mean(Flux), sdFlux = sd(Flux), meanSM = mean(SMoisture), meanTemp = mean(T5))
+=======
+           Origin_Plot, Origin_Salinity, Origin_Elevation,Collar) %>%
+  summarise(n = n(), 
+            Timestamp = mean(Timestamp),
+            meanFlux = mean(Flux), sdFlux = sd(Flux), 
+            meanSM = mean(SMoisture), meanTemp = mean(T5))
+>>>>>>> d5449efa767c194ef999b8d092e7fa188b4ea94f
 
 # Calculate standard deviation between collars at each plot
 collar_to_collar_err <- dat %>% 
@@ -59,10 +31,15 @@ collar_to_collar_err <- dat %>%
   summarise(n = n(), meanflux = mean(Flux), sdflux=sd(Flux),
             Timestamp = mean(Timestamp), Collars = paste(Collar, collapse = " "))
 
-# Calculate CV for flux measurements
-cv <- dat %>% 
+# Calculate CV between observations
+cv_obs <- dat %>% 
   group_by(Date, Group, Collar) %>% 
   summarise(CV = sd(Flux) / mean(Flux), n = n())
+
+# Calculate CV between groups
+cv_exp <- dat %>% 
+  group_by(Date, Group, Experiment) %>%
+  summarize(CV = sd(Flux) / mean(Flux), n = n())
 
 # Calculate mean flux of all 3 observations in the meas. and the first 2 obs. in the meas.
 fmean <- dat %>% 
@@ -70,7 +47,7 @@ fmean <- dat %>%
   summarize(mean3 = mean(Flux), mean2 = mean(Flux[1:2]))
 
 #----- Plot time vs. flux -----
-timeflux_plot <- ggplot(daily_dat, aes(x = Date, y = meanFlux, color = Group, group = Collar)) +
+timeflux_plot <- ggplot(daily_dat, aes(x = Timestamp, y = meanFlux, color = Group, group = Collar)) +
   geom_point() +
   geom_line() +
   facet_grid(Dest_Elevation ~ Dest_Salinity) +
@@ -89,7 +66,7 @@ ggE <- ggplot(collar_to_collar_err, aes(x = Timestamp, y = sdflux, color = Group
 print(ggE)
 
 #----- Plot temperature vs. flux with regression line -----
-q10_plot <- ggplot(daily_dat, aes(x = meanTemp, y = meanFlux)) +
+q10_plot <- ggplot(daily_dat, aes(x = meanTemp, y = meanFlux, color = Dest_Elevation)) +
   geom_point() +
   geom_line(size = 1) +
   geom_smooth(method = "lm") +
@@ -126,6 +103,10 @@ var_test <- ggplot(fmean, aes(x = mean3, y = mean2)) +
   ggtitle("Mean Flux Per Collar (µmol m-2 s-1)")
 print(var_test)
 #ggsave("../diagnostics/mean_test.png")
+
+#----- Plot CV between observations over time -----
+ggCV_obs <- ggplot(cc_obs, aes()) 
+
 
 figures <- list()
 figures$timesm_plot <- timesm_plot 

@@ -4,6 +4,7 @@
 library(tidyr)
 library(lubridate)
 library(dplyr)
+library(readr)
 
 #----- Function to parse a file and return data frame -----
 read_licor_data <- function(filename) {
@@ -76,3 +77,39 @@ read_dir <- function(path) {
   bind_rows(list)
 }
 
+licorDat <- read_dir("../licor_data/")
+collarDat <- read_csv("../design/cores_collars.csv")
+plots <- read_csv("../design/plots.csv")
+
+dat <- left_join(licorDat, collarDat, by = "Collar") %>% 
+  rename(Origin_Plot = Plot) %>%
+  select(-Site)
+dat <- left_join(dat, plots, by = c("Origin_Plot" = "Plot")) %>%
+  rename(Origin_Salinity = Salinity, Origin_Elevation = Elevation) %>%
+  select(-Site)
+
+# For any transplant core X, we know (in "Core_placement") the hole in which it ended up (or
+# rather, the core number of the hole). We actually need to know the plot. So create a lookup
+# table for this...
+lookup_table <- collarDat %>% 
+  select(Collar, Destination_Plot = Plot)
+
+# ...and then merge back into main data frame. Now "Lookup_Plot" holds the plot info for
+# where each core ENDED UP, not where it STARTED
+dat <- left_join(dat, lookup_table, by = c("Core_placement" = "Collar")) %>% 
+  # Remove duplicate variables
+  select(-Longitude, -Latitude, -Plot_area_m2)
+dat <- left_join(dat, plots, by = c("Destination_Plot" = "Plot")) %>%
+  rename(Dest_Salinity = Salinity, Dest_Elevation = Elevation)
+
+# Reorder labels
+dat$Origin_Salinity <- factor(dat$Origin_Salinity, levels = c("High", "Medium", "Low"))
+dat$Origin_Elevation <- factor(dat$Origin_Elevation, levels = c("Low", "Medium", "High"))
+dat$Dest_Salinity <- factor(dat$Dest_Salinity, levels = c("High", "Medium", "Low"))
+dat$Dest_Elevation <- factor(dat$Dest_Elevation, levels = c("Low", "Medium", "High"))
+
+dat$Date <- paste(month(dat$Timestamp), "/", day(dat$Timestamp))
+dat$Group <- paste(dat$Origin_Plot, "->", dat$Destination_Plot)
+dat$Group[dat$Experiment == "Control"] <- "Control"
+
+save(dat, file = "../outputs/licordat.rda")
