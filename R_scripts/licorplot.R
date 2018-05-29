@@ -50,7 +50,10 @@ dat$Group[dat$Experiment == "Control"] <- "Control"
 daily_dat <- dat %>%
   group_by(Date, Experiment, Group, Destination_Plot, Dest_Salinity, Dest_Elevation,
            Origin_Plot, Origin_Salinity, Origin_Elevation,Collar) %>%
-  summarise(n = n(), meanFlux = mean(Flux), sdFlux = sd(Flux), meanSM = mean(SMoisture), meanTemp = mean(T5))
+  summarise(n = n(), 
+            Timestamp = mean(Timestamp),
+            meanFlux = mean(Flux), sdFlux = sd(Flux), 
+            meanSM = mean(SMoisture), meanTemp = mean(T5))
 
 # Calculate standard deviation between collars at each plot
 collar_to_collar_err <- dat %>% 
@@ -70,7 +73,7 @@ fmean <- dat %>%
   summarize(mean3 = mean(Flux), mean2 = mean(Flux[1:2]))
 
 #----- Plot time vs. flux -----
-timeflux_plot <- ggplot(daily_dat, aes(x = Date, y = meanFlux, color = Group, group = Collar)) +
+timeflux_plot <- ggplot(daily_dat, aes(x = Timestamp, y = meanFlux, color = Group, group = Collar)) +
   geom_point() +
   geom_line() +
   facet_grid(Dest_Elevation ~ Dest_Salinity) +
@@ -89,7 +92,7 @@ ggE <- ggplot(collar_to_collar_err, aes(x = Timestamp, y = sdflux, color = Group
 print(ggE)
 
 #----- Plot temperature vs. flux with regression line -----
-q10_plot <- ggplot(daily_dat, aes(x = meanTemp, y = meanFlux)) +
+q10_plot <- ggplot(daily_dat, aes(x = meanTemp, y = meanFlux, color = Dest_Elevation)) +
   geom_point() +
   geom_line(size = 1) +
   geom_smooth(method = "lm") +
