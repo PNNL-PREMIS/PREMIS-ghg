@@ -10,44 +10,57 @@ library(readr)
 
 # Run read_dir function with licor data, merge with cores_collars.csv
 #d <- data.frame(Timestamp = rep(1:5, times = 12), Flux = runif(120), Collar = rep(1:120, each = 5))
+cat("Reading datasets...\n")
 source("licordat.R")
 licorDat <- read_dir("../licor_data/")
-collarDat <- read_csv("../design/cores_collars.csv")
-plots <- read_csv("../design/plots.csv")
+# `collarDat` holds information about the collars, based on collar number: its origin plot, and
+# (if a transplant collar) into what hole it ended up 
+collarDat <- read_csv("../design/cores_collars.csv", col_types = "cciiicic")
+# `plotDat` holds information based on the plot code: longitude, latitude, area, 
+# and salinity/elevation levels
+plotDat <- read_csv("../design/plots.csv", col_types = "ccccddi")
 
-dat <- left_join(licorDat, collarDat, by = "Collar") %>% 
+cat("Joining datasets and calculating...\n")
+
+# Merge these three datasets together based on collar number and plot name
+licorDat %>% 
+  left_join(collarDat, by = "Collar") %>% 
   rename(Origin_Plot = Plot) %>%
-  select(-Site)
-dat <- left_join(dat, plots, by = c("Origin_Plot" = "Plot")) %>%
+  select(-Site) %>% 
+  left_join(plotDat, by = c("Origin_Plot" = "Plot")) %>%
   rename(Origin_Salinity = Salinity, Origin_Elevation = Elevation) %>%
-  select(-Site)
+  select(-Site) ->
+  licorDat_full
 
 # For any transplant core X, we know (in "Core_placement") the hole in which it ended up (or
 # rather, the core number of the hole). We actually need to know the plot. So create a lookup
 # table for this...
-lookup_table <- collarDat %>% 
-  select(Collar, Destination_Plot = Plot)
+lookup_table <- select(collarDat, Collar, Destination_Plot = Plot)
 
-# ...and then merge back into main data frame. Now "Lookup_Plot" holds the plot info for
-# where each core ENDED UP, not where it STARTED
-dat <- left_join(dat, lookup_table, by = c("Core_placement" = "Collar")) %>% 
+# ...and then merge back into main data frame. Note that "Destination_Plot" holds the plot info
+# for where each core ENDED UP, not where it STARTED
+licorDat_full %>% 
+  left_join(lookup_table, by = c("Core_placement" = "Collar")) %>% 
   # Remove duplicate variables
-  select(-Longitude, -Latitude, -Plot_area_m2)
-dat <- left_join(dat, plots, by = c("Destination_Plot" = "Plot")) %>%
-  rename(Dest_Salinity = Salinity, Dest_Elevation = Elevation)
+  select(-Longitude, -Latitude, -Plot_area_m2) %>% 
+  left_join(plotDat, by = c("Destination_Plot" = "Plot")) %>%
+  rename(Dest_Salinity = Salinity, Dest_Elevation = Elevation) ->
+  licorDat_full
 
-# Reorder labels
-dat$Origin_Salinity <- factor(dat$Origin_Salinity, levels = c("High", "Medium", "Low"))
-dat$Origin_Elevation <- factor(dat$Origin_Elevation, levels = c("Low", "Medium", "High"))
-dat$Dest_Salinity <- factor(dat$Dest_Salinity, levels = c("High", "Medium", "Low"))
-dat$Dest_Elevation <- factor(dat$Dest_Elevation, levels = c("Low", "Medium", "High"))
-
-dat$Date <- paste(month(dat$Timestamp), "/", day(dat$Timestamp))
-dat$Group <- paste(dat$Origin_Plot, "->", dat$Destination_Plot)
-dat$Group[dat$Experiment == "Control"] <- "Control"
+# Reorder labels by making them into factors
+HML <- c("High", "Medium", "Low")
+licorDat_full %>% 
+  mutate(Origin_Salinity <- factor(Origin_Salinity, levels = HML),
+         Origin_Elevation <- factor(Origin_Elevation, levels = HML),
+         Dest_Salinity <- factor(Dest_Salinity, levels = HML),
+         Dest_Elevation <- factor(Dest_Elevation, levels = HML),
+         Date = paste(month(Timestamp), "/", day(Timestamp)),
+         Group = paste(Origin_Plot, "->", Destination_Plot),
+         Group = if_else(Experiment == "Control", "Control", Group)) ->
+  licorDat_full
 
 # Calculate daily averages for flux, temp, and soil moisture for each collar
-daily_dat <- dat %>%
+daily_dat <- licorDat_full %>%
   group_by(Date, Experiment, Group, Destination_Plot, Dest_Salinity, Dest_Elevation,
            Origin_Plot, Origin_Salinity, Origin_Elevation,Collar) %>%
   summarise(n = n(), 
@@ -56,21 +69,25 @@ daily_dat <- dat %>%
             meanSM = mean(SMoisture), meanTemp = mean(T5))
 
 # Calculate standard deviation between collars at each plot
-collar_to_collar_err <- dat %>% 
+collar_to_collar_err <- licorDat_full %>% 
   group_by(Date, Experiment, Group, Destination_Plot, Origin_Plot, Collar) %>% 
+  # First calculate collar means...
   summarise(n = n(), Flux = mean(Flux), Timestamp = mean(Timestamp)) %>% 
+  # ...and then plot mean and standard deviations
   summarise(n = n(), meanflux = mean(Flux), sdflux=sd(Flux),
             Timestamp = mean(Timestamp), Collars = paste(Collar, collapse = " "))
 
 # Calculate CV for flux measurements
-cv <- dat %>% 
+cv <- licorDat_full %>% 
   group_by(Date, Group, Collar) %>% 
   summarise(CV = sd(Flux) / mean(Flux), n = n())
 
 # Calculate mean flux of all 3 observations in the meas. and the first 2 obs. in the meas.
-fmean <- dat %>% 
+fmean <- licorDat_full %>% 
   group_by(Date, Group, Collar) %>%
-  summarize(mean3 = mean(Flux), mean2 = mean(Flux[1:2]))
+  summarize(n = n(), mean_gt_2 = mean(Flux), mean_2 = mean(Flux[1:2]))
+
+cat("Making plots...\n")
 
 #----- Plot time vs. flux -----
 timeflux_plot <- ggplot(daily_dat, aes(x = Timestamp, y = meanFlux, color = Group, group = Collar)) +
@@ -122,7 +139,7 @@ print(timesm_plot)
 #----- Plot mean flux with all 3 measurements vs. mean flux with only first two meas. -----
 # This is to test whether reducing observation size from 3 to 2 observations per measurement changes..
 # .. the flux
-var_test <- ggplot(fmean, aes(x = mean3, y = mean2)) + 
+var_test <- ggplot(fmean, aes(x = mean_gt_2, y = mean_2, color = n)) + 
   geom_abline(slope = 1, intercept = 0, color = "blue") +
   geom_point() + 
   labs(x = "Mean flux of all measurements", y = "Mean flux of first 2 measurements") +
@@ -138,3 +155,5 @@ figures$q10_plot <- q10_plot
 figures$ggE <- ggE
 figures$timeflux_plot <- timeflux_plot
 save(figures, file = "../outputs/figures.rda")
+
+cat("All done.\n")
