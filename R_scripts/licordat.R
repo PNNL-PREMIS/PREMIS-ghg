@@ -4,6 +4,7 @@
 library(tidyr)
 library(lubridate)
 library(dplyr)
+library(readr)
 
 #----- Function to parse a file and return data frame -----
 read_licor_data <- function(filename) {
@@ -76,3 +77,39 @@ read_dir <- function(path) {
   bind_rows(list)
 }
 
+rawDat <- read_dir("../licor_data/")
+collarDat <- read_csv("../design/cores_collars.csv")
+plots <- read_csv("../design/plots.csv")
+
+licorDat <- left_join(rawDat, collarDat, by = "Collar") %>% 
+  rename(Origin_Plot = Plot) %>%
+  select(-Site)
+licorDat <- left_join(licorDat, plots, by = c("Origin_Plot" = "Plot")) %>%
+  rename(Origin_Salinity = Salinity, Origin_Elevation = Elevation) %>%
+  select(-Site)
+
+# For any transplant core X, we know (in "Core_placement") the hole in which it ended up (or
+# rather, the core number of the hole). We actually need to know the plot. So create a lookup
+# table for this...
+lookup_table <- collarDat %>% 
+  select(Collar, Destination_Plot = Plot)
+
+# ...and then merge back into main data frame. Now "Lookup_Plot" holds the plot info for
+# where each core ENDED UP, not where it STARTED
+licorDat <- left_join(licorDat, lookup_table, by = c("Core_placement" = "Collar")) %>% 
+  # Remove duplicate variables
+  select(-Longitude, -Latitude, -Plot_area_m2)
+licorDat <- left_join(licorDat, plots, by = c("Destination_Plot" = "Plot")) %>%
+  rename(Dest_Salinity = Salinity, Dest_Elevation = Elevation)
+
+# Reorder labels
+licorDat$Origin_Salinity <- factor(licorDat$Origin_Salinity, levels = c("High", "Medium", "Low"))
+licorDat$Origin_Elevation <- factor(licorDat$Origin_Elevation, levels = c("Low", "Medium", "High"))
+licorDat$Dest_Salinity <- factor(licorDat$Dest_Salinity, levels = c("High", "Medium", "Low"))
+licorDat$Dest_Elevation <- factor(licorDat$Dest_Elevation, levels = c("Low", "Medium", "High"))
+
+licorDat$Date <- paste(month(licorDat$Timestamp), "/", day(licorDat$Timestamp))
+licorDat$Group <- paste(licorDat$Origin_Plot, "->", licorDat$Destination_Plot)
+licorDat$Group[licorDat$Experiment == "Control"] <- "Control"
+
+save(licorDat, file = "../outputs/licordat.rda")

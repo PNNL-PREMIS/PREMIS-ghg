@@ -1,50 +1,14 @@
 # Script to graph and visualize licor data
 # Stephanie Pennington | created April 2018
 
+library(tidyr)
 library(ggplot2)
 theme_set(theme_bw())
 library(ggrepel)
-library(lubridate)
 library(dplyr)
 library(readr)
 
-# Run read_dir function with licor data, merge with cores_collars.csv
-#d <- data.frame(Timestamp = rep(1:5, times = 12), Flux = runif(120), Collar = rep(1:120, each = 5))
-source("licordat.R")
-licorDat <- read_dir("../licor_data/")
-collarDat <- read_csv("../design/cores_collars.csv")
-plots <- read_csv("../design/plots.csv")
-
-dat <- left_join(licorDat, collarDat, by = "Collar") %>% 
-  rename(Origin_Plot = Plot) %>%
-  select(-Site)
-dat <- left_join(dat, plots, by = c("Origin_Plot" = "Plot")) %>%
-  rename(Origin_Salinity = Salinity, Origin_Elevation = Elevation) %>%
-  select(-Site)
-
-# For any transplant core X, we know (in "Core_placement") the hole in which it ended up (or
-# rather, the core number of the hole). We actually need to know the plot. So create a lookup
-# table for this...
-lookup_table <- collarDat %>% 
-  select(Collar, Destination_Plot = Plot)
-
-# ...and then merge back into main data frame. Now "Lookup_Plot" holds the plot info for
-# where each core ENDED UP, not where it STARTED
-dat <- left_join(dat, lookup_table, by = c("Core_placement" = "Collar")) %>% 
-  # Remove duplicate variables
-  select(-Longitude, -Latitude, -Plot_area_m2)
-dat <- left_join(dat, plots, by = c("Destination_Plot" = "Plot")) %>%
-  rename(Dest_Salinity = Salinity, Dest_Elevation = Elevation)
-
-# Reorder labels
-dat$Origin_Salinity <- factor(dat$Origin_Salinity, levels = c("High", "Medium", "Low"))
-dat$Origin_Elevation <- factor(dat$Origin_Elevation, levels = c("Low", "Medium", "High"))
-dat$Dest_Salinity <- factor(dat$Dest_Salinity, levels = c("High", "Medium", "Low"))
-dat$Dest_Elevation <- factor(dat$Dest_Elevation, levels = c("Low", "Medium", "High"))
-
-dat$Date <- paste(month(dat$Timestamp), "/", day(dat$Timestamp))
-dat$Group <- paste(dat$Origin_Plot, "->", dat$Destination_Plot)
-dat$Group[dat$Experiment == "Control"] <- "Control"
+dat <- get(load("../outputs/licordat.rda"))
 
 # Calculate daily averages for flux, temp, and soil moisture for each collar
 daily_dat <- dat %>%
@@ -62,13 +26,18 @@ collar_to_collar_err <- dat %>%
   summarise(n = n(), meanflux = mean(Flux), sdflux=sd(Flux),
             Timestamp = mean(Timestamp), Collars = paste(Collar, collapse = " "))
 
-# Calculate CV for flux measurements
-cv <- dat %>% 
+# Calculate CV between observations
+cv_btwn_obs <- dat %>% 
   group_by(Date, Group, Collar) %>% 
   summarise(CV = sd(Flux) / mean(Flux), n = n())
 
+# Calculate CV between groups
+cv_btwn_exp <- dat %>% 
+  group_by(Date, Group, Experiment) %>%
+  summarize(CV = sd(Flux) / mean(Flux), n = n())
+
 # Calculate mean flux of all 3 observations in the meas. and the first 2 obs. in the meas.
-fmean <- dat %>% 
+fluxMean <- dat %>% 
   group_by(Date, Group, Collar) %>%
   summarize(mean3 = mean(Flux), mean2 = mean(Flux[1:2]))
 
@@ -102,12 +71,15 @@ print(q10_plot)
 #ggsave("../outputs/q10.pdf")
 
 #----- Plot collar vs. CV with regression line -----
-ggCV <- ggplot(data = cv, aes(x = Collar, y = CV, color = n)) +
+ggCV_btwn_exp <- ggplot(data = cv_btwn_exp, aes(x = Collar, y = cv_btwn_exp, color = n)) +
   geom_point() +
   ggtitle("Coefficient of Variation")
-#geom_text_repel(data = cv, aes(label = Collar))
-print(ggCV)
-#ggsave("../outputs/cv.pdf")
+#geom_text_repel(data = cv_btwn_exp, aes(label = Collar))
+print(ggCV_btwn_exp)
+#ggsave("../outputs/cv_btwn_exp.pdf")
+
+#----- Plot CV between observations over time -----
+ggCV_btwn_obs <- ggplot(cv_btwn_obs, aes()) 
 
 #----- Plot time vs. soil moisture -----
 timesm_plot <- ggplot(daily_dat, aes(x = Date, y = meanSM, color = Group, group = Collar)) +
@@ -122,13 +94,16 @@ print(timesm_plot)
 #----- Plot mean flux with all 3 measurements vs. mean flux with only first two meas. -----
 # This is to test whether reducing observation size from 3 to 2 observations per measurement changes..
 # .. the flux
-var_test <- ggplot(fmean, aes(x = mean3, y = mean2)) + 
+var_test <- ggplot(fluxMean, aes(x = mean3, y = mean2)) + 
   geom_abline(slope = 1, intercept = 0, color = "blue") +
   geom_point() + 
   labs(x = "Mean flux of all measurements", y = "Mean flux of first 2 measurements") +
   ggtitle("Mean Flux Per Collar (µmol m-2 s-1)")
 print(var_test)
 #ggsave("../diagnostics/mean_test.png")
+
+
+
 
 figures <- list()
 figures$timesm_plot <- timesm_plot 
