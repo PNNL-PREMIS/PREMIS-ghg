@@ -77,14 +77,14 @@ read_dir <- function(path) {
   bind_rows(list)
 }
 
-licorDat <- read_dir("../licor_data/")
+rawDat <- read_dir("../licor_data/")
 collarDat <- read_csv("../design/cores_collars.csv")
 plots <- read_csv("../design/plots.csv")
 
-dat <- left_join(licorDat, collarDat, by = "Collar") %>% 
+licorDat <- left_join(rawDat, collarDat, by = "Collar") %>% 
   rename(Origin_Plot = Plot) %>%
   select(-Site)
-dat <- left_join(dat, plots, by = c("Origin_Plot" = "Plot")) %>%
+licorDat <- left_join(licorDat, plots, by = c("Origin_Plot" = "Plot")) %>%
   rename(Origin_Salinity = Salinity, Origin_Elevation = Elevation) %>%
   select(-Site)
 
@@ -96,20 +96,20 @@ lookup_table <- collarDat %>%
 
 # ...and then merge back into main data frame. Now "Lookup_Plot" holds the plot info for
 # where each core ENDED UP, not where it STARTED
-dat <- left_join(dat, lookup_table, by = c("Core_placement" = "Collar")) %>% 
+licorDat <- left_join(licorDat, lookup_table, by = c("Core_placement" = "Collar")) %>% 
   # Remove duplicate variables
   select(-Longitude, -Latitude, -Plot_area_m2)
-dat <- left_join(dat, plots, by = c("Destination_Plot" = "Plot")) %>%
+licorDat <- left_join(licorDat, plots, by = c("Destination_Plot" = "Plot")) %>%
   rename(Dest_Salinity = Salinity, Dest_Elevation = Elevation)
 
 # Reorder labels
-dat$Origin_Salinity <- factor(dat$Origin_Salinity, levels = c("High", "Medium", "Low"))
-dat$Origin_Elevation <- factor(dat$Origin_Elevation, levels = c("Low", "Medium", "High"))
-dat$Dest_Salinity <- factor(dat$Dest_Salinity, levels = c("High", "Medium", "Low"))
-dat$Dest_Elevation <- factor(dat$Dest_Elevation, levels = c("Low", "Medium", "High"))
+licorDat$Origin_Salinity <- factor(licorDat$Origin_Salinity, levels = c("High", "Medium", "Low"))
+licorDat$Origin_Elevation <- factor(licorDat$Origin_Elevation, levels = c("Low", "Medium", "High"))
+licorDat$Dest_Salinity <- factor(licorDat$Dest_Salinity, levels = c("High", "Medium", "Low"))
+licorDat$Dest_Elevation <- factor(licorDat$Dest_Elevation, levels = c("Low", "Medium", "High"))
 
-dat$Date <- paste(month(dat$Timestamp), "/", day(dat$Timestamp))
-dat$Group <- paste(dat$Origin_Plot, "->", dat$Destination_Plot)
-dat$Group[dat$Experiment == "Control"] <- "Control"
+licorDat$Date <- paste(month(licorDat$Timestamp), "/", day(licorDat$Timestamp))
+licorDat$Group <- paste(licorDat$Origin_Plot, "->", licorDat$Destination_Plot)
+licorDat$Group[licorDat$Experiment == "Control"] <- "Control"
 
-save(dat, file = "../outputs/licordat.rda")
+save(licorDat, file = "../outputs/licordat.rda")
