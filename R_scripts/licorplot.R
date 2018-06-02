@@ -9,7 +9,7 @@ library(dplyr)
 library(readr)
 
 cat("Reading data...\n")
-dat <- read_csv("../outputs/licor_data.csv")
+dat <- get(load("../outputs/licordat.rda"))
 
 # Calculate daily averages for flux, temp, and soil moisture for each collar
 cat("Calculating daily averages, CVs, etc...\n")

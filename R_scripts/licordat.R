@@ -121,5 +121,6 @@ licorDat %>%
   licorDat
 
 cat("Saving data...\n")
+save(licorDat, file = "../outputs/licordat.rda")
 write_csv(licorDat, "../outputs/licor_data.csv")
 cat("All done.\n")
