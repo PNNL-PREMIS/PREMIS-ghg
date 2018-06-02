@@ -8,9 +8,11 @@ library(ggrepel)
 library(dplyr)
 library(readr)
 
+cat("Reading data...\n")
 dat <- get(load("../outputs/licordat.rda"))
 
 # Calculate daily averages for flux, temp, and soil moisture for each collar
+cat("Calculating daily averages, CVs, etc...\n")
 daily_dat <- dat %>%
   group_by(Date, Experiment, Group, Destination_Plot, Dest_Salinity, Dest_Elevation,
            Origin_Plot, Origin_Salinity, Origin_Elevation,Collar) %>%
@@ -22,7 +24,9 @@ daily_dat <- dat %>%
 # Calculate standard deviation between collars at each plot
 collar_to_collar_err <- dat %>% 
   group_by(Date, Experiment, Group, Destination_Plot, Origin_Plot, Collar) %>% 
+  # First calculate collar means...
   summarise(n = n(), Flux = mean(Flux), Timestamp = mean(Timestamp)) %>% 
+  # ...and then plot mean and standard deviations
   summarise(n = n(), meanflux = mean(Flux), sdflux=sd(Flux),
             Timestamp = mean(Timestamp), Collars = paste(Collar, collapse = " "))
 
@@ -39,7 +43,9 @@ cv_btwn_exp <- dat %>%
 # Calculate mean flux of all 3 observations in the meas. and the first 2 obs. in the meas.
 fluxMean <- dat %>% 
   group_by(Date, Group, Collar) %>%
-  summarize(mean3 = mean(Flux), mean2 = mean(Flux[1:2]))
+  summarize(n = n(), mean_gt_2 = mean(Flux), mean_2 = mean(Flux[1:2]))
+
+cat("Making plots...\n")
 
 #----- Plot time vs. flux -----
 timeflux_plot <- ggplot(daily_dat, aes(x = Timestamp, y = meanFlux, color = Group, group = Collar)) +
@@ -94,15 +100,13 @@ print(timesm_plot)
 #----- Plot mean flux with all 3 measurements vs. mean flux with only first two meas. -----
 # This is to test whether reducing observation size from 3 to 2 observations per measurement changes..
 # .. the flux
-var_test <- ggplot(fluxMean, aes(x = mean3, y = mean2)) + 
+var_test <- ggplot(fluxMean, aes(x = mean_gt_2, y = mean_2, color = n)) + 
   geom_abline(slope = 1, intercept = 0, color = "blue") +
   geom_point() + 
   labs(x = "Mean flux of all measurements", y = "Mean flux of first 2 measurements") +
   ggtitle("Mean Flux Per Collar (µmol m-2 s-1)")
 print(var_test)
 #ggsave("../diagnostics/mean_test.png")
-
-
 
 
 figures <- list()
@@ -113,3 +117,5 @@ figures$q10_plot <- q10_plot
 figures$ggE <- ggE
 figures$timeflux_plot <- timeflux_plot
 save(figures, file = "../outputs/figures.rda")
+
+cat("All done.\n")
