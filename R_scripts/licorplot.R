@@ -38,7 +38,7 @@ cv_btwn_exp <- licorDat %>%
   summarize(CV = sd(Flux) / mean(Flux), n = n(), Collars = paste(Collar, collapse = " "))
 
 # Calculate mean flux of all 3 observations in the meas. and the first 2 obs. in the meas.
-fluxMean <- dalicorDatt %>% 
+fluxMean <- licorDat %>% 
   group_by(Date, Group, Collar) %>%
   summarize(mean3 = mean(Flux), mean2 = mean(Flux[1:2]))
 
