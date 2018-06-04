@@ -35,7 +35,12 @@ figures$timeflux_plot
 figures$q10_plot
 ```
 
-### CV distribution for each collar, n = number of measurements taken
+### Soil moisture over time
 ```{r, echo = FALSE}
-figures$ggCV
+figures$timesm_plot
+```
+
+### CV distribution for each collar, n = number of measurements taken
+```{r, echo = FALSE, warning = FALSE}
+figures$ggCV_btwn_exp
 ```

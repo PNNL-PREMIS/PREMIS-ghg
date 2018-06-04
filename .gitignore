@@ -38,3 +38,4 @@ outputs/*.pdf
 outputs/*.rda
 outputs/*.csv
 R_scripts/*.html
+*.rda
