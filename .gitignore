@@ -36,5 +36,6 @@ licor_test_data/readTest.R
 .Rproj.user
 outputs/*.pdf
 outputs/*.rda
+outputs/*.csv
 R_scripts/*.html
 *.rda
