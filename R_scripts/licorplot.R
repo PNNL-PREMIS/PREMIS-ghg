@@ -74,8 +74,8 @@ print(q10_plot)
 #----- Plot collar vs. CV with regression line -----
 ggCV_btwn_exp <- ggplot(data = cv_btwn_exp, aes(x = Date, y = CV, color = Group)) +
   geom_point() +
-  ggtitle("Coefficient of Variation Among Treatments") +
-  geom_text_repel(data = cv_btwn_exp, aes(label = Group))
+  ggtitle("Coefficient of Variation Among Treatments") #+
+#  geom_text_repel(data = cv_btwn_exp, aes(label = Group))
 print(ggCV_btwn_exp)
 #ggsave("../outputs/cv_btwn_exp.pdf")
 
@@ -106,13 +106,11 @@ var_test <- ggplot(fluxMean, aes(x = mean3, y = mean2)) +
 print(var_test)
 #ggsave("../diagnostics/mean_test.png")
 
-
-
-
 figures <- list()
 figures$timesm_plot <- timesm_plot 
 figures$var_test <- var_test
-figures$ggCV <- ggCV
+figures$ggCV_btwn_exp <- ggCV_btwn_exp
+figures$ggCV_btwn_obs <- ggCV_btwn_obs
 figures$q10_plot <- q10_plot
 figures$ggE <- ggE
 figures$timeflux_plot <- timeflux_plot
