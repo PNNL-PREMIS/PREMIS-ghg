@@ -64,14 +64,14 @@ print(timeflux_plot)
 #ggsave("../outputs/timeflux.pdf", width = 8, height = 5)
 
 #----- Plot time vs. flux with error bars -----
-ggE <- ggplot(collar_to_collar_err, aes(x = Timestamp, y = meanflux, color = Group)) +
+ggE <- ggplot(collar_to_collar_err, aes(x = Timestamp, y = meanflux, group = Group, color = Experiment)) +
   geom_point() +
   geom_line() +
-  geom_errorbar(aes(ymin = meanflux - sdflux, ymax = meanflux + sdflux), color = "black") +
-  facet_wrap(~ Group, ncol = 3) +
+  geom_errorbar(aes(ymin = meanflux - sdflux, ymax = meanflux + sdflux)) +
+  facet_wrap(~ Destination_Plot, ncol = 3) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  labs(x = "Date", y = "Mean Flux (µmol m-2 s-1)") +
-  ggtitle("Collar to Collar Error")
+  labs(x = "Date", y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
+  ggtitle("Treatment means and errors")
 print(ggE)
 
 #----- Plot temperature vs. flux with regression line -----
