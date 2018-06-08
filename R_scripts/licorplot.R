@@ -10,6 +10,10 @@ library(readr)
 
 cat("Reading data...\n")
 dat <- get(load("../outputs/licordat.rda"))
+dat$Dest_Elevation <- factor(paste(dat$Dest_Elevation, "elevation"), 
+                             levels = c("Low elevation", "Medium elevation", "High elevation"))
+dat$Dest_Salinity <- factor(paste(dat$Dest_Salinity, "salinity"), 
+                            levels = c("Low salinity", "Medium salinity", "High salinity"))
 
 # Calculate daily averages for flux, temp, and soil moisture for each collar
 cat("Calculating daily averages, CVs, etc...\n")
@@ -54,7 +58,7 @@ timeflux_plot <- ggplot(daily_dat, aes(x = Timestamp, y = meanFlux, color = Grou
   geom_line() +
   facet_grid(Dest_Elevation ~ Dest_Salinity) +
   ggtitle("Flux over time") +
-  labs(x = "Date", y = "Flux (µmol m-2 s-1)") +
+  labs(x = "Date", y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 print(timeflux_plot)
 #ggsave("../outputs/timeflux.pdf", width = 8, height = 5)
