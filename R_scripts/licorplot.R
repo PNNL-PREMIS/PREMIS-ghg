@@ -17,7 +17,7 @@ dat$Dest_Salinity <- factor(paste(dat$Dest_Salinity, "salinity"),
 
 # Calculate daily averages for flux, temp, and soil moisture for each collar
 cat("Calculating daily averages, CVs, etc...\n")
-daily_dat <- licorDat %>%
+daily_dat <- dat %>%
   group_by(Date, Experiment, Group, Destination_Plot, Dest_Salinity, Dest_Elevation,
            Origin_Plot, Origin_Salinity, Origin_Elevation,Collar) %>%
   summarise(n = n(), 
@@ -39,8 +39,8 @@ cv_btwn_obs <- licorDat %>%
   group_by(Date, Group, Collar) %>% 
   summarise(CV = sd(Flux) / mean(Flux), n = n())
 
-# Calculate CV between groups
-cv_btwn_exp <- licorDat %>% 
+# Calculate CV between collars
+cv_btwn_collars <- licorDat %>% 
   group_by(Date, Group, Experiment, Collar) %>%
   summarise(n = n(), Flux = mean(Flux), Timestamp = mean(Timestamp)) %>% 
   summarize(CV = sd(Flux) / mean(Flux), n = n(), Collars = paste(Collar, collapse = " "))
@@ -77,22 +77,20 @@ print(ggE)
 #----- Plot temperature vs. flux with regression line -----
 q10_plot <- ggplot(daily_dat, aes(x = meanTemp, y = meanFlux, color = Dest_Elevation)) +
   geom_point() +
-  geom_line(size = 1) +
   geom_smooth(method = "lm") +
   ggtitle("Temperature vs. Flux") +
   labs(x = "Temperature (degC)", y = "Flux (µmol m-2 s-1)")
 print(q10_plot)
 #ggsave("../outputs/q10.pdf")
 
-#----- Plot collar vs. CV with regression line -----
-ggCV_btwn_exp <- ggplot(data = cv_btwn_exp, aes(x = Date, y = CV, color = Group)) +
+#----- Plot collar CV (within treatment) over time -----
+ggCV_btwn_collars <- ggplot(data = cv_btwn_collars, aes(x = Date, y = CV, color = Group)) +
   geom_point() +
-  ggtitle("Coefficient of Variation Among Treatments") #+
-#  geom_text_repel(data = cv_btwn_exp, aes(label = Group))
-print(ggCV_btwn_exp)
+  ggtitle("Coefficient of Variation Between Collars")
+print(ggCV_btwn_collars)
 #ggsave("../outputs/cv_btwn_exp.pdf")
 
-#----- Plot CV between observations over time -----
+#----- Plot observation CV (within collar) over time -----
 ggCV_btwn_obs <- ggplot(cv_btwn_obs, aes(x = Date, y = CV)) +
   geom_point() +
   ggtitle("Coefficient of Variation Between Measurements")
