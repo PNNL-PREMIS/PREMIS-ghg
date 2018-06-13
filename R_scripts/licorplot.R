@@ -9,15 +9,15 @@ library(dplyr)
 library(readr)
 
 cat("Reading data...\n")
-dat <- get(load("../outputs/licordat.rda"))
-dat$Dest_Elevation <- factor(paste(dat$Dest_Elevation, "elevation"), 
+licorDat <- get(load("../outputs/licordat.rda"))
+licorDat$Dest_Elevation <- factor(paste(licorDat$Dest_Elevation, "elevation"), 
                              levels = c("Low elevation", "Medium elevation", "High elevation"))
-dat$Dest_Salinity <- factor(paste(dat$Dest_Salinity, "salinity"), 
+licorDat$Dest_Salinity <- factor(paste(licorDat$Dest_Salinity, "salinity"), 
                             levels = c("Low salinity", "Medium salinity", "High salinity"))
 
 # Calculate daily averages for flux, temp, and soil moisture for each collar
 cat("Calculating daily averages, CVs, etc...\n")
-daily_dat <- dat %>%
+daily_dat <- licorDat %>%
   group_by(Date, Experiment, Group, Destination_Plot, Dest_Salinity, Dest_Elevation,
            Origin_Plot, Origin_Salinity, Origin_Elevation,Collar) %>%
   summarise(n = n(), 
@@ -25,25 +25,17 @@ daily_dat <- dat %>%
             meanFlux = mean(Flux), sdFlux = sd(Flux), 
             meanSM = mean(SMoisture), meanTemp = mean(T5))
 
-# Calculate standard deviation between collars at each plot
-collar_to_collar_err <- licorDat %>% 
-  group_by(Date, Experiment, Group, Destination_Plot, Origin_Plot, Collar) %>% 
-  # First calculate collar means...
+# Calculate standard deviation and CV between collars at each plot
+cv_btwn_collars <- licorDat %>% 
+  group_by(Date, Group, Experiment, Collar) %>%
   summarise(n = n(), Flux = mean(Flux), Timestamp = mean(Timestamp)) %>% 
-  # ...and then plot mean and standard deviations
-  summarise(n = n(), meanflux = mean(Flux), sdflux=sd(Flux),
-            Timestamp = mean(Timestamp), Collars = paste(Collar, collapse = " "))
+  summarize( n = n(), CV = sd(Flux) / mean(Flux), meanflux = mean(Flux), sdflux=sd(Flux),
+             Timestamp = mean(Timestamp), Collars = paste(Collar, collapse = " "))
 
 # Calculate CV between observations
 cv_btwn_obs <- licorDat %>% 
   group_by(Date, Group, Collar) %>% 
   summarise(CV = sd(Flux) / mean(Flux), n = n())
-
-# Calculate CV between collars
-cv_btwn_collars <- licorDat %>% 
-  group_by(Date, Group, Experiment, Collar) %>%
-  summarise(n = n(), Flux = mean(Flux), Timestamp = mean(Timestamp)) %>% 
-  summarize(CV = sd(Flux) / mean(Flux), n = n(), Collars = paste(Collar, collapse = " "))
 
 # Calculate mean flux of all 3 observations in the meas. and the first 2 obs. in the meas.
 fluxMean <- licorDat %>% 
@@ -52,16 +44,27 @@ fluxMean <- licorDat %>%
 
 cat("Making plots...\n")
 
-#----- Plot time vs. flux -----
-timeflux_plot <- ggplot(daily_dat, aes(x = Timestamp, y = meanFlux, color = Group, group = Collar)) +
+#----- Plot time vs. flux at DESTINATION plot-----
+timeflux_plot_dest <- ggplot(daily_dat, aes(x = Timestamp, y = meanFlux, color = Group, group = Collar)) +
   geom_point() +
   geom_line() +
   facet_grid(Dest_Elevation ~ Dest_Salinity) +
-  ggtitle("Flux over time") +
+  ggtitle("Flux over time - destination plots") +
   labs(x = "Date", y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
-print(timeflux_plot)
-#ggsave("../outputs/timeflux.pdf", width = 8, height = 5)
+print(timeflux_plot_dest)
+#ggsave("../outputs/timeflux_dest.pdf", width = 8, height = 5)
+
+#----- Plot time vs. flux at ORIGN plot-----
+timeflux_plot_origin <- ggplot(daily_dat, aes(x = Timestamp, y = meanFlux, color = Group, group = Collar)) +
+  geom_point() +
+  geom_line() +
+  facet_grid(Origin_Elevation ~ Origin_Salinity) +
+  ggtitle("Flux over time - origin plots") +
+  labs(x = "Date", y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+print(timeflux_plot_origin)
+#ggsave("../outputs/timeflux_origin.p
 
 #----- Plot time vs. flux with error bars -----
 ggE <- ggplot(collar_to_collar_err, aes(x = Timestamp, y = meanflux, group = Group, color = Experiment)) +
@@ -118,7 +121,8 @@ print(var_test)
 #ggsave("../diagnostics/mean_test.png")
 
 figures <- list()
-figures$timesm_plot <- timesm_plot 
+figures$timesm_plot_dest <- timesm_plot_dest
+figures$timesm_plot_origin <- timesm_plot_origin
 figures$var_test <- var_test
 figures$ggCV_btwn_exp <- ggCV_btwn_exp
 figures$ggCV_btwn_obs <- ggCV_btwn_obs
