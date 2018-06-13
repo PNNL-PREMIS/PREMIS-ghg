@@ -9,15 +9,15 @@ library(dplyr)
 library(readr)
 
 cat("Reading data...\n")
-dat <- get(load("../outputs/licordat.rda"))
-dat$Dest_Elevation <- factor(paste(dat$Dest_Elevation, "elevation"), 
+licorDat <- get(load("../outputs/licordat.rda"))
+licorDat$Dest_Elevation <- factor(paste(licorDat$Dest_Elevation, "elevation"), 
                              levels = c("Low elevation", "Medium elevation", "High elevation"))
-dat$Dest_Salinity <- factor(paste(dat$Dest_Salinity, "salinity"), 
+licorDat$Dest_Salinity <- factor(paste(licorDat$Dest_Salinity, "salinity"), 
                             levels = c("Low salinity", "Medium salinity", "High salinity"))
 
 # Calculate daily averages for flux, temp, and soil moisture for each collar
 cat("Calculating daily averages, CVs, etc...\n")
-daily_dat <- dat %>%
+daily_dat <- licorDat %>%
   group_by(Date, Experiment, Group, Destination_Plot, Dest_Salinity, Dest_Elevation,
            Origin_Plot, Origin_Salinity, Origin_Elevation,Collar) %>%
   summarise(n = n(), 
