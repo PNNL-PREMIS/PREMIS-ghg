@@ -4,6 +4,7 @@
 library(readr)
 library(dplyr)
 library(ggplot2)
+library(ggrepel)
 
 # ----- Step 1: Read tree data -----
 cat("Reading tree proximity data...\n")
@@ -30,6 +31,8 @@ tree_frequency <- proxDat %>% group_by(Collar, Distance_m) %>%
   summarize(tree_num=n()) %>%
   mutate(n=cumsum(tree_num))
 
-ggplot(data = tree_frequency, aes(x = Distance_m, y = n, group = Collar, color = Collar)) +
+tree_dist <- ggplot(data = tree_frequency, aes(x = Distance_m, y = n, group = Collar, color = Collar)) +
   geom_line() +
-  scale_color_gradient(low = "red", high = "purple")
+#  geom_text_repel(aes(label = Collar)) +
+  scale_color_gradient(low = "red", high = "purple") +
+  ggtitle("Cumulative distribution of trees")
