@@ -3,6 +3,7 @@
 
 library(readr)
 library(dplyr)
+library(ggplot2)
 
 # ----- Step 1: Read tree data -----
 cat("Reading tree proximity data...\n")
@@ -25,4 +26,10 @@ collar_to_tree_prox <- select(proxDat, -Date) %>%
   left_join(treeDat, by = "Tag")
 
 # ----- Step 5: Plot distance vs. number of trees at each collar -----
-ggplot(data = collar_to_tree_prox, aes(x = Distance_m, y = ))
+tree_frequency <- proxDat %>% group_by(Collar, Distance_m) %>%  
+  summarize(tree_num=n()) %>%
+  mutate(n=cumsum(tree_num))
+
+ggplot(data = tree_frequency, aes(x = Distance_m, y = n, group = Collar, color = Collar)) +
+  geom_line() +
+  scale_color_gradient(low = "red", high = "purple")
