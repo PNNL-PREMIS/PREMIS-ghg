@@ -14,8 +14,8 @@ proxDat$Tag <- as.character(proxDat$Tag)
 # ----- Step 2: QC/error check -----
 # Warning generated if duplicate tag/tree is found
 cat("Checking for duplicate trees...\n")
-if (all(duplicated(proxDat$Tag) == FALSE) == FALSE) {
-  stop(sprintf("\n Tags duplicated: %s", proxDat$Tag[duplicated(proxDat$Tag)]))
+if (any(duplicated(proxDat$Tag))) {
+  stop("\n Tag duplicated: ", proxDat$Tag[duplicated(proxDat$Tag)])
 } else {
   cat("No duplicates found.")
 }
@@ -28,19 +28,21 @@ treeDat <- read_csv("../inventory_data/inventory.csv")
 # ----- Step 4: Join datasets by collar -----
 cat("Joining datasets...\n")
 collar_to_tree_prox <- select(proxDat, -Date) %>% 
-  left_join(treeDat, by = "Tag") %>%
-  left_join(licorDat, by = "Collar")
-  
-collar_to_tree_prox$BA_sqcm <- (pi/(4*1000))*((collar_to_tree_prox$DBH_cm)^2)
-
+  left_join(treeDat, by = c("Site", "Plot", "Tag"), na_matches = "never") %>%
+  mutate(BA_sqm = (DBH_cm / 100 / 2) ^ 2 * pi)  # from DBH (cm) to area (m2)
 
 # ----- Step 5: Plot distance vs. number of trees at each collar -----
-tree_frequency <- proxDat %>% group_by(Collar, Distance_m) %>%  
-  summarize(tree_num=n()) %>%
-  mutate(n=cumsum(tree_num))
+tree_frequency <- collar_to_tree_prox %>% group_by(Collar, Distance_m) %>%  
+  summarize(tree_num=n(), BA_sqm = sum(BA_sqm)) %>%
+  mutate(n=cumsum(tree_num), BA_sqm = cumsum(BA_sqm))
 
 tree_dist <- ggplot(data = tree_frequency, aes(x = Distance_m, y = n, group = Collar, color = Collar)) +
   geom_line() +
 #  geom_text_repel(aes(label = Collar)) +
   scale_color_gradient(low = "red", high = "purple") +
   ggtitle("Cumulative distribution of trees")
+print(tree_dist)
+
+
+#%>%
+#  left_join(licorDat, by = "Collar")
