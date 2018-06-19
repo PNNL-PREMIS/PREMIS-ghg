@@ -43,6 +43,10 @@ tree_dist <- ggplot(data = tree_frequency, aes(x = Distance_m, y = n, group = Co
   ggtitle("Cumulative distribution of trees")
 print(tree_dist)
 
+BA_dist <- ggplot(data = tree_frequency, aes(x = Distance_m, y = BA_sqm, group = Collar, color = Collar)) +
+  geom_line() +
+  ggtitle("Cumulative distribution of basal area")
+print(BA_dist)
 
 #%>%
 #  left_join(licorDat, by = "Collar")
