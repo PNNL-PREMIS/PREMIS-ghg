@@ -36,16 +36,23 @@ tree_frequency <- collar_to_tree_prox %>% group_by(Collar, Distance_m) %>%
   summarize(tree_num=n(), BA_sqm = sum(BA_sqm)) %>%
   mutate(n=cumsum(tree_num), BA_sqm = cumsum(BA_sqm))
 
-tree_dist <- ggplot(data = tree_frequency, aes(x = Distance_m, y = n, group = Collar, color = Collar)) +
+tree_cumdist <- ggplot(data = tree_frequency, aes(x = Distance_m, y = n, group = Collar, color = Collar)) +
   geom_line() +
 #  geom_text_repel(aes(label = Collar)) +
   scale_color_gradient(low = "red", high = "purple") +
   ggtitle("Cumulative distribution of trees")
-print(tree_dist)
+print(tree_cumdist)
 
-BA_dist <- ggplot(data = tree_frequency, aes(x = Distance_m, y = BA_sqm, group = Collar, color = Collar)) +
+BA_cumdist <- ggplot(data = tree_frequency, aes(x = Distance_m, y = BA_sqm, group = Collar, color = Collar)) +
   geom_line() +
+  geom_point() +
   ggtitle("Cumulative distribution of basal area")
+print(BA_cumdist)
+
+BA_dist <- ggplot(data = collar_to_tree_prox, aes( x = Distance_m, y = BA_sqm, group = Collar)) + 
+  geom_point() + 
+  facet_grid(~ Collar) +
+  ggtitle("Distribution of basal area")
 print(BA_dist)
 
 #%>%
