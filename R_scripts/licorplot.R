@@ -67,11 +67,11 @@ print(timeflux_plot_origin)
 #ggsave("../outputs/timeflux_origin.p
 
 #----- Plot time vs. flux with error bars -----
-ggE <- ggplot(collar_to_collar_err, aes(x = Timestamp, y = meanflux, group = Group, color = Experiment)) +
+ggE <- ggplot(cv_btwn_collars, aes(x = Timestamp, y = meanflux, group = Group, color = Experiment)) +
   geom_point() +
   geom_line() +
   geom_errorbar(aes(ymin = meanflux - sdflux, ymax = meanflux + sdflux)) +
-  facet_wrap(~ Destination_Plot, ncol = 3) +
+  facet_wrap(~ Group, ncol = 3) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   labs(x = "Date", y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
   ggtitle("Treatment means and errors")
