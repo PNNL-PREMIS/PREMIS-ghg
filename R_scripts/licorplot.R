@@ -121,14 +121,14 @@ print(var_test)
 #ggsave("../diagnostics/mean_test.png")
 
 figures <- list()
-figures$timesm_plot_dest <- timesm_plot_dest
-figures$timesm_plot_origin <- timesm_plot_origin
+figures$timeflux_plot_dest <- timeflux_plot_dest
+figures$timeflux_plot_origin <- timeflux_plot_origin
 figures$var_test <- var_test
 figures$ggCV_btwn_exp <- ggCV_btwn_exp
 figures$ggCV_btwn_obs <- ggCV_btwn_obs
 figures$q10_plot <- q10_plot
 figures$ggE <- ggE
-figures$timeflux_plot <- timeflux_plot
+figures$timesm_plot <- timesm_plot
 save(figures, file = "../outputs/figures.rda")
 
 cat("All done.\n")
