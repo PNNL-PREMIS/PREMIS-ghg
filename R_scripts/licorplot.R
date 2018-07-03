@@ -67,11 +67,11 @@ print(timeflux_plot_origin)
 #ggsave("../outputs/timeflux_origin.p
 
 #----- Plot time vs. flux with error bars -----
-ggE <- ggplot(collar_to_collar_err, aes(x = Timestamp, y = meanflux, group = Group, color = Experiment)) +
+ggE <- ggplot(cv_btwn_collars, aes(x = Timestamp, y = meanflux, group = Group, color = Experiment)) +
   geom_point() +
   geom_line() +
   geom_errorbar(aes(ymin = meanflux - sdflux, ymax = meanflux + sdflux)) +
-  facet_wrap(~ Destination_Plot, ncol = 3) +
+  facet_wrap(~ Group, ncol = 3) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   labs(x = "Date", y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
   ggtitle("Treatment means and errors")
@@ -121,14 +121,14 @@ print(var_test)
 #ggsave("../diagnostics/mean_test.png")
 
 figures <- list()
-figures$timesm_plot_dest <- timesm_plot_dest
-figures$timesm_plot_origin <- timesm_plot_origin
+figures$timeflux_plot_dest <- timeflux_plot_dest
+figures$timeflux_plot_origin <- timeflux_plot_origin
 figures$var_test <- var_test
 figures$ggCV_btwn_exp <- ggCV_btwn_exp
 figures$ggCV_btwn_obs <- ggCV_btwn_obs
 figures$q10_plot <- q10_plot
 figures$ggE <- ggE
-figures$timeflux_plot <- timeflux_plot
+figures$timesm_plot <- timesm_plot
 save(figures, file = "../outputs/figures.rda")
 
 cat("All done.\n")
