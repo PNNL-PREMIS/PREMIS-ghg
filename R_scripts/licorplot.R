@@ -124,7 +124,7 @@ figures <- list()
 figures$timeflux_plot_dest <- timeflux_plot_dest
 figures$timeflux_plot_origin <- timeflux_plot_origin
 figures$var_test <- var_test
-figures$ggCV_btwn_exp <- ggCV_btwn_exp
+figures$ggCV_btwn_collars <- ggCV_btwn_collars
 figures$ggCV_btwn_obs <- ggCV_btwn_obs
 figures$q10_plot <- q10_plot
 figures$ggE <- ggE
