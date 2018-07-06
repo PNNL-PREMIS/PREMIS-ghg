@@ -42,5 +42,5 @@ figures$timesm_plot
 
 ### CV distribution for each collar, n = number of measurements taken
 ```{r, echo = FALSE, warning = FALSE}
-figures$ggCV_btwn_exp
+figures$ggCV_btwn_collars
 ```
