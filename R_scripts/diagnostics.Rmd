@@ -27,7 +27,7 @@ read.csv("../design/cores_collars.csv") %>%
 Color indicates origin/destination plot pairings. Panels: left to right - High, Medium, Low salinity; top to bottom - Low, Medium, and High elevation.
 
 ```{r, echo = FALSE}
-figures$timeflux_plot
+figures$timeflux_plot_dest
 ```
 
 ### Composite temperature and flux data for all cores
