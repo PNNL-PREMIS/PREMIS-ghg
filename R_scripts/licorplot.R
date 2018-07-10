@@ -25,6 +25,15 @@ daily_dat <- licorDat %>%
             meanFlux = mean(Flux), sdFlux = sd(Flux), 
             meanSM = mean(SMoisture), meanTemp = mean(T5))
 
+# Calculate treaetments means and s.d.
+daily_dat %>% 
+  ungroup %>% 
+  mutate(ControlGroup = if_else(Group == "Control", "Control (true)", "Transplant")) %>% 
+  group_by(Experiment, Origin_Plot, Dest_Salinity, Dest_Elevation, Destination_Plot, Date, Group, ControlGroup) %>%  
+  summarise(Timestamp = mean(Timestamp), sdFlux = sd(meanFlux), meanFlux = mean(meanFlux)) -> 
+  daily_dat_means
+daily_dat_means$Experiment[daily_dat_means$Origin_Plot == daily_dat_means$Destination_Plot] <- "Control"
+
 # Calculate standard deviation and CV between collars at each plot
 cv_btwn_collars <- licorDat %>% 
   group_by(Date, Group, Experiment, Collar) %>%
@@ -54,6 +63,16 @@ timeflux_plot_dest <- ggplot(daily_dat, aes(x = Timestamp, y = meanFlux, color =
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 print(timeflux_plot_dest)
 #ggsave("../outputs/timeflux_dest.pdf", width = 8, height = 5)
+
+timeflux_plot_dest_means <- ggplot(daily_dat_means, aes(x = Timestamp, y = meanFlux, color = Experiment, group = Group)) +
+  geom_point() +
+  geom_line(aes(linetype = ControlGroup)) +
+  geom_errorbar(aes(ymin = meanFlux - sdFlux, ymax = meanFlux + sdFlux)) +
+  facet_grid(Dest_Elevation ~ Dest_Salinity) +
+  ggtitle("Flux over time - destination plots") +
+  labs(x = "Date", y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+print(timeflux_plot_dest_means)
 
 #----- Plot time vs. flux at ORIGN plot-----
 timeflux_plot_origin <- ggplot(daily_dat, aes(x = Timestamp, y = meanFlux, color = Group, group = Collar)) +
@@ -122,6 +141,7 @@ print(var_test)
 
 figures <- list()
 figures$timeflux_plot_dest <- timeflux_plot_dest
+figures$timeflux_plot_dest_means <- timeflux_plot_dest_means
 figures$timeflux_plot_origin <- timeflux_plot_origin
 figures$var_test <- var_test
 figures$ggCV_btwn_collars <- ggCV_btwn_collars
