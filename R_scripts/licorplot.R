@@ -44,7 +44,7 @@ cv_btwn_collars <- licorDat %>%
 # Calculate CV between observations
 cv_btwn_obs <- licorDat %>% 
   group_by(Date, Group, Collar) %>% 
-  summarise(CV = sd(Flux) / mean(Flux), n = n())
+  summarise(CV = sd(Flux) / mean(Flux), n = n(), Timestamp = mean(Timestamp))
 
 # Calculate mean flux of all 3 observations in the meas. and the first 2 obs. in the meas.
 fluxMean <- licorDat %>% 
@@ -106,20 +106,20 @@ print(q10_plot)
 #ggsave("../outputs/q10.pdf")
 
 #----- Plot collar CV (within treatment) over time -----
-ggCV_btwn_collars <- ggplot(data = cv_btwn_collars, aes(x = Date, y = CV, color = Group)) +
+ggCV_btwn_collars <- ggplot(data = cv_btwn_collars, aes(x = Timestamp, y = CV, color = Group)) +
   geom_point() +
   ggtitle("Coefficient of Variation Between Collars")
 print(ggCV_btwn_collars)
 #ggsave("../outputs/cv_btwn_exp.pdf")
 
 #----- Plot observation CV (within collar) over time -----
-ggCV_btwn_obs <- ggplot(cv_btwn_obs, aes(x = Date, y = CV)) +
+ggCV_btwn_obs <- ggplot(cv_btwn_obs, aes(x = Timestamp, y = CV)) +
   geom_point() +
   ggtitle("Coefficient of Variation Between Measurements")
 print(ggCV_btwn_obs)
 
 #----- Plot time vs. soil moisture -----
-timesm_plot <- ggplot(daily_dat, aes(x = Date, y = meanSM, color = Group, group = Collar)) +
+timesm_plot <- ggplot(daily_dat, aes(x = Timestamp, y = meanSM, color = Group, group = Collar)) +
   geom_point() +
   geom_line() +
   facet_grid(Dest_Elevation ~ Dest_Salinity) +
