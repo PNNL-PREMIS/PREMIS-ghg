@@ -1,7 +1,7 @@
 
 cat("Welcome to licorstat.R\n")
 cat("Loading data...\n")
-dat <- get(load("../outputs/licordat.rda"))
+dat <- read_csv("../inventory_data/collar_to_tree_prox.csv")
 
 # Only looking at the undisturbed controls for this analysis
 cat("Filtering data...\n")

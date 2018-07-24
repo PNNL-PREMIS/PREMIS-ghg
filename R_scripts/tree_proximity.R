@@ -30,6 +30,7 @@ cat("Joining datasets...\n")
 collar_to_tree_prox <- select(proxDat, -Date) %>% 
   left_join(treeDat, by = c("Site", "Plot", "Tag"), na_matches = "never") %>%
   mutate(BA_sqm = (DBH_cm / 100 / 2) ^ 2 * pi)  # from DBH (cm) to area (m2)
+write_csv(collar_to_tree_prox, "../inventory_data/collar_to_tree_prox.csv")
 
 # ----- Step 5: Plot distance vs. number of trees at each collar -----
 tree_frequency <- collar_to_tree_prox %>% group_by(Collar, Distance_m) %>%  
