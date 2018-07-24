@@ -5,7 +5,7 @@ dat <- get(load("../outputs/licordat.rda"))
 
 # Only looking at the undisturbed controls for this analysis
 cat("Filtering data...\n")
-dat <- dat[grep("Control", dat$Group), ]
+dat <- filter(dat, Group == "Control")
 
 # We are interested in understanding the drivers of soil respiration
 # (`Flux`, µmol/m2/s). Variables that we have a priori reason to 
