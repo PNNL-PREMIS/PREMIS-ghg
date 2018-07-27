@@ -52,7 +52,7 @@ print(BA_cumdist)
 
 BA_dist <- ggplot(data = collar_to_tree_prox, aes( x = Distance_m, y = BA_sqm, group = Collar)) + 
   geom_point() + 
-  facet_grid(~ Collar) +
+  facet_wrap(~ Collar) +
   ggtitle("Distribution of basal area")
 print(BA_dist)
 
