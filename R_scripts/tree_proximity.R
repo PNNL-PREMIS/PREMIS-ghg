@@ -32,6 +32,14 @@ collar_to_tree_prox <- select(proxDat, -Date) %>%
   mutate(BA_sqm = (DBH_cm / 100 / 2) ^ 2 * pi)  # from DBH (cm) to area (m2)
 write_csv(collar_to_tree_prox, "../inventory_data/collar_to_tree_prox.csv")
 
+# Replace DBH with recorded value for non-tagged trees
+for (i in nrow(collar_to_tree_prox)) {
+  if (is.na(collar_to_tree_prox$Tag[i])) {
+    collar_to_tree_prox$DBH_cm[i] <- collar_to_tree_prox$No_tag_DBH[i]
+    collar_to_tree_prox$Species[i] <- collar_to_tree_prox$No_tag_species[i]
+  }
+}
+
 # ----- Step 5: Plot distance vs. number of trees at each collar -----
 tree_frequency <- collar_to_tree_prox %>% group_by(Collar, Distance_m) %>%  
   summarize(tree_num=n(), BA_sqm = sum(BA_sqm)) %>%
