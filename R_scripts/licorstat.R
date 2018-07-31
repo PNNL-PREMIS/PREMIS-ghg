@@ -2,6 +2,7 @@
 cat("Welcome to licorstat.R\n")
 cat("Loading data...\n")
 dat <- read_csv("../inventory_data/collar_to_tree_prox.csv")
+BAdat <- read_csv("../inventory_data/tree_frequency.csv")
 
 # Only looking at the undisturbed controls for this analysis
 cat("Filtering data...\n")
@@ -28,7 +29,7 @@ dat <- filter(dat, Group == "Control")
 cat("Fitting full model...\n")
 library(nlme)
 mod_full <- nlme::lme(log(Flux) ~ T5 + T20 + SMoisture + I(SMoisture ^ 2), 
-                      random = ~ 1 | Dest_Salinity,
+                      random = ~ 1 | BAdat$BA_sqm,
                       method = "ML", # because we're doing stepAIC below
                       data = dat)
 print(summary(mod_full))
