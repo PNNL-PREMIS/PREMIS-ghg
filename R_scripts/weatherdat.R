@@ -15,6 +15,19 @@ library(ggrepel)
 #}
 #c <- read_weather_data("../weather_data/")
 
+# Function to replace S/N with descriptive label
+swap <- function(file, subfile) {
+  for (i in 3:ncol(file)) {
+    n <- which(subfile$Sensor_SN == colnames(file)[i])
+    colnames(file)[i] <- c(subfile$Sensor_Label[n])
+  }
+}
+
+for (i in 3:ncol(HSLE)) {
+  n <- which(station_info$Sensor_SN == colnames(HSLE)[i])
+  colnames(HSLE)[i] <- c(station_info$Sensor_Label[n])
+}
+
 # Read in data
 station_info <- read_csv("../inventory_data/wstation_info.csv")
 
@@ -27,5 +40,5 @@ ggplot(data = HSLE, aes(x = Timestamp)) +
 
 # Calculate stdev for each temperature and moisture probe
 qc_weather <- HSLE %>%
-  summarize(sd(`20353471`))
+  summarize(sd(HSLE_T2M_2CM))
 
