@@ -26,12 +26,11 @@ daily_dat <- licorDat %>%
             meanSM = mean(SMoisture), meanTemp = mean(T5))
 
 # Calculate treaetments means and s.d.
-daily_dat %>% 
+daily_dat_means <- daily_dat %>% 
   ungroup %>% 
   mutate(ControlGroup = if_else(Group == "Control", "Control (true)", "Transplant")) %>% 
   group_by(Experiment, Origin_Plot, Dest_Salinity, Dest_Elevation, Destination_Plot, Date, Group, ControlGroup) %>%  
-  summarise(Timestamp = mean(Timestamp), sdFlux = sd(meanFlux), meanFlux = mean(meanFlux)) -> 
-  daily_dat_means
+  summarise(Timestamp = mean(Timestamp), sdFlux = sd(meanFlux), meanFlux = mean(meanFlux), meanSM = mean(meanSM))
 daily_dat_means$Experiment[daily_dat_means$Origin_Plot == daily_dat_means$Destination_Plot] <- "Control"
 
 # Calculate standard deviation and CV between collars at each plot
@@ -74,7 +73,17 @@ timeflux_plot_dest_means <- ggplot(daily_dat_means, aes(x = Timestamp, y = meanF
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 print(timeflux_plot_dest_means)
 
-#----- Plot time vs. flux at ORIGN plot-----
+sm_plot_dest_means <- ggplot(daily_dat_means, aes(x = Timestamp, y = meanSM, color = Experiment, group = Group)) +
+  geom_point() +
+  geom_line(aes(linetype = ControlGroup)) +
+#  geom_errorbar(aes(ymin = meanFlux - sdFlux, ymax = meanFlux + sdFlux)) +
+  facet_grid(Dest_Elevation ~ Dest_Salinity) +
+  ggtitle("Soil moisture over time - destination plots") +
+  labs(x = "Date") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+print(sm_plot_dest_means)
+
+#----- Plot time vs. flux at ORIGIN plot-----
 timeflux_plot_origin <- ggplot(daily_dat, aes(x = Timestamp, y = meanFlux, color = Group, group = Collar)) +
   geom_point() +
   geom_line() +
@@ -142,6 +151,7 @@ print(var_test)
 figures <- list()
 figures$timeflux_plot_dest <- timeflux_plot_dest
 figures$timeflux_plot_dest_means <- timeflux_plot_dest_means
+figures$sm_plot_dest_means <- sm_plot_dest_means
 figures$timeflux_plot_origin <- timeflux_plot_origin
 figures$var_test <- var_test
 figures$ggCV_btwn_collars <- ggCV_btwn_collars
