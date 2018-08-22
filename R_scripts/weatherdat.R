@@ -6,9 +6,11 @@ library(dplyr)
 library(ggplot2)
 library(ggrepel)
 library(lubridate)
+library(tidyr)
 
 # Function to replace S/N with descriptive label
-swap <- function(file, subfile) {
+read_wxdat <- function(file) {
+  subfile <- read_csv("../inventory_data/wstation_info.csv")
   wdat <- file %>% 
     read_csv(skip=1) %>%
     gather(label, value, -1:-2) %>% 
@@ -16,21 +18,19 @@ swap <- function(file, subfile) {
     separate(firstpart, sep = ",", into = c("SensorType", "info")) %>%
     select(- info)
   wdat$Timestamp <- mdy_hms(wdat$`Date Time, GMT-04:00`)
-  wdat$Sensor_SN <- gsub(")", "", wdat$Sensor_SN)
-  
-  wdat %>%
-    select(-`Date Time, GMT-04:00`) %>%
-    left_join(wdat, subfile, by = "Sensor_SN")
-  
+  wdat$Sensor_SN <- as.integer(gsub(")", "", wdat$Sensor_SN))
+ 
+  wdat <- left_join(wdat, subfile, by = "Sensor_SN") 
+  wdat <- select(wdat, -`Date Time, GMT-04:00`)
 }
 
-# Read in data
-station_info <- read_csv("../inventory_data/wstation_info.csv")
+LSLE <- read_wxdat("../weather_data/20377496_LSLE_20180718.csv")
+MSLE <- read_wxdat("../weather_data/20377497_MSLE_20180718.csv")
+HSLE <- read_wxdat("../weather_data/20377498_HSLE_20180718.csv")
 
-#need to pull out sensor s/n and join with sensor inventory data
 
-ggplot(data = HSLE, aes(x = Timestamp)) + 
-  geom_line(aes(y = `20378027`))
+ggplot(data = HSLE, aes(x = Timestamp, group = Sensor_Type)) + 
+  geom_line(aes(y = SensorType == "Temp"))
 
 # Calculate stdev for each temperature and moisture probe
 qc_weather <- HSLE %>%
