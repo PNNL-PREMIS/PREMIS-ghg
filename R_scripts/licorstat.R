@@ -6,6 +6,7 @@ dat <- get(load("../outputs/licordat.rda"))
 # Only looking at the undisturbed controls for this analysis
 cat("Filtering data...\n")
 dat <- filter(dat, Group == "Control")
+#only want true controls
 
 # We are interested in understanding the drivers of soil respiration
 # (`Flux`, µmol/m2/s). Variables that we have a priori reason to 
@@ -27,7 +28,7 @@ dat <- filter(dat, Group == "Control")
 # To do so we use a linear mixed-effects model.
 cat("Fitting full model...\n")
 library(nlme)
-mod_full <- nlme::lme(log(Flux) ~ T5 + T20 + SMoisture + I(SMoisture ^ 2), 
+mod_full <- nlme::lme(log(Flux) ~ T5 + T20 + SMoisture + I(SMoisture ^ 2) + BA5, 
                       random = ~ 1 | Dest_Salinity,
                       method = "ML", # because we're doing stepAIC below
                       data = dat)
