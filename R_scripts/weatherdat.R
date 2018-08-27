@@ -26,16 +26,20 @@ read_wxdat <- function(file) {
 
 }
 
-LSLE <- read_wxdat("../weather_data/LSLE_weather_20180809.csv")
-MSLE <- read_wxdat("../weather_data/MSLE_weather_20180809.csv")
-HSLE <- read_wxdat("../weather_data/HSLE_weather_20180806.csv")
-
+cat("Reading weather data...")
+wx_LSLE <- read_wxdat("../weather_data/LSLE_weather_20180809.csv")
+wx_MSLE <- read_wxdat("../weather_data/MSLE_weather_20180809.csv")
+wx_HSLE <- read_wxdat("../weather_data/HSLE_weather_20180806.csv")
 all_sites <- bind_rows(LSLE, MSLE, HSLE)
 
-#filer()
-ggplot(data = HSLE, aes(x = Timestamp, group = Sensor_Type)) + 
-  geom_line(aes(y = SensorType == "Temp"))
+cat("Generating wx diagnotics...")
+# Calculate stdev for each temperature and moisture probe
+qc_wx <- all_sites %>%
+  group_by(Site, Sensor_SN, Sensor_Group, Sensor_Type, Sensor_Depth) %>%
+  summarize(n = n(), meanValue = mean(Value)) #%>%
+#  summarize(n = n(), )
 
+cat("Generating weather plots...")
 ggplot(filter(all_sites, Sensor_Group == "Water Content"), aes(Timestamp, Value, color = Site, group = Sensor_SN)) + 
   facet_wrap(~Sensor_Depth) + 
   geom_line()
@@ -46,7 +50,11 @@ ggplot(filter(all_sites, Sensor_Type == "TRH"), aes(Timestamp, Value, color = Se
 ggplot(filter(all_sites, Sensor_Group == "Temp"), aes(Timestamp, Value, color = Site, group = Sensor_SN)) + 
   facet_wrap(~Sensor_Depth) + 
   geom_line()
+#need to save plots when finalized
 
-# Calculate stdev for each temperature and moisture probe
-qc_weather <- HSLE %>%
-  summarize(sd(HSLE_T2M_2CM))
+cat("Reading conductivity data...")
+cond_HSLE <- read_csv("../well_data/HSLE_conductivity_20180806.csv", skip = 2,
+                      col_names = c("#", "Timestamp", "Low_Range", "High_Range", "Temp"))
+cond_HSLE$Timestamp <- mdy_hm(cond_HSLE$Timestamp)
+
+  
