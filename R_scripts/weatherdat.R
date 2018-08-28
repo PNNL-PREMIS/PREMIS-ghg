@@ -35,9 +35,8 @@ all_sites <- bind_rows(wx_LSLE, wx_MSLE, wx_HSLE)
 cat("Generating wx diagnotics...")
 # Calculate stdev for each temperature and moisture probe
 qc_wx <- all_sites %>%
-  group_by(Site, Sensor_SN, Sensor_Group, Sensor_Type, Sensor_Depth) %>%
-  summarize(n = n(), meanValue = mean(Value)) #%>%
-#  summarize(n = n(), )
+  group_by(Site, Sensor_Depth, Sensor_Group, Timestamp) %>%
+  summarize(n = n(), meanValue = mean(Value), sdValue = sd(Value))
 
 cat("Generating weather plots...")
 ggplot(filter(all_sites, Sensor_Group == "Water Content"), aes(Timestamp, Value, color = Site, group = Sensor_SN)) + 
@@ -50,17 +49,31 @@ ggplot(filter(all_sites, Sensor_Type == "TRH"), aes(Timestamp, Value, color = Se
 ggplot(filter(all_sites, Sensor_Group == "Temp"), aes(Timestamp, Value, color = Site, group = Sensor_SN)) + 
   facet_wrap(~Sensor_Depth) + 
   geom_line()
+
+ggplot(filter(qc_wx, Sensor_Depth == "20CM"), aes(Timestamp, meanValue, color = Site)) +
+  facet_wrap(~Site) +
+  geom_line() +
+  geom_errorbar(aes(ymin = meanValue - sdValue, ymax = meanValue + sdValue))
 #need to save plots when finalized
 
 cat("Reading conductivity data...")
 cond_HSLE <- read_csv("../well_data/HSLE_conductivity_20180806.csv", skip = 2,
                       col_names = c("#", "Timestamp", "Low_Range", "High_Range", "Temp"))
-cond_HSLE$Timestamp <- mdy_hm(cond_HSLE$Timestamp)
+cond_HSLE$Timestamp <- mdy_hms(cond_HSLE$Timestamp)
 
 cond_MSLE <- read_csv("../well_data/MSLE_conductivity_20180809.csv", skip = 2,
                       col_names = c("#", "Timestamp", "Low_Range", "High_Range", "Temp"))
-cond_MSLE$Timestamp <- mdy_hm(cond_MSLE$Timestamp)
+cond_MSLE$Timestamp <- mdy_hms(cond_MSLE$Timestamp)
 
 cond_LSLE <- read_csv("../well_data/LSLE_conductivity_20180809.csv", skip = 2,
                       col_names = c("#", "Timestamp", "Low_Range", "High_Range", "Temp"))
-cond_LSLE$Timestamp <- mdy_hm(cond_LSLE$Timestamp)
+cond_LSLE$Timestamp <- mdy_hms(cond_LSLE$Timestamp)
+
+cat("Plotting conductivity data...")
+ggplot(cond_LSLE, aes(x = Timestamp)) +
+  geom_line(aes(y = Low_Range)) +
+  geom_line(aes(y = High_Range), linetype = 2)
+
+cat("Saving datasets...")
+write_csv(all_sites, "../weather_data/wx_all_sites.csv")
+write_csv(cond_LSLE, "../well_data/cond_LSLE")
