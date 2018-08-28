@@ -30,7 +30,7 @@ cat("Reading weather data...")
 wx_LSLE <- read_wxdat("../weather_data/LSLE_weather_20180809.csv")
 wx_MSLE <- read_wxdat("../weather_data/MSLE_weather_20180809.csv")
 wx_HSLE <- read_wxdat("../weather_data/HSLE_weather_20180806.csv")
-all_sites <- bind_rows(LSLE, MSLE, HSLE)
+all_sites <- bind_rows(wx_LSLE, wx_MSLE, wx_HSLE)
 
 cat("Generating wx diagnotics...")
 # Calculate stdev for each temperature and moisture probe
@@ -57,4 +57,10 @@ cond_HSLE <- read_csv("../well_data/HSLE_conductivity_20180806.csv", skip = 2,
                       col_names = c("#", "Timestamp", "Low_Range", "High_Range", "Temp"))
 cond_HSLE$Timestamp <- mdy_hm(cond_HSLE$Timestamp)
 
-  
+cond_MSLE <- read_csv("../well_data/MSLE_conductivity_20180809.csv", skip = 2,
+                      col_names = c("#", "Timestamp", "Low_Range", "High_Range", "Temp"))
+cond_MSLE$Timestamp <- mdy_hm(cond_MSLE$Timestamp)
+
+cond_LSLE <- read_csv("../well_data/LSLE_conductivity_20180809.csv", skip = 2,
+                      col_names = c("#", "Timestamp", "Low_Range", "High_Range", "Temp"))
+cond_LSLE$Timestamp <- mdy_hm(cond_LSLE$Timestamp)
