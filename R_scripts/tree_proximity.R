@@ -67,5 +67,10 @@ BA_dist <- ggplot(data = collar_to_tree_prox, aes( x = Distance_m, y = BA_sqm, g
   ggtitle("Distribution of basal area")
 print(BA_dist)
 
-#%>%
-#  left_join(licorDat, by = "Collar")
+# Calculate cumulative basal area at each distance 
+BA_dat <- list()
+for (i in 1:10) {
+  m <- collar_to_tree_prox[which(collar_to_tree_prox$Distance_m <= 5),]
+  BA_dat[[BA_i]] <- m %>% group_by(Collar) %>%
+    summarize(n = n(), BA_i = sum(BA_sqm))
+}
