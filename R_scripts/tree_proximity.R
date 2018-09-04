@@ -39,6 +39,14 @@ no_tags <- is.na(collar_to_tree_prox$Tag)
 collar_to_tree_prox$DBH_cm[no_tags] <- collar_to_tree_prox$No_tag_DBH[no_tags]
 collar_to_tree_prox$Species[no_tags] <- collar_to_tree_prox$No_tag_species[no_tags]
 
+# Replace DBH with recorded value for non-tagged trees
+for (i in nrow(collar_to_tree_prox)) {
+  if (is.na(collar_to_tree_prox$Tag[i])) {
+    collar_to_tree_prox$DBH_cm[i] <- collar_to_tree_prox$No_tag_DBH[i]
+    collar_to_tree_prox$Species[i] <- collar_to_tree_prox$No_tag_species[i]
+  }
+}
+
 # ----- Step 5: Plot distance vs. number of trees at each collar -----
 tree_frequency <- collar_to_tree_prox %>% group_by(Collar, Distance_m) %>%  
   summarize(tree_num=n(), BA_sqm = sum(BA_sqm)) %>%

@@ -25,6 +25,14 @@ daily_dat <- licorDat %>%
             meanFlux = mean(Flux), sdFlux = sd(Flux), 
             meanSM = mean(SMoisture), meanTemp = mean(T5))
 
+# Calculate treaetments means and s.d.
+daily_dat_means <- daily_dat %>% 
+  ungroup %>% 
+  mutate(ControlGroup = if_else(Group == "Control", "Control (true)", "Transplant")) %>% 
+  group_by(Experiment, Origin_Plot, Dest_Salinity, Dest_Elevation, Destination_Plot, Date, Group, ControlGroup) %>%  
+  summarise(Timestamp = mean(Timestamp), sdFlux = sd(meanFlux), meanFlux = mean(meanFlux), meanSM = mean(meanSM))
+daily_dat_means$Experiment[daily_dat_means$Origin_Plot == daily_dat_means$Destination_Plot] <- "Control"
+
 # Calculate standard deviation and CV between collars at each plot
 cv_btwn_collars <- licorDat %>% 
   group_by(Date, Group, Experiment, Collar) %>%
@@ -35,7 +43,7 @@ cv_btwn_collars <- licorDat %>%
 # Calculate CV between observations
 cv_btwn_obs <- licorDat %>% 
   group_by(Date, Group, Collar) %>% 
-  summarise(CV = sd(Flux) / mean(Flux), n = n())
+  summarise(CV = sd(Flux) / mean(Flux), n = n(), Timestamp = mean(Timestamp))
 
 # Calculate mean flux of all 3 observations in the meas. and the first 2 obs. in the meas.
 fluxMean <- licorDat %>% 
@@ -55,7 +63,27 @@ timeflux_plot_dest <- ggplot(daily_dat, aes(x = Timestamp, y = meanFlux, color =
 print(timeflux_plot_dest)
 #ggsave("../outputs/timeflux_dest.pdf", width = 8, height = 5)
 
-#----- Plot time vs. flux at ORIGN plot-----
+timeflux_plot_dest_means <- ggplot(daily_dat_means, aes(x = Timestamp, y = meanFlux, color = Experiment, group = Group)) +
+  geom_point() +
+  geom_line(aes(linetype = ControlGroup)) +
+  geom_errorbar(aes(ymin = meanFlux - sdFlux, ymax = meanFlux + sdFlux)) +
+  facet_grid(Dest_Elevation ~ Dest_Salinity) +
+  ggtitle("Flux over time - destination plots") +
+  labs(x = "Date", y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+print(timeflux_plot_dest_means)
+
+sm_plot_dest_means <- ggplot(daily_dat_means, aes(x = Timestamp, y = meanSM, color = Experiment, group = Group)) +
+  geom_point() +
+  geom_line(aes(linetype = ControlGroup)) +
+#  geom_errorbar(aes(ymin = meanFlux - sdFlux, ymax = meanFlux + sdFlux)) +
+  facet_grid(Dest_Elevation ~ Dest_Salinity) +
+  ggtitle("Soil moisture over time - destination plots") +
+  labs(x = "Date") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+print(sm_plot_dest_means)
+
+#----- Plot time vs. flux at ORIGIN plot-----
 timeflux_plot_origin <- ggplot(daily_dat, aes(x = Timestamp, y = meanFlux, color = Group, group = Collar)) +
   geom_point() +
   geom_line() +
@@ -87,20 +115,20 @@ print(q10_plot)
 #ggsave("../outputs/q10.pdf")
 
 #----- Plot collar CV (within treatment) over time -----
-ggCV_btwn_collars <- ggplot(data = cv_btwn_collars, aes(x = Date, y = CV, color = Group)) +
+ggCV_btwn_collars <- ggplot(data = cv_btwn_collars, aes(x = Timestamp, y = CV, color = Group)) +
   geom_point() +
   ggtitle("Coefficient of Variation Between Collars")
 print(ggCV_btwn_collars)
 #ggsave("../outputs/cv_btwn_exp.pdf")
 
 #----- Plot observation CV (within collar) over time -----
-ggCV_btwn_obs <- ggplot(cv_btwn_obs, aes(x = Date, y = CV)) +
+ggCV_btwn_obs <- ggplot(cv_btwn_obs, aes(x = Timestamp, y = CV)) +
   geom_point() +
   ggtitle("Coefficient of Variation Between Measurements")
 print(ggCV_btwn_obs)
 
 #----- Plot time vs. soil moisture -----
-timesm_plot <- ggplot(daily_dat, aes(x = Date, y = meanSM, color = Group, group = Collar)) +
+timesm_plot <- ggplot(daily_dat, aes(x = Timestamp, y = meanSM, color = Group, group = Collar)) +
   geom_point() +
   geom_line() +
   facet_grid(Dest_Elevation ~ Dest_Salinity) +
@@ -122,9 +150,11 @@ print(var_test)
 
 figures <- list()
 figures$timeflux_plot_dest <- timeflux_plot_dest
+figures$timeflux_plot_dest_means <- timeflux_plot_dest_means
+figures$sm_plot_dest_means <- sm_plot_dest_means
 figures$timeflux_plot_origin <- timeflux_plot_origin
 figures$var_test <- var_test
-figures$ggCV_btwn_exp <- ggCV_btwn_exp
+figures$ggCV_btwn_collars <- ggCV_btwn_collars
 figures$ggCV_btwn_obs <- ggCV_btwn_obs
 figures$q10_plot <- q10_plot
 figures$ggE <- ggE
