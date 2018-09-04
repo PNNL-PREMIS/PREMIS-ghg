@@ -14,10 +14,12 @@ proxDat$Tag <- as.character(proxDat$Tag)
 # ----- Step 2: QC/error check -----
 # Warning generated if duplicate tag/tree is found
 cat("Checking for duplicate trees...\n")
-if (any(duplicated(proxDat$Tag))) {
-  stop("\n Tag duplicated: ", proxDat$Tag[duplicated(proxDat$Tag)])
-} else {
-  cat("No duplicates found.")
+for(i in nrow(proxDat)) {
+  if (any(duplicated(proxDat$Tag))) {
+    stop("\n Tag duplicated: ", proxDat$Tag[duplicated(proxDat$Tag)])
+  } else {
+    cat("No duplicates found.")
+  }
 }
 
 # ----- Step 3: Read Licor and tre inventory data -----
@@ -30,6 +32,12 @@ cat("Joining datasets...\n")
 collar_to_tree_prox <- select(proxDat, -Date) %>% 
   left_join(treeDat, by = c("Site", "Plot", "Tag"), na_matches = "never") %>%
   mutate(BA_sqm = (DBH_cm / 100 / 2) ^ 2 * pi)  # from DBH (cm) to area (m2)
+write_csv(collar_to_tree_prox, "../inventory_data/collar_to_tree_prox.csv")
+
+# Replace DBH with recorded value for non-tagged trees
+no_tags <- is.na(collar_to_tree_prox$Tag)
+collar_to_tree_prox$DBH_cm[no_tags] <- collar_to_tree_prox$No_tag_DBH[no_tags]
+collar_to_tree_prox$Species[no_tags] <- collar_to_tree_prox$No_tag_species[no_tags]
 
 # Replace DBH with recorded value for non-tagged trees
 for (i in nrow(collar_to_tree_prox)) {
@@ -43,6 +51,7 @@ for (i in nrow(collar_to_tree_prox)) {
 tree_frequency <- collar_to_tree_prox %>% group_by(Collar, Distance_m) %>%  
   summarize(tree_num=n(), BA_sqm = sum(BA_sqm)) %>%
   mutate(n=cumsum(tree_num), BA_sqm = cumsum(BA_sqm))
+write_csv(tree_frequency, "../inventory_data/tree_frequency.csv")
 
 tree_cumdist <- ggplot(data = tree_frequency, aes(x = Distance_m, y = n, group = Collar, color = Collar)) +
   geom_line() +
@@ -59,9 +68,14 @@ print(BA_cumdist)
 
 BA_dist <- ggplot(data = collar_to_tree_prox, aes( x = Distance_m, y = BA_sqm, group = Collar)) + 
   geom_point() + 
-  facet_grid(~ Collar) +
+  facet_wrap(~ Collar) +
   ggtitle("Distribution of basal area")
 print(BA_dist)
 
-#%>%
-#  left_join(licorDat, by = "Collar")
+# Calculate cumulative basal area at each distance 
+BA_dat <- list()
+for (i in 1:10) {
+  m <- collar_to_tree_prox[which(collar_to_tree_prox$Distance_m <= i),]
+  BA_dat[[BA_i]] <- m %>% group_by(Collar) %>%
+    summarize(n = n(), BA_i = sum(BA_sqm))
+}

@@ -1,7 +1,8 @@
 
 cat("Welcome to licorstat.R\n")
 cat("Loading data...\n")
-dat <- get(load("../outputs/licordat.rda"))
+dat <- read_csv("../inventory_data/collar_to_tree_prox.csv")
+BAdat <- read_csv("../inventory_data/tree_frequency.csv")
 
 # Only looking at the undisturbed controls for this analysis
 cat("Filtering data...\n")
@@ -28,6 +29,7 @@ dat <- filter(dat, Group == "Control")
 # To do so we use a linear mixed-effects model.
 cat("Fitting full model...\n")
 library(nlme)
+
 mod_full <- nlme::lme(log(Flux) ~ T5 + T20 + SMoisture + I(SMoisture ^ 2) + BA5, 
                       random = ~ 1 | Dest_Salinity,
                       method = "ML", # because we're doing stepAIC below
