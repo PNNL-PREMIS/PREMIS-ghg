@@ -35,12 +35,9 @@ collar_to_tree_prox <- select(proxDat, -Date) %>%
 write_csv(collar_to_tree_prox, "../inventory_data/collar_to_tree_prox.csv")
 
 # Replace DBH with recorded value for non-tagged trees
-for (i in nrow(collar_to_tree_prox)) {
-  if (is.na(collar_to_tree_prox$Tag[i])) {
-    collar_to_tree_prox$DBH_cm[i] <- collar_to_tree_prox$No_tag_DBH[i]
-    collar_to_tree_prox$Species[i] <- collar_to_tree_prox$No_tag_species[i]
-  }
-}
+no_tags <- is.na(collar_to_tree_prox$Tag)
+collar_to_tree_prox$DBH_cm[no_tags] <- collar_to_tree_prox$No_tag_DBH[no_tags]
+collar_to_tree_prox$Species[no_tags] <- collar_to_tree_prox$No_tag_species[no_tags]
 
 # ----- Step 5: Plot distance vs. number of trees at each collar -----
 tree_frequency <- collar_to_tree_prox %>% group_by(Collar, Distance_m) %>%  
@@ -70,7 +67,7 @@ print(BA_dist)
 # Calculate cumulative basal area at each distance 
 BA_dat <- list()
 for (i in 1:10) {
-  m <- collar_to_tree_prox[which(collar_to_tree_prox$Distance_m <= 5),]
+  m <- collar_to_tree_prox[which(collar_to_tree_prox$Distance_m <= i),]
   BA_dat[[BA_i]] <- m %>% group_by(Collar) %>%
     summarize(n = n(), BA_i = sum(BA_sqm))
 }
