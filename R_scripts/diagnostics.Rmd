@@ -11,6 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
 figures <- get(load("../outputs/figures.rda"))
+wxfigures <- get(load("../outputs/wxfigures.rda"))
 ```
 
 ```{r, echo = FALSE, message = FALSE}
@@ -43,4 +44,19 @@ figures$sm_plot_dest_means
 ### CV distribution for each collar, n = number of measurements taken
 ```{r, echo = FALSE, warning = FALSE}
 figures$ggCV_btwn_collars
+```
+
+### Soil temperature at 20CM and 2CM depth
+```{r, echo = FALSE}
+wxfigures$stemp_wxplot
+```
+
+### Air temperature and Relative Humidity
+```{r, echo = FALSE}
+wxfigures$TRH_wxplot
+```
+
+### Soil moisure at 20CM and 2CM depth
+```{r, echo = FALSE}
+wxfigures$smoisture_wxplot
 ```
