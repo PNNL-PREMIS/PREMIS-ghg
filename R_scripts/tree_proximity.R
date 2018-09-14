@@ -51,7 +51,7 @@ for (i in nrow(collar_to_tree_prox)) {
 tree_frequency <- collar_to_tree_prox %>% group_by(Collar, Distance_m) %>%  
   summarize(tree_num=n(), BA_sqm = sum(BA_sqm)) %>%
   mutate(n=cumsum(tree_num), BA_sqm = cumsum(BA_sqm))
-write_csv(tree_frequency, "../inventory_data/tree_frequency.csv")
+write_csv(tree_frequency, "../outputs/tree_frequency.csv")
 
 tree_cumdist <- ggplot(data = tree_frequency, aes(x = Distance_m, y = n, group = Collar, color = Collar)) +
   geom_line() +
