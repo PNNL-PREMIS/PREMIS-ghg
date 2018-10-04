@@ -20,7 +20,7 @@ read_LTlicor_data <- function(filename) {
   
   # Find beginning and end indices of raw data for each measurment
   tablestarts <- grep("^Type", file)
-  tablestops <- grep("^CrvFitStatus:", file)
+  tablestops <- grep("^GasColumnID:", file)
   
   # Average values and place in matrix to be added to final df
   tcham <- matrix()
@@ -81,7 +81,8 @@ save(LT_licorDat, file = "../outputs/LT_licordat.rda")
 write_csv(LT_licorDat, "../outputs/LT_licor_data.csv")
 
 ggplot(data = LT_test, aes(x = Timestamp, y = Flux, group = Port, color = Port)) + 
-  geom_line() +scale_colour_gradientn(colours = rainbow(9)) + 
+  geom_line(size = 1) +scale_colour_gradientn(colours = rainbow(9)) + 
   ggtitle("Long Term Chamber Measurements") #+
   geom_text_repel()
+  
 cat("All done.\n")
