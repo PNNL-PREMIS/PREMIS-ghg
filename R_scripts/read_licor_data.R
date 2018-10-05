@@ -33,11 +33,13 @@ read_licor_data <- function(filename) {
     record <- file[record_starts[i]:record_end]
     # Get rid of blank lines because that can screw up paste(collapse()) below
     record <- record[grep("^$", record, invert = TRUE)]
-    cat(i, record_starts[i], ":", record_end, length(record), "\n")
+    #cat(i, record_starts[i], ":", record_end, length(record), "\n")
     
     # Find the table start and stop
     table_start <- tail(grep("^Type\t", record), n = 1)
-    table_stop <- tail(grep("^CrvFitStatus:\t", record), n = 1)
+    # Look for the next non-numeric line
+    table_stop <-  head(grep("^[A-Z]", record[-(1:table_start)]), n = 1) + table_start
+
     if(length(table_stop) == 0) {
       message("Skipping table ", i, " ", record_starts[i], ":", record_end)
       next()
