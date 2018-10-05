@@ -18,4 +18,5 @@ write_csv(LT_licorDat, "../outputs/LT_licor_data.csv")
 ggplot(data = LT_licorDat, aes(x = Timestamp, y = Flux, group = Port, color = Port)) + 
   geom_line() + scale_colour_gradientn(colours = rainbow(9)) + 
   ggtitle("Long Term Chamber Measurements") #+ geom_text_repel()
+
 cat("All done.\n")
