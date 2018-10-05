@@ -12,14 +12,16 @@ source("read_licor_data.R")
 read_licor_dir("../licor_data/") %>%
   select(-Port) %>%           # not continuous data, so remove
   rename(T20 = Comments) %>%  # we record T20 in the comments field
-  mutate(T20 = as.numeric(T20)) ->
+  rename(Collar = Label) %>%  # we record Collar in the Label field
+  mutate(T20 = as.numeric(T20),
+         Collar = as.numeric(Collar)) ->
   rawDat
 # `collarDat` holds information about the collars, based on collar number: 
 # its origin plot, and (if a transplant collar) into what hole it ended up 
-collarDat <- read_csv("../design/cores_collars.csv")
+collarDat <- read_csv("../design/cores_collars.csv", col_types = "cciiicic")
 # `plotDat` holds information based on the plot code: longitude, latitude,
 # area, and salinity/elevation levels
-plots <- read_csv("../design/plots.csv")
+plots <- read_csv("../design/plots.csv", col_types = "ccccddi")
 
 cat("Joining datasets and calculating...\n")
 
