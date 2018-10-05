@@ -14,7 +14,7 @@ read_licor_dir("../licor_data/") %>%
   rename(T20 = Comments) %>%  # we record T20 in the comments field
   rename(Collar = Label) %>%  # we record Collar in the Label field
   mutate(T20 = as.numeric(T20),
-         Collar = as.numeric(Collar)) ->
+         Collar = as.integer(Collar)) ->
   rawDat
 # `collarDat` holds information about the collars, based on collar number: 
 # its origin plot, and (if a transplant collar) into what hole it ended up 

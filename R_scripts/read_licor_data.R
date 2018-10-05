@@ -6,6 +6,12 @@ read_licor_data <- function(filename) {
   nobs <- length(file[grepl("^Obs#:", file)])
   cat("Reading...", filename, " lines =", length(file), "observations =", nobs, "\n")
   
+  record_sep <- grep(pattern = "^$", file)
+  
+  find_parse <- function(tabletext, lbl) {
+    line <- tail(grep(lbl, tabletext), n = 1)
+    if(length(line)) gsub(lbl, "", tabletext[line]) else ""
+  }
   label <- file[grepl("^Label:", file)]  # Pull out variables
   flux <- file[grepl("^Lin_Flux:", file)]
   r2 <- file[grepl("^Lin_R2:", file)]
@@ -13,58 +19,58 @@ read_licor_data <- function(filename) {
   comments <- file[grepl("^Comments:", file)]
   port <- file[grepl("^Port#:", file)]  # may or may not be present
   
-  # Find beginning and end indices of raw data for each measurment
-  tablestarts <- grep("^Type", file)
-  tablestops <- grep("^CrvFitStatus", file)
-  if(length(tablestarts) != length(tablestops)) {
-    stop("Table start/stops not same length!")  
+  results <- tibble(table = seq_along(record_sep),
+                    Timestamp = as_datetime(NA),
+                    Label = NA_character_,
+                    Port = NA_integer_,
+                    Flux = NA_character_,
+                    R2 = NA_character_,
+                    T5 = NA_character_,
+                    Tcham = NA_character_,
+                    SMoist = NA_character_,
+                    Comments = NA_character_)
+  
+  previous_table_end <- 0
+  for (i in seq_along(record_sep)) {
+    tabletext <- file[(previous_table_end + 1):record_sep[i]]
+    #cat(i, length(tabletext), " ")
+    #browser()
+    # Find the table start and stop
+    table_start <- tail(grep("^Type\t", tabletext), n = 1)
+    table_stop <- tail(grep("^CrvFitStatus:\t", tabletext), n = 1)
+    if(length(table_stop) == 0) {
+      message("Skipping table", i, previous_table_end + 1:record_sep[i])
+      next()
+    }
+    # Find names, discarding any trailing 'Annotation' column
+    col_names <- strsplit(file[table_start], "\t", fixed = TRUE)[[1]]
+    col_names <- col_names[!grepl("Annotation", col_names)]
+    #cat("\tReading table at", table_start, ":", tablestops[i], "...\n")
+    tabletext[(table_start+1):(table_stop-1)] %>% 
+      paste(collapse = "\n") %>% 
+      readr::read_tsv(col_names = col_names) ->
+      df
+    
+    index <- which(df$Type == 1)
+    results$Timestamp[i] <- mean(df$Date)
+    results$Label[i] <- find_parse(tabletext, "^Label:\t")
+    results$Port[i] <- find_parse(tabletext, "^Port#:\t")
+    results$Flux[i] <- find_parse(tabletext, "^Exp_Flux:\t")
+    results$R2[i] <- find_parse(tabletext, "^Exp_R2:\t")
+    results$T5[i] <- mean(df$V4[index])
+    results$Tcham[i] <- mean(df$Tcham[index])
+    results$SMoist[i] <- mean(df$V3[index])
+    results$Comments[i] <- find_parse(tabletext, "^Comments:\t")
+    previous_table_end <- record_sep[i]
   }
 
-  # Average values and place in matrix to be added to final df
-  tcham <- matrix()
-  t5 <- matrix()
-  smoist <- matrix()
-  #browser()
-  
-  for (i in seq_along(tablestarts)) {
-    col_names <- strsplit(file[tablestarts[i]], "\t", fixed = TRUE)[[1]]
-    col_names <- col_names[!grepl("Annotation", col_names)]
-    df <- suppressMessages(readr::read_tsv(filename, skip = tablestarts[i], 
-                                           n_max = tablestops[i] - tablestarts[i] - 1,
-                                           col_names = col_names))
-    index <- which(df$Type == 1)
-    tcham[i] <- round(mean(df$Tcham[index]), digits = 2)
-    t5[i] <- round(mean(df$V4[index]), digits = 2)
-    smoist[i] <- round(mean(df$V3[index]), digits = 2)
-  }
-  
-  # Separate into data frame
-  sLabel <- separate(data.frame(label), label,into = c("name", "label"), sep = "\\t")  
-  sFlux <- separate(data.frame(flux), flux, into = c("name", "flux"), sep = "\\t")
-  sR2 <- separate(data.frame(r2), r2, into = c("name", "r2"), sep = "\\t")
-  sDate <- separate(data.frame(date), date, into = c("type", "etime", "date", "time"), 
-                    sep = "[:space:]" , extra = "drop") 
-  sComments <- separate(data.frame(comments), comments, into = c("name", "comments"), sep = "\\t")
-  sPort <- separate(data.frame(port), port, into = c("name", "port"), sep = "\\t")
-  
-  tstamp <- ymd_hms((paste(sDate$date, sDate$time)))  # Parse into "POSIXct/POSIXt" - formatted timestamp
-  lengths <- c(nrow(sLabel),nrow(sFlux), nrow(sR2), nrow(sDate))
-  
-  # Warning if missing a variable 
-  if (!all(nrow(sLabel) == lengths)) {
-    stop(sprintf("Variable lengths do not match \n File: %s \n nLabel:%s \n nFlux:%s \n nR2:%s \n nDate:%s \n", 
-                 filename, nrow(sLabel), nrow(sFlux), nrow(sR2), nrow(sDate)))
-  }
-  
-  tibble(Label = sLabel$label,
-         Timestamp = tstamp,
-         Flux = as.numeric(sFlux$flux),
-         R2 = as.numeric(sR2$r2),
-         Comments = sComments$comments,
-         Port = as.numeric(sPort$port),
-         T5 = as.numeric(t5),
-         Tcham = as.numeric(tcham),
-         SMoisture = as.numeric(smoist))
+  results %>% 
+    mutate(Port = as.integer(Port),
+           Flux = as.numeric(Flux),
+           R2 = as.numeric(R2),
+           T5 = as.numeric(T5),
+           Tcham = as.numeric(Tcham),
+           SMoist = as.numeric(SMoist))
 }
 
 #----- Function to loop through directory and call function to read licor data -----
