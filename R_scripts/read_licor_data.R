@@ -1,8 +1,9 @@
 
 #----- Function to parse a file and return data frame -----
-read_licor_data <- function(filename) {
+read_licor_data <- function(filename, debug = FALSE) {
   
-  filedata <- readLines(filename)  # Read in file
+  # Read file into memory and find records
+  filedata <- readLines(filename)
   record_starts <- grep(pattern = "^LI-8100", filedata)
   cat("Reading...", filename, " lines =", length(filedata), "observations =", length(record_starts), "\n")
   
@@ -19,10 +20,7 @@ read_licor_data <- function(filename) {
                     Flux = NA_character_,
                     R2 = NA_character_,
                     Tcham = NA_real_,
-                    V1 = NA_real_,
-                    V2 = NA_real_,
-                    V3 = NA_real_,
-                    V4 = NA_real_,
+                    V1 = NA_real_, V2 = NA_real_, V3 = NA_real_, V4 = NA_real_,
                     RH = NA_real_,
                     Cdry = NA_real_,
                     Comments = NA_character_)
@@ -33,29 +31,34 @@ read_licor_data <- function(filename) {
     } else {
       record_end <- length(filedata)
     }
+    # Isolate the lines of this record...
     record <- filedata[record_starts[i]:record_end]
-    # Get rid of blank lines because that can screw up paste(collapse()) below
+    # ...and get rid of blank lines because that can screw up paste(collapse()) below
     record <- record[grep("^$", record, invert = TRUE)]
-    #cat(i, record_starts[i], ":", record_end, length(record), "\n")
+    
+    if(debug) cat("Record", i, "lines", record_starts[i], ":", record_end, "length", length(record), "\n")
     
     # Find the data table start
     table_start <- tail(grep("^Type\t", record), n = 1)
     # Look for the next non-numeric line; this marks the end
-    table_stop <-  head(grep("^[A-Z]", record[-(1:table_start)]), n = 1) + table_start
-
+    table_stop <-  head(grep("^[A-Z]", record[-(1:table_start)]), n = 1) + table_start - 1
+    
+    # Sometimes the Licor aborts in the middle of a measurement. Handle gracefully
     if(length(table_stop) == 0) {
       message("Skipping table ", i, " ", record_starts[i], ":", record_end)
       next()
     }
-    # Find names, discarding any trailing 'Annotation' column, and read
+    # Find names, discarding any trailing 'Annotation' column, because if it's empty
+    # the Licor software doesn't add any trailing comma, which read_tsv can't handle
     col_names <- strsplit(record[table_start], "\t", fixed = TRUE)[[1]]
     col_names <- col_names[!grepl("Annotation", col_names)]
-    #cat("\tReading table at", table_start, ":", tablestops[i], "...\n")
-    record[(table_start+1):(table_stop-1)] %>% 
+    if(debug) cat("\tReading table at record lines", table_start, ":", table_stop, "...")
+    record[(table_start+1):table_stop] %>% 
       paste(collapse = "\n") %>% 
       readr::read_tsv(col_names = col_names) ->
       df
     
+    # Pull out the data we're interested in
     index <- which(df$Type == 1)
     results$Timestamp[i] <- mean(df$Date)
     results$Label[i] <- find_parse(record, "^Label:\t")
@@ -70,8 +73,10 @@ read_licor_data <- function(filename) {
     results$RH[i] <- mean(df$RH[index])
     results$Cdry[i] <- mean(df$Cdry[index])
     results$Comments[i] <- find_parse(record, "^Comments:\t")
+    if(debug) cat(as.character(results$Timestamp[i]), results$Label[i], results$Port[i], results$Flux[i], results$Comments[i], "\n")
   }
   
+  # Clean up and return
   results %>% 
     mutate(Port = as.integer(Port),
            Flux = as.numeric(Flux),
