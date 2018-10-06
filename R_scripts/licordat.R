@@ -10,12 +10,14 @@ source("read_licor_data.R")
 
 
 read_licor_dir("../licor_data/") %>%
-  select(-Port) %>%           # not continuous data, so remove
-  rename(T20 = Comments) %>%  # we record T20 in the comments field
-  rename(Collar = Label) %>%  # we record Collar in the Label field
+  rename(T5 = V4, 
+         SMoisture = V3, 
+         Collar = Label,      # we record Collar in the label field
+         T20 = Comments) %>%  # we record T20 in the comments field
   mutate(T20 = as.numeric(T20),
          Collar = as.integer(Collar)) ->
   rawDat
+
 # `collarDat` holds information about the collars, based on collar number: 
 # its origin plot, and (if a transplant collar) into what hole it ended up 
 collarDat <- read_csv("../design/cores_collars.csv", col_types = "cciiicic")
