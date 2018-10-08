@@ -76,6 +76,7 @@ print(timeflux_plot_dest_means)
 sm_plot_dest_means <- ggplot(daily_dat_means, aes(x = Timestamp, y = meanSM, color = Experiment, group = Group)) +
   geom_point() +
   geom_line(aes(linetype = ControlGroup)) +
+  ylim(0,0.6) +
 #  geom_errorbar(aes(ymin = meanFlux - sdFlux, ymax = meanFlux + sdFlux)) +
   facet_grid(Dest_Elevation ~ Dest_Salinity) +
   ggtitle("Soil moisture over time - destination plots") +
