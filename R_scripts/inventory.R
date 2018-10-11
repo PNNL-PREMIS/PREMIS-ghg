@@ -66,14 +66,11 @@ ggsave("../outputs/tree_species.pdf", width = 8, height = 5)
 
 
 trees_plots %>% 
-  group_by(Site, Plot) %>% 
-  summarise(n = n(), Plot_area_m2 = mean(Plot_area_m2)) %>% 
+  group_by(Site, Salinity, Elevation) %>% 
+  summarise(n = n(), Plot_area_m2 = mean(Plot_area_m2), `BA (m2/ha)` = sum((DBH_cm / 100 / 2) ^ 2 * pi, na.rm = TRUE) / mean(Plot_area_m2) * 10000) %>% 
   mutate(`Trees (/ha)` = n / Plot_area_m2 * 10000) %>% 
+  summarise(n = n(), tree_mean = mean(`Trees (/ha)`), tree_sd = sd(`Trees (/ha)`), BA_mean = mean(`BA (m2/ha)`), BA_sd = sd(`BA (m2/ha)`))
   print
 
-trees_plots %>% 
-  group_by(Site, Plot) %>% 
-  summarise(`BA (m2/ha)` = sum((DBH_cm / 100 / 2) ^ 2 * pi, na.rm = TRUE) / mean(Plot_area_m2) * 10000) %>% 
-  print
 
 print("All done.")
