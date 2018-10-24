@@ -75,7 +75,14 @@ print(BA_dist)
 # Calculate cumulative basal area at each distance 
 BA_dat <- list()
 for (i in 1:10) {
-  m <- collar_to_tree_prox[which(collar_to_tree_prox$Distance_m <= i),]
-  BA_dat[[BA_i]] <- m %>% group_by(Collar) %>%
-    summarize(n = n(), BA_i = sum(BA_sqm))
+  collar_to_tree_prox %>% 
+    filter(Distance_m <= i) %>% 
+    group_by(Collar) %>% 
+    summarise(n = n(), BA_m2 = sum(BA_sqm, na.rm = TRUE), dist = i) ->
+    BA_dat[[i]]
+  # m <- collar_to_tree_prox[which(collar_to_tree_prox$Distance_m <= i),]
+  # BA_dat[[BA_i]] <- m %>% group_by(Collar) %>%
+  #   summarize(n = n(), BA_i = sum(BA_sqm))
 }
+
+BA_dat <- bind_rows(BA_dat)
