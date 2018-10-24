@@ -1,0 +1,41 @@
+---
+title: "proximity_results"
+author: "SP"
+date: "October 24, 2018"
+output: html_document
+---
+
+```{r, echo = FALSE, warning = FALSE}
+library(readr)
+# Load data
+licorDat <- get(load("../outputs/licordat.rda"))
+treeDat <- read_csv("../inventory_data/inventory.csv")
+proxDat <- read_csv("../inventory_data/collar_proximity.csv")
+```
+
+```{r, echo = FALSE, warning = FALSE}
+# Define functions
+prox_analysis <- function() {}
+basal_area_sum <- function() {}
+```
+
+### Table 1
+```{r, echo = FALSE, warning = FALSE}
+# Site info
+```
+
+```{r, echo = FALSE, warning = FALSE}
+# Hypothesis I - BA strong effect within 5 meters
+```
+
+```{r, echo = FALSE, warning = FALSE}
+# Hypothesis II - growing vs. dormant season
+```
+
+```{r, echo = FALSE, warning = FALSE}
+# Hypothesis III - moisture-limited times
+```
+
+```{r, echo = FALSE, warning = FALSE}
+# Sensitivity test - BA significance with distance
+```
