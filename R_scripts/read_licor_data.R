@@ -85,10 +85,7 @@ read_licor_data <- function(filename, debug = FALSE) {
 
 #----- Function to loop through directory and call function to read licor data -----
 read_licor_dir <- function(path) {
-  files <<- list.files(path, pattern = ".81x", full.names = TRUE)
-  list <- list()
-  for (i in files) {
-    list[[i]] <- read_licor_data(i)
-  }
-  bind_rows(list)
+  files <- list.files(path, pattern = ".81x", full.names = TRUE)
+  lapply(files, read_licor_data) %>% 
+    bind_rows
 }
