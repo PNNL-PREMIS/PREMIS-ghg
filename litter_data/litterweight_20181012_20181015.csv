@@ -1,4 +1,4 @@
-Plot,Trap,Date_weighed,Date_collected,M_woody,M_reproductive,M_oak,M_tulip,M_beech,M_other,Notes
+Plot,Trap,Date_weighed,Date_collected,M_woody,M_reproductive,M_leaf_oak,M_leaf_tulip,M_leaf_beech,M_leaf_other,Notes
 LSME,A,10/18/2018,10/15/2018,0.0,0.0,0.3,16.5,4.6,15.1,
 LSME,B,10/18/2018,10/15/2018,0.2,0.0,0.0,22.0,7.3,12.4,
 LSME,C,10/18/2018,10/15/2018,0.0,5.0,0.9,1.0,7.6,16.4,
