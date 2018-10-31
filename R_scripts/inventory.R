@@ -64,13 +64,12 @@ p2 <- ggplot(tp, aes(x = "", y = `BA (fraction)`, fill = Species, labels = `BA (
 print(p2)
 ggsave("../outputs/tree_species.pdf", width = 8, height = 5)
 
-
 trees_plots %>% 
   group_by(Site, Salinity, Elevation) %>% 
   summarise(n = n(), Plot_area_m2 = mean(Plot_area_m2), `BA (m2/ha)` = sum((DBH_cm / 100 / 2) ^ 2 * pi, na.rm = TRUE) / mean(Plot_area_m2) * 10000) %>% 
   mutate(`Trees (/ha)` = n / Plot_area_m2 * 10000) %>% 
-  summarise(n = n(), tree_mean = mean(`Trees (/ha)`), tree_sd = sd(`Trees (/ha)`), BA_mean = mean(`BA (m2/ha)`), BA_sd = sd(`BA (m2/ha)`))
-  print
-
+  summarise(tree_mean = mean(`Trees (/ha)`), tree_sd = sd(`Trees (/ha)`), BA_mean = mean(`BA (m2/ha)`), BA_sd = sd(`BA (m2/ha)`)) ->
+  tree_table
+write_csv(tree_table, "../outputs/tree_table.csv")
 
 print("All done.")
