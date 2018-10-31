@@ -16,12 +16,22 @@ proxDat <- read_csv("../inventory_data/collar_proximity.csv")
 ```{r, echo = FALSE, warning = FALSE}
 # Define functions
 prox_analysis <- function() {}
-basal_area_sum <- function() {}
+basal_area_sum <- function(data, distance) {
+  data %>% 
+    filter(Distance_m <= distance) %>% 
+    group_by(Collar) %>% 
+    summarise(n_trees = n(), BA_m2 = round(sum(BA_sqm, na.rm = TRUE), digits = 3), dist = distance)
+}
 ```
 
 ### Table 1
 ```{r, echo = FALSE, warning = FALSE}
 # Site info
+library(dplyr)
+read.csv("../outputs/tree_table.csv") %>% 
+#  group_by(Site, Experiment) %>% 
+#  summarise(N = n()) %>% 
+  knitr::kable(digits = 1, col.names = c("Site", "Salinity", "Trees (/ha)", "Trees_sd", "BA (m2/ha)", "BA_sd"))
 ```
 
 ```{r, echo = FALSE, warning = FALSE}
