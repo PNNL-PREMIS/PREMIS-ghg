@@ -130,7 +130,7 @@ print(ggCV_btwn_obs)
 
 #----- Plot time vs. soil moisture -----
 timesm_plot <- ggplot(daily_dat, aes(x = Timestamp, y = meanSM, color = Group, group = Collar)) +
-  ylim(0,0.6) +
+  ylim(0,2) +
   geom_point() +
   geom_line() +
   facet_grid(Dest_Elevation ~ Dest_Salinity) +
