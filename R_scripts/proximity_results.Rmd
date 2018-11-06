@@ -5,7 +5,7 @@ date: "October 24, 2018"
 output: html_document
 ---
 
-```{r, echo = FALSE, warning = FALSE}
+```{r, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
 library(readr)
 # Load data
 licorDat <- get(load("../outputs/licordat.rda"))
@@ -13,7 +13,7 @@ treeDat <- read_csv("../inventory_data/inventory.csv")
 proxDat <- read_csv("../inventory_data/collar_proximity.csv")
 ```
 
-```{r, echo = FALSE, warning = FALSE}
+```{r, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
 # Define functions
 prox_analysis <- function() {}
 basal_area_sum <- function(data, distance) {
@@ -25,7 +25,7 @@ basal_area_sum <- function(data, distance) {
 ```
 
 ### Table 1
-```{r, echo = FALSE, warning = FALSE}
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
 # Site info
 library(dplyr)
 read.csv("../outputs/tree_table.csv") %>% 
