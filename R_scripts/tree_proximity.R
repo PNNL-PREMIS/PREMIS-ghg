@@ -46,6 +46,7 @@ for (i in nrow(collar_to_tree_prox)) {
     collar_to_tree_prox$Species[i] <- collar_to_tree_prox$No_tag_species[i]
   }
 }
+write_csv(collar_to_tree_prox, "../outputs/collar_to_tree_prox.csv")
 
 # ----- Step 5: Plot distance vs. number of trees at each collar -----
 tree_frequency <- collar_to_tree_prox %>% group_by(Collar, Distance_m) %>%  

@@ -23,7 +23,7 @@ daily_dat <- licorDat %>%
   summarise(n = n(), 
             Timestamp = mean(Timestamp),
             meanFlux = mean(Flux), sdFlux = sd(Flux), 
-            meanSM = mean(SMoisture), meanTemp = mean(T5))
+            meanSM = mean(SMoisture), meanT5 = mean(T5), meanT20 = mean(T20))
 
 # Calculate treaetments means and s.d.
 daily_dat_means <- daily_dat %>% 

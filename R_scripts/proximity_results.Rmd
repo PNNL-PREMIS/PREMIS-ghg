@@ -9,43 +9,81 @@ output: html_document
 library(readr)
 # Load data
 licorDat <- get(load("../outputs/licordat.rda"))
-treeDat <- read_csv("../inventory_data/inventory.csv")
-proxDat <- read_csv("../inventory_data/collar_proximity.csv")
+treeProxDat <- read_csv("../inventory_data/collar_to_tree_prox.csv")
 ```
 
 ```{r, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
 # Define functions
-prox_analysis <- function() {}
 basal_area_sum <- function(data, distance) {
   data %>% 
     filter(Distance_m <= distance) %>% 
     group_by(Collar) %>% 
     summarise(n_trees = n(), BA_m2 = round(sum(BA_sqm, na.rm = TRUE), digits = 3), dist = distance)
 }
+
+prox_model <- function(flux, T5, T20, SM, site) {
+  # Fit model
+  nlme::lme(log(flux) ~ T5 + T20 + SM + I(SM ^ 2), 
+                      random = ~ 1 | site,
+                      method = "ML")
+  
+  # Remove non-significant variables
+  
+  
+  # Return model
+}
+
 ```
 
 ### Table 1
 ```{r, echo = FALSE, warning = FALSE, message = FALSE}
 # Site info
 library(dplyr)
-read.csv("../outputs/tree_table.csv") %>% 
-#  group_by(Site, Experiment) %>% 
-#  summarise(N = n()) %>% 
-  knitr::kable(digits = 1, col.names = c("Site", "Salinity", "Trees (/ha)", "Trees_sd", "BA (m2/ha)", "BA_sd"))
+library(tidyr)
+
+x <- read.csv("../outputs/tree_table.csv")
+x$tree_mean <- round(x$tree_mean, digits = 1)
+x$tree_sd <- round(x$tree_sd, digits = 1)
+x$BA_mean <- round(x$BA_mean, digits = 1)
+x$BA_sd <- round(x$BA_sd, digits = 1)
+x$Salinity <- sub("Salinity H", "High", x$Salinity)
+x$Salinity <- sub("Salinity M", "Medium", x$Salinity)
+x$Salinity <- sub("Salinity L", "Low", x$Salinity)
+
+x %>% 
+  unite(col = 'Trees (/ha)', tree_mean, tree_sd, sep = " ± ") %>%
+  unite(col = 'BA (m2/ha)', BA_mean, BA_sd, sep = " ± ") %>%
+  knitr::kable(digits = 1, format = "html", col.names = c("Site", "Salinity", "Trees (/ha)", expression(BA~(m^2~ha^-1)))) %>%
+  kableExtra::kable_styling(c("striped", "bordered"), full_width = F)
 ```
 
+### Hypothesis I - BA strong effect within 5 meters
 ```{r, echo = FALSE, warning = FALSE}
-# Hypothesis I - BA strong effect within 5 meters
+
+# Filter Licor data for only true control collars
+control_cols <- filter(licorDat, Experiment == "Control" & is.na(Notes))
+BA5 <- basal_area_sum(treeProxDat, 5)
+prox_model(control_cols$Flux, control_cols$T5, control_cols$T20, control_cols$SMoisture, BA5$BA_m2, control_cols$Destination_Plot)
+
 ```
 
+### Hypothesis II - growing vs. dormant season
 ```{r, echo = FALSE, warning = FALSE}
-# Hypothesis II - growing vs. dormant season
+
+# Filter true controls for growing season
+
+# Filter true controls for dormant season
+
 ```
 
+### Hypothesis III - moisture-limited times
 ```{r, echo = FALSE, warning = FALSE}
-# Hypothesis III - moisture-limited times
+
+# Filter true controls for soil moisture < x
+
 ```
 
+### Sensitivity test - BA significance with distance
 ```{r, echo = FALSE, warning = FALSE}
-# Sensitivity test - BA significance with distance
+
 ```
