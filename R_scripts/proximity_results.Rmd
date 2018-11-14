@@ -6,15 +6,6 @@ output: html_document
 ---
 
 ```{r, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
-library(readr)
-# Load data
-BASE <- "/Users/penn529/Documents/GitHub/PREMIS-ghg"
-licorDat <- get(load(file.path(BASE, "outputs", "licordat.rda")))
-treeProxDat <- read_csv(file.path(BASE, "inventory_data", "collar_to_tree_prox.csv"))
-
-```
-
-```{r, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
 # Define functions
 basal_area_sum <- function(data, distance) {
   data %>% 
@@ -26,8 +17,8 @@ basal_area_sum <- function(data, distance) {
 prox_model <- function(flux, T5, T20, SM, BA, site) {
   # Fit model
   nlme::lme(log(flux) ~ T5 + T20 + SM + I(SM ^ 2) + BA, 
-                      random = ~ 1 | site,
-                      method = "ML")
+            random = ~ 1 | site,
+            method = "ML")
   
   # Remove non-significant variables
   
@@ -38,10 +29,8 @@ prox_model <- function(flux, T5, T20, SM, BA, site) {
 ```
 
 ### Table 1
-```{r, echo = FALSE, warning = FALSE, message = FALSE}
+```{r, echo = FALSE, warning = FALSE, message = FALSE, eval=FALSE}
 # Site info
-library(dplyr)
-library(tidyr)
 
 x <- read.csv("../outputs/tree_table.csv")
 x$tree_mean <- round(x$tree_mean, digits = 1)
@@ -56,22 +45,20 @@ x %>%
   unite(col = 'Trees (/ha)', tree_mean, tree_sd, sep = " ± ") %>%
   unite(col = 'BA (m2/ha)', BA_mean, BA_sd, sep = " ± ") %>%
   knitr::kable(digits = 1, format = "html", col.names = c("Site", "Salinity", "Trees (/ha)", expression(BA~(m^2~ha^-1)))) %>%
-  kableExtra::kable_styling(c("striped", "bordered"), full_width = F)
+  kableExtra::kable_styling(c("striped", "bordered"), full_width = FALSE)
 ```
 
 ### Hypothesis I - BA strong effect within 5 meters
 ```{r, echo = FALSE, warning = FALSE}
 # Site info
-library(dplyr)
-library(tidyr)
-library(ggplot2)
+licor_data <- readd("licor_data")
+treeProxDat <- readd("treeProxDat")
 
 # Filter Licor data for only true control collars
-control_cols <- filter(licorDat, Experiment == "Control" & is.na(Notes) & Dest_Salinity == "High")
+control_cols <- filter(licor_data, Experiment == "Control", is.na(Notes), Dest_Salinity == "High")
 BA5 <- basal_area_sum(treeProxDat, 5)
 control_cols <- left_join(control_cols, BA5, by = "Collar")
 
-#p1 <- prox_model(control_cols$Flux, control_cols$T5, control_cols$T20, control_cols$SMoisture, control_cols$BA_m2, #control_cols$Destination_Plot)
 control_cols <- filter(control_cols, SMoisture > 0, SMoisture < 1)
 p1 <- lm(log(Flux) ~ T5 + T20 + SMoisture + I(SMoisture ^ 2) +BA_m2, data = control_cols)
 summary(p1)
@@ -80,9 +67,6 @@ control_cols$prediction <- predict(p1)
 ggplot(control_cols, aes(Timestamp, Flux)) + geom_point() + geom_line(aes(y = exp(prediction))) + facet_wrap(~Collar)
 ```
 
-
-
-```
 
 ### Hypothesis II - growing vs. dormant season
 ```{r, echo = FALSE, warning = FALSE}
