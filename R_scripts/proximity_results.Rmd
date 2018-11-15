@@ -74,6 +74,11 @@ control_cols$prediction <- predict(p1)
 ggplot(control_cols, aes(Timestamp, Flux)) + geom_point() + geom_line(aes(y = exp(prediction))) + facet_wrap(~Collar)
 ```
 
+### Table 2
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
+knitr::kable(p1$coefficients, digits = 3, format = "html") %>%
+  kableExtra::kable_styling(c("striped", "bordered"), full_width = FALSE)
+```
 
 ### Hypothesis II - growing vs. dormant season
 ```{r, echo = FALSE, warning = FALSE}
