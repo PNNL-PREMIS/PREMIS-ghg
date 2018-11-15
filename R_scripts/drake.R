@@ -14,6 +14,8 @@ library(lubridate)
 source("read_licor_data.R")
 source("process_licor_data.R")
 
+do_filecount <- function(dir) length(list.files(dir))
+
 plan <- drake_plan(
   
   # `plot_data` holds information based on the plot code: longitude, latitude,
@@ -24,16 +26,17 @@ plan <- drake_plan(
   # its origin plot, and (if a transplant collar) into what hole it ended up 
   collar_data = read_csv(file_in("../design/cores_collars.csv"), col_types = "cciiicic"),
   
-  # Licor data
-  # This is my attempt to have drake automatically rebuild when new file(s)
-  # are added to the `licor_data` folder. Right now it isn't working.
-  filecount = length(list.files("../licor_data/")),
-  raw_licor_data = target(trigger = trigger(change = filecount),
-                          command = read_licor_dir("../licor_data/")),
+  # We use number of files to detect when a new Licor data file is added
+  raw_licor_data = target(command = read_licor_dir("../licor_data/"),
+                          trigger = trigger(change = do_filecount("../licor_data/"))),
+  
+  # Process Licor data, adding in treatment etc. information
   licor_data = process_licor_data(raw_licor_data, collar_data, plot_data),
   
-  # Proximity report that feeds SP's proximity analysis manuscript
+  # Proximity data that feeds SP's proximity analysis manuscript
   treeProxDat = read_csv(file_in("../inventory_data/collar_to_tree_prox.csv")),
+
+  # Proximity analysis report
   prox_report = rmarkdown::render(
     knitr_in("proximity_results.Rmd"),
     output_file = file_out("proximity_results.html"),
