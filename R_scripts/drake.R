@@ -8,6 +8,7 @@ library(readr)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+theme_set(theme_bw())
 library(lubridate)
 library(kableExtra)
 
@@ -15,6 +16,7 @@ library(kableExtra)
 source("read_licor_data.R")
 source("process_licor_data.R")
 source("inventory.R")
+source("weatherdat.R")
 
 do_filedigest <- function(dir) digest::digest(list.files(dir))
 
@@ -33,8 +35,14 @@ plan <- drake_plan(
   species_codes = read_csv(file_in("../inventory_data/species_codes.csv"), col_types = "ccc"),
   tree_data = make_tree_data(inventory_data, species_codes, plot_data),
   
-  # We digest the filename list to detect when something changes in the Licor directory
+  # Weather data from Hobo loggers
+  # We digest the filename list to detect when something changes in the weather_data directory
   # Not perfect--this won't detect a change *within* a file
+  wstation_info = read_csv(file_in("../weather_data/wstation_info.csv"), col_types = "cicic"),
+  weather_data = target(command = read_all_wxdat("../weather_data/"),
+                        trigger = trigger(change = do_filedigest("../weather_data/"))),
+  
+  # We digest the filename list to detect when something changes in the licor_data directory
   raw_licor_data = target(command = read_licor_dir("../licor_data/"),
                           trigger = trigger(change = do_filedigest("../licor_data/"))),
   
