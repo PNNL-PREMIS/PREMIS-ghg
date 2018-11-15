@@ -13,6 +13,7 @@ library(lubridate)
 # Load our functions
 source("read_licor_data.R")
 source("process_licor_data.R")
+source("inventory.R")
 
 do_filecount <- function(dir) length(list.files(dir))
 
@@ -25,6 +26,11 @@ plan <- drake_plan(
   # `collar_data` holds information about the collars, based on collar number: 
   # its origin plot, and (if a transplant collar) into what hole it ended up 
   collar_data = read_csv(file_in("../design/cores_collars.csv"), col_types = "cciiicic"),
+  
+  # `inventory_data` and `species_codes` hold tree information
+  inventory_data = read_csv(file_in("../inventory_data/inventory.csv"), col_types = "ccccdccc"),
+  species_codes = read_csv(file_in("../inventory_data/species_codes.csv"), col_types = "ccc"),
+  tree_data = make_tree_data(inventory_data, species_codes, plot_data),
   
   # We use number of files to detect when a new Licor data file is added
   raw_licor_data = target(command = read_licor_dir("../licor_data/"),
@@ -42,3 +48,5 @@ plan <- drake_plan(
     output_file = file_out("proximity_results.html"),
     quiet = TRUE)
 )
+
+# Now type `make(plan)` at command line

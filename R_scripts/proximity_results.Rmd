@@ -7,6 +7,7 @@ output: html_document
 
 ```{r, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
 # Define functions
+
 basal_area_sum <- function(data, distance) {
   data %>% 
     filter(Distance_m <= distance) %>% 
@@ -29,10 +30,16 @@ prox_model <- function(flux, T5, T20, SM, BA, site) {
 ```
 
 ### Table 1
-```{r, echo = FALSE, warning = FALSE, message = FALSE, eval=FALSE}
-# Site info
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
 
-x <- read.csv("../outputs/tree_table.csv")
+readd("tree_data") %>% 
+  group_by(Site, Salinity, Elevation) %>% 
+  summarise(n = n(), Plot_area_m2 = mean(Plot_area_m2), `BA (m2/ha)` = sum((DBH_cm / 100 / 2) ^ 2 * pi, na.rm = TRUE) / mean(Plot_area_m2) * 10000) %>% 
+  mutate(`Trees (/ha)` = n / Plot_area_m2 * 10000) %>% 
+  summarise(tree_mean = mean(`Trees (/ha)`), tree_sd = sd(`Trees (/ha)`), BA_mean = mean(`BA (m2/ha)`), BA_sd = sd(`BA (m2/ha)`)) ->
+  x
+
+# Site info
 x$tree_mean <- round(x$tree_mean, digits = 1)
 x$tree_sd <- round(x$tree_sd, digits = 1)
 x$BA_mean <- round(x$BA_mean, digits = 1)
