@@ -16,7 +16,7 @@ source("read_licor_data.R")
 source("process_licor_data.R")
 source("inventory.R")
 
-do_filecount <- function(dir) length(list.files(dir))
+do_filedigest <- function(dir) digest::digest(list.files(dir))
 
 plan <- drake_plan(
   
@@ -33,9 +33,10 @@ plan <- drake_plan(
   species_codes = read_csv(file_in("../inventory_data/species_codes.csv"), col_types = "ccc"),
   tree_data = make_tree_data(inventory_data, species_codes, plot_data),
   
-  # We use number of files to detect when a new Licor data file is added
+  # We digest the filename list to detect when something changes in the Licor directory
+  # Not perfect--this won't detect a change *within* a file
   raw_licor_data = target(command = read_licor_dir("../licor_data/"),
-                          trigger = trigger(change = do_filecount("../licor_data/"))),
+                          trigger = trigger(change = do_filedigest("../licor_data/"))),
   
   # Process Licor data, adding in treatment etc. information
   licor_data = process_licor_data(raw_licor_data, collar_data, plot_data),
