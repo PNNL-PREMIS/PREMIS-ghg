@@ -37,5 +37,4 @@ licor_test_data/readTest.R
 outputs/*.pdf
 outputs/*.rda
 outputs/*.csv
-R_scripts/*.html
 *.rda
