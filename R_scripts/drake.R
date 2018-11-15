@@ -9,6 +9,7 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(lubridate)
+library(kableExtra)
 
 # Load our functions
 source("read_licor_data.R")
