@@ -42,11 +42,11 @@ plan <- drake_plan(
   weather_data = target(command = read_all_wxdat("../weather_data/"),
                         trigger = trigger(change = do_filedigest("../weather_data/"))),
   
+  # Licor data - transplant cores
   # We digest the filename list to detect when something changes in the licor_data directory
   raw_licor_data = target(command = read_licor_dir("../licor_data/"),
                           trigger = trigger(change = do_filedigest("../licor_data/"))),
-  
-  # Process Licor data, adding in treatment etc. information
+  # Process, adding in treatment etc. information
   licor_data = process_licor_data(raw_licor_data, collar_data, plot_data),
   licor_daily_data = calculate_licor_daily_data(licor_data),
   
@@ -56,7 +56,7 @@ plan <- drake_plan(
     output_file = file_out("diagnostics.html"),
     quiet = TRUE),
   
-  # Proximity data that feeds SP's proximity analysis manuscript
+  # Proximity data for SP's proximity analysis manuscript
   treeProxDat = read_csv(file_in("../inventory_data/collar_to_tree_prox.csv"), col_types = "ccidicdcdcccd"),
 
   # Proximity analysis report

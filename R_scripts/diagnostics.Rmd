@@ -98,3 +98,12 @@ wxfigures$TRH_wxplot
 ```{r, echo = FALSE, eval = FALSE}
 wxfigures$smoisture_wxplot
 ```
+
+### Histogram of trees by DBH
+```{r}
+tree_data <- readd("tree_data")
+ggplot(tree_data, aes(DBH_cm, fill = Species)) + 
+   geom_histogram(position = "stack", binwidth = 5) + 
+   facet_grid(Salinity ~ Elevation)
+```
+

@@ -29,10 +29,3 @@ make_tree_data <- function(inventory_data, species_codes, plot_data) {
 }
 
 
-
-# # Histogram of trees by DBH
-# p1 <- ggplot(trees, aes(DBH_cm, fill = Species)) + 
-#   geom_histogram(position = "stack", binwidth = 5) + 
-#   facet_grid(Salinity ~ Elevation)
-# print(p1)
-# ggsave("../outputs/tree_dbh.pdf", width = 8, height = 5)
