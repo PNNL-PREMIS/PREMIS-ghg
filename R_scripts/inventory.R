@@ -4,6 +4,10 @@
 
 make_tree_data <- function(inventory_data, species_codes, plot_data) {
   
+  inventory_data <- readd("inventory_data")
+  species_codes <- readd("species_codes")
+  plot_data <- readd("plot_data")
+  
   # Join the two and check for any unknown species code
   inventory_data %>% 
     left_join(species_codes, by = "Species_code") ->
@@ -20,8 +24,7 @@ make_tree_data <- function(inventory_data, species_codes, plot_data) {
   trees$Elevation <- factor(trees$Elevation, levels = paste("Elevation", c("H", "M", "L")))
   
   trees %>% 
-    filter(trees, Site == "SERC") # temporary - only handle SERC
-    mutate(Plot = as.character(Plot)) %>% 
+    filter(Site == "SERC") %>% # temporary - only handle SERC
     left_join(select(plot_data, Site, Plot, Plot_area_m2), by = c("Site", "Plot")) 
 }
 

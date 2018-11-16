@@ -12,25 +12,10 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
 
 # Load the licor data and calculate daily means
-licor_data <- readd("licor_data")
+licor_daily_data <- readd("licor_daily_data")
 
-# Calculate daily averages for flux, temp, and soil moisture for each collar
-cat("Calculating daily averages, CVs, etc...\n")
-licor_data %>% 
-  group_by(Date, Experiment, Group, Destination_Plot, Dest_Salinity, Dest_Elevation,
-           Origin_Plot, Origin_Salinity, Origin_Elevation, Collar) %>%
-  summarise(n = n(), 
-            Timestamp = mean(Timestamp),
-            meanFlux = mean(Flux), 
-            sdFlux = sd(Flux), 
-            meanSM = mean(SMoisture), 
-            meanT5 = mean(T5), 
-            meanT20 = mean(T20)) %>% 
-  ungroup ->
-  daily_dat
-
-# Calculate treaetments means and s.d.
-daily_dat %>% 
+# Calculate treatments means and s.d.
+licor_daily_data %>% 
   mutate(ControlGroup = if_else(Group == "Control", "Control (true)", "Transplant")) %>% 
   group_by(Experiment, Origin_Plot, Dest_Salinity, Dest_Elevation, Destination_Plot,
            Date, Group, ControlGroup) %>%  
@@ -40,7 +25,7 @@ daily_dat %>%
             meanSM = mean(meanSM)) %>% 
   ungroup %>% 
   mutate(Experiment = if_else(Origin_Plot == Destination_Plot, "Control", Experiment)) ->
-  daily_dat_means
+  daily_treatment_means
 ```
 
 ```{r, echo = FALSE, message = FALSE}
@@ -56,7 +41,7 @@ readd("collar_data") %>%
 Color indicates origin/destination plot pairings. Panels: left to right - High, Medium, Low salinity; top to bottom - Low, Medium, and High elevation.
 
 ```{r, echo = FALSE, warning = FALSE}
-daily_dat_means %>% 
+daily_treatment_means %>% 
   filter(!is.na(meanFlux), !is.na(sdFlux)) %>% 
   ggplot(aes(x = Timestamp, y = meanFlux, color = Experiment, group = Group)) +
   geom_point() +
@@ -70,7 +55,7 @@ daily_dat_means %>%
 
 ### Composite temperature and flux data for all cores
 ```{r, echo = FALSE, warning = FALSE}
-daily_dat %>% 
+licor_daily_data %>% 
   filter(!is.na(meanT20), !is.na(meanFlux)) %>% 
   ggplot(aes(x = meanT20, y = meanFlux, color = Dest_Elevation)) +
   geom_point() +
@@ -81,7 +66,7 @@ daily_dat %>%
 
 ### Soil moisture over time
 ```{r, echo = FALSE}
-daily_dat_means %>% 
+daily_treatment_means %>% 
   filter(!is.na(meanSM)) %>% 
   ggplot(aes(x = Timestamp, y = meanSM, color = Experiment, group = Group)) +
   geom_point() +
