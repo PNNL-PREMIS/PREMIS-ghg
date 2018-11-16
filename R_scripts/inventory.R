@@ -2,7 +2,8 @@
 # PREMIS-ghg April 2018  
 # Ben Bond-Lamberty
 
-make_tree_data <- function(inventory_data, species_codes, plot_data) {
+# Join inventory data with species and plot information
+make_tree_data <- function() {
   
   inventory_data <- readd("inventory_data")
   species_codes <- readd("species_codes")
@@ -27,5 +28,3 @@ make_tree_data <- function(inventory_data, species_codes, plot_data) {
     filter(Site == "SERC") %>% # temporary - only handle SERC
     left_join(select(plot_data, Site, Plot, Plot_area_m2), by = c("Site", "Plot")) 
 }
-
-

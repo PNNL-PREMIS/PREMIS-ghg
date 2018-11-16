@@ -18,7 +18,7 @@ source("process_licor_data.R")
 source("inventory.R")
 source("weatherdat.R")
 
-do_filedigest <- function(dir) digest::digest(list.files(dir))
+do_filedigest <- function(dir) digest::digest(list.files(dir)) # helper function
 
 plan <- drake_plan(
   
@@ -50,12 +50,14 @@ plan <- drake_plan(
   licor_data = process_licor_data(raw_licor_data, collar_data, plot_data),
   licor_daily_data = calculate_licor_daily_data(licor_data),
   
+  # --------------------------------------------------------------------------------------------------------
   # Webpage diagnostics report
   diagnostics_report = rmarkdown::render(
     knitr_in("diagnostics.Rmd"),
     output_file = file_out("diagnostics.html"),
     quiet = TRUE),
   
+  # --------------------------------------------------------------------------------------------------------
   # Proximity data for SP's proximity analysis manuscript
   treeProxDat = read_csv(file_in("../inventory_data/collar_to_tree_prox.csv"), col_types = "ccidicdcdcccd"),
 
