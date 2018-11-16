@@ -5,21 +5,47 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-library(ggplot2)
-theme_set(theme_bw())
 ```
 
 # Diagnostics as of `r date()`
 
 ```{r, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
-figures <- get(load("../outputs/figures.rda"))
-wxfigures <- get(load("../outputs/wxfigures.rda"))
+
+# Load the licor data and calculate daily means
+licor_data <- readd("licor_data")
+
+# Calculate daily averages for flux, temp, and soil moisture for each collar
+cat("Calculating daily averages, CVs, etc...\n")
+licor_data %>% 
+  group_by(Date, Experiment, Group, Destination_Plot, Dest_Salinity, Dest_Elevation,
+           Origin_Plot, Origin_Salinity, Origin_Elevation, Collar) %>%
+  summarise(n = n(), 
+            Timestamp = mean(Timestamp),
+            meanFlux = mean(Flux), 
+            sdFlux = sd(Flux), 
+            meanSM = mean(SMoisture), 
+            meanT5 = mean(T5), 
+            meanT20 = mean(T20)) %>% 
+  ungroup ->
+  daily_dat
+
+# Calculate treaetments means and s.d.
+daily_dat %>% 
+  mutate(ControlGroup = if_else(Group == "Control", "Control (true)", "Transplant")) %>% 
+  group_by(Experiment, Origin_Plot, Dest_Salinity, Dest_Elevation, Destination_Plot,
+           Date, Group, ControlGroup) %>%  
+  summarise(Timestamp = mean(Timestamp), 
+            sdFlux = sd(meanFlux), 
+            meanFlux = mean(meanFlux), 
+            meanSM = mean(meanSM)) %>% 
+  ungroup %>% 
+  mutate(Experiment = if_else(Origin_Plot == Destination_Plot, "Control", Experiment)) ->
+  daily_dat_means
 ```
 
 ```{r, echo = FALSE, message = FALSE}
 # Auto-generate the sample size table
-library(dplyr)
-read.csv("../design/cores_collars.csv") %>% 
+readd("collar_data") %>% 
   group_by(Site, Experiment) %>% 
   summarise(N = n()) %>% 
   knitr::kable()
@@ -30,35 +56,60 @@ read.csv("../design/cores_collars.csv") %>%
 Color indicates origin/destination plot pairings. Panels: left to right - High, Medium, Low salinity; top to bottom - Low, Medium, and High elevation.
 
 ```{r, echo = FALSE, warning = FALSE}
-figures$timeflux_plot_dest_means
+daily_dat_means %>% 
+  filter(!is.na(meanFlux), !is.na(sdFlux)) %>% 
+  ggplot(aes(x = Timestamp, y = meanFlux, color = Experiment, group = Group)) +
+  geom_point() +
+  geom_line(aes(linetype = ControlGroup)) +
+  geom_errorbar(aes(ymin = meanFlux - sdFlux, ymax = meanFlux + sdFlux)) +
+  facet_grid(Dest_Elevation ~ Dest_Salinity) +
+  ggtitle("Flux over time - destination plots") +
+  labs(x = "Date", y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
 ### Composite temperature and flux data for all cores
 ```{r, echo = FALSE, warning = FALSE}
-figures$q10_plot
+daily_dat %>% 
+  filter(!is.na(meanT20), !is.na(meanFlux)) %>% 
+  ggplot(aes(x = meanT20, y = meanFlux, color = Dest_Elevation)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  ggtitle("Licor temperature vs. Flux") +
+  labs(x = "Temperature (degC)", y = "Flux (µmol m-2 s-1)")
 ```
 
 ### Soil moisture over time
 ```{r, echo = FALSE}
-figures$sm_plot_dest_means
+daily_dat_means %>% 
+  filter(!is.na(meanSM)) %>% 
+  ggplot(aes(x = Timestamp, y = meanSM, color = Experiment, group = Group)) +
+  geom_point() +
+  geom_line(aes(linetype = ControlGroup)) +
+  coord_cartesian(ylim = c(0, 0.6)) +
+  facet_grid(Dest_Elevation ~ Dest_Salinity) +
+  ggtitle("Licor soil moisture over time - destination plots") +
+  labs(x = "Date") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
+
 ### CV distribution for each collar, n = number of measurements taken
-```{r, echo = FALSE, warning = FALSE}
+```{r, echo = FALSE, warning = FALSE, eval = FALSE}
 figures$ggCV_btwn_collars
 ```
 
 ### Soil temperature at 20CM and 2CM depth
-```{r, echo = FALSE}
+```{r, echo = FALSE, eval = FALSE}
 wxfigures$stemp_wxplot
 ```
 
 ### Air temperature and Relative Humidity
-```{r, echo = FALSE}
+```{r, echo = FALSE, eval = FALSE}
 wxfigures$TRH_wxplot
 ```
 
 ### Soil moisure at 20CM and 2CM depth
-```{r, echo = FALSE}
+```{r, echo = FALSE, eval = FALSE}
 wxfigures$smoisture_wxplot
 ```
