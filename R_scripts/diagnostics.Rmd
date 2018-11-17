@@ -12,6 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
 
 # Load the licor data and calculate daily means
+licor_data <- readd("licor_data")
 licor_daily_data <- readd("licor_daily_data")
 
 # Calculate treatments means and s.d.
@@ -36,6 +37,7 @@ readd("collar_data") %>%
   knitr::kable()
 ```
 
+
 ### CO2 flux over time
 
 Color indicates origin/destination plot pairings. Panels: left to right - High, Medium, Low salinity; top to bottom - Low, Medium, and High elevation.
@@ -53,18 +55,16 @@ daily_treatment_means %>%
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
-### Composite temperature and flux data for all cores
+### Soil temperature versus CO2 flux for all cores
 ```{r, echo = FALSE, warning = FALSE}
 licor_daily_data %>% 
   filter(!is.na(meanT20), !is.na(meanFlux)) %>% 
   ggplot(aes(x = meanT20, y = meanFlux, color = Dest_Elevation)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  ggtitle("Licor temperature vs. Flux") +
+  geom_point() + geom_smooth(method = "loess") +
   labs(x = "Temperature (degC)", y = "Flux (µmol m-2 s-1)")
 ```
 
-### Soil moisture over time
+### Licor soil moisture over time
 ```{r, echo = FALSE}
 daily_treatment_means %>% 
   filter(!is.na(meanSM)) %>% 
@@ -73,15 +73,20 @@ daily_treatment_means %>%
   geom_line(aes(linetype = ControlGroup)) +
   coord_cartesian(ylim = c(0, 0.6)) +
   facet_grid(Dest_Elevation ~ Dest_Salinity) +
-  ggtitle("Licor soil moisture over time - destination plots") +
   labs(x = "Date") +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
-
-### CV distribution for each collar, n = number of measurements taken
-```{r, echo = FALSE, warning = FALSE, eval = FALSE}
-figures$ggCV_btwn_collars
+### Coefficient of variation between collars
+```{r, echo = FALSE, warning = FALSE}
+licor_data %>% 
+  group_by(Date, Group, Collar) %>% 
+  summarise(CV = sd(Flux) / mean(Flux), 
+            n = n(), 
+            Timestamp = mean(Timestamp)) %>%
+  filter(!is.na(CV)) %>% 
+  ggplot(aes(x = Timestamp, y = CV, color = Group)) +
+  geom_point()
 ```
 
 ### Soil temperature at 20CM and 2CM depth
@@ -103,7 +108,7 @@ wxfigures$smoisture_wxplot
 ```{r}
 tree_data <- readd("tree_data")
 ggplot(tree_data, aes(DBH_cm, fill = Species)) + 
-   geom_histogram(position = "stack", binwidth = 5) + 
-   facet_grid(Salinity ~ Elevation)
+  geom_histogram(position = "stack", binwidth = 5) + 
+  facet_grid(Salinity ~ Elevation)
 ```
 

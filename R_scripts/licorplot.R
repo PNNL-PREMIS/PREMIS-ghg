@@ -40,10 +40,6 @@ cv_btwn_collars <- licorDat %>%
   summarize( n = n(), CV = sd(Flux) / mean(Flux), meanflux = mean(Flux), sdflux=sd(Flux),
              Timestamp = mean(Timestamp), Collars = paste(Collar, collapse = " "))
 
-# Calculate CV between observations
-cv_btwn_obs <- licorDat %>% 
-  group_by(Date, Group, Collar) %>% 
-  summarise(CV = sd(Flux) / mean(Flux), n = n(), Timestamp = mean(Timestamp))
 
 # Calculate mean flux of all 3 observations in the meas. and the first 2 obs. in the meas.
 fluxMean <- licorDat %>% 
@@ -115,12 +111,6 @@ q10_plot <- ggplot(daily_dat, aes(x = meanTemp, y = meanFlux, color = Dest_Eleva
 print(q10_plot)
 #ggsave("../outputs/q10.pdf")
 
-#----- Plot collar CV (within treatment) over time -----
-ggCV_btwn_collars <- ggplot(data = cv_btwn_collars, aes(x = Timestamp, y = CV, color = Group)) +
-  geom_point() +
-  ggtitle("Coefficient of Variation Between Collars")
-print(ggCV_btwn_collars)
-#ggsave("../outputs/cv_btwn_exp.pdf")
 
 #----- Plot observation CV (within collar) over time -----
 ggCV_btwn_obs <- ggplot(cv_btwn_obs, aes(x = Timestamp, y = CV)) +
@@ -156,7 +146,6 @@ figures$timeflux_plot_dest_means <- timeflux_plot_dest_means
 figures$sm_plot_dest_means <- sm_plot_dest_means
 figures$timeflux_plot_origin <- timeflux_plot_origin
 figures$var_test <- var_test
-figures$ggCV_btwn_collars <- ggCV_btwn_collars
 figures$ggCV_btwn_obs <- ggCV_btwn_obs
 figures$q10_plot <- q10_plot
 figures$ggE <- ggE
