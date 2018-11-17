@@ -129,8 +129,17 @@ weather_data %>%
   summarize(n = n(), meanValue = mean(Value), sdValue = sd(Value))
 ```
 
+### Well conductivity data
+```{r, echo = FALSE}
+readd("well_data") %>% 
+  gather(variable, value, Low_Range, High_Range) %>% 
+  ggplot(aes(x = Timestamp, y = value, color = variable)) +
+    geom_line() +
+    facet_grid(~Plot)
+```
+
 ### Histogram of trees by DBH
-```{r}
+```{r, echo = FALSE}
 tree_data <- readd("tree_data")
 ggplot(tree_data, aes(DBH_cm, fill = Species)) + 
   geom_histogram(position = "stack", binwidth = 5) + 

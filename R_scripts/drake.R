@@ -39,8 +39,11 @@ plan <- drake_plan(
   # We digest the filename list to detect when something changes in the weather_data directory
   # Not perfect--this won't detect a change *within* a file
   wstation_info = read_csv(file_in("../weather_data/wstation_info.csv"), col_types = "cicic"),
-  weather_data = target(command = read_all_wxdat("../weather_data/"),
+  weather_data = target(command = read_all_wxdat("../weather_data/", read_wxdat),
                         trigger = trigger(change = do_filedigest("../weather_data/"))),
+  # Conductivity data from wells
+  well_data = target(command = read_all_wxdat("../well_data/", read_single_well),
+                     trigger = trigger(change = do_filedigest("../well_data/"))),
   
   # Licor data - transplant cores
   # We digest the filename list to detect when something changes in the licor_data directory

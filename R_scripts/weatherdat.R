@@ -29,36 +29,26 @@ read_wxdat <- function(filename) {
 }
 
 # Read all available weather station files, combine, and remove duplicate rows
-read_all_wxdat <- function(dir) {
+read_all_wxdat <- function(dir, read_function) {
   list.files(dir, pattern = "[0-9]{8}\\.csv$", full.names = TRUE) %>% 
-    lapply(read_wxdat) %>% 
+    lapply(read_function) %>% 
     bind_rows %>% 
     distinct
 }
 
-if(0) {
-
-  # Read conductivity data
-  cat("Reading conductivity data...")
-  cond_HSLE <- read_csv("../well_data/HSLE_conductivity_20180806.csv", skip = 2,
-                        col_names = c("#", "Timestamp", "Low_Range", "High_Range", "Temp"))
-  cond_HSLE$Timestamp <- mdy_hms(cond_HSLE$Timestamp)
+read_single_well <- function(filename) {
+  cat("Reading", filename, "...\n")
+  # The first line of the file holds the plot name
+  readLines(filename, n = 1) %>% 
+    gsub("Plot Title: ", "", .) %>% 
+    gsub('"', '', .) ->
+    plot
   
-  cond_MSLE <- read_csv("../well_data/MSLE_conductivity_20180809.csv", skip = 2,
-                        col_names = c("#", "Timestamp", "Low_Range", "High_Range", "Temp"))
-  cond_MSLE$Timestamp <- mdy_hms(cond_MSLE$Timestamp)
-  
-  cond_LSLE <- read_csv("../well_data/LSLE_conductivity_20180809.csv", skip = 2,
-                        col_names = c("#", "Timestamp", "Low_Range", "High_Range", "Temp"))
-  cond_LSLE$Timestamp <- mdy_hms(cond_LSLE$Timestamp)
-  
-  cat("Plotting conductivity data...")
-  ggplot(cond_LSLE, aes(x = Timestamp)) +
-    geom_line(aes(y = Low_Range)) +
-    geom_line(aes(y = High_Range), linetype = 2)
-  
-  cat("Saving datasets...")
-  write_csv(all_sites, "../weather_data/wx_all_sites.csv")
-  write_csv(cond_LSLE, "../well_data/cond_LSLE")
-  
+  read_csv(filename, skip = 2,
+           col_names = c("#", "Timestamp", "Low_Range", "High_Range", "Temp",
+                         paste0("X", 1:8)),
+           col_types = "icdddcccccccc") %>% 
+    select(Timestamp, Low_Range, High_Range, Temp) %>% 
+    mutate(Timestamp = mdy_hms(Timestamp),
+           Plot = plot)
 }
