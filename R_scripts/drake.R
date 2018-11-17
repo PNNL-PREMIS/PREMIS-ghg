@@ -69,7 +69,19 @@ plan <- drake_plan(
   prox_report = rmarkdown::render(
     knitr_in("proximity_results.Rmd"),
     output_file = file_out("proximity_results.html"),
+    quiet = TRUE),
+  
+  # --------------------------------------------------------------------------------------------------------
+  # Proximity data for SP's proximity analysis manuscript
+  ts_report = rmarkdown::render(
+    knitr_in("temporal_scaling.Rmd"),
+    output_file = file_out("temporal_scaling.html"),
+    quiet = TRUE),
+  ts_presentation = rmarkdown::render(
+    knitr_in("temporal_scaling.Rpres"),
+    output_file = file_out("temporal_scaling_presentation.html"),
     quiet = TRUE)
+
 )
 
 # Now type `make(plan)` at command line
