@@ -41,11 +41,6 @@ cv_btwn_collars <- licorDat %>%
              Timestamp = mean(Timestamp), Collars = paste(Collar, collapse = " "))
 
 
-# Calculate mean flux of all 3 observations in the meas. and the first 2 obs. in the meas.
-fluxMean <- licorDat %>% 
-  group_by(Date, Group, Collar) %>%
-  summarize(n = n(), mean_gt_2 = mean(Flux), mean_2 = mean(Flux[1:2]))
-
 cat("Making plots...\n")
 
 #----- Plot time vs. flux at DESTINATION plot-----
@@ -120,16 +115,6 @@ timesm_plot <- ggplot(daily_dat, aes(x = Timestamp, y = meanSM, color = Group, g
 print(timesm_plot)
 #ggsave("../outputs/timesm.pdf")
 
-#----- Plot mean flux with all 3 measurements vs. mean flux with only first two meas. -----
-# This is to test whether reducing observation size from 3 to 2 observations per measurement changes..
-# .. the flux
-var_test <- ggplot(fluxMean, aes(x = mean_gt_2, y = mean_2, color = n)) + 
-  geom_abline(slope = 1, intercept = 0, color = "blue") +
-  geom_point() + 
-  labs(x = "Mean flux of all measurements", y = "Mean flux of first 2 measurements") +
-  ggtitle("Mean Flux Per Collar (µmol m-2 s-1)")
-print(var_test)
-#ggsave("../diagnostics/mean_test.png")
 
 figures <- list()
 figures$timeflux_plot_dest <- timeflux_plot_dest

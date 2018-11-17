@@ -91,6 +91,22 @@ licor_data %>%
   geom_point()
 ```
 
+### Mean flux of first 2 observations versus all observations
+```{r, echo = FALSE}
+licor_data %>% 
+  group_by(Date, Group, Collar) %>%
+  summarize(n = n(), mean_gt_2 = mean(Flux), mean_2 = mean(Flux[1:2])) ->
+  lds
+
+ggplot(lds, aes(x = mean_gt_2, y = mean_2, color = n)) + 
+  geom_abline(slope = 1, intercept = 0, color = "blue") +
+  geom_smooth(method = "lm", linetype = 2) +
+  geom_point() + 
+  labs(title = paste("N =", nrow(lds)),
+       x = "Mean flux of all measurements", 
+       y = "Mean flux of first 2 measurements")
+```
+
 ### Soil temperature at 20CM and 2CM depth
 ```{r, echo = FALSE}
 weather_data %>% 
@@ -105,7 +121,7 @@ weather_data %>%
 ```{r, echo = FALSE}
 weather_data %>% 
   filter(Sensor_Type == "TRH") %>% 
-ggplot(aes(Timestamp, Value, color = Sensor_Group, group = Sensor_Group)) + 
+  ggplot(aes(Timestamp, Value, color = Sensor_Group, group = Sensor_Group)) + 
   geom_line() +
   facet_wrap(~Site) +
   ggtitle("Atmospheric Temperature (Celsius) and Relative Humidity (%)") +
@@ -134,8 +150,8 @@ weather_data %>%
 readd("well_data") %>% 
   gather(variable, value, Low_Range, High_Range) %>% 
   ggplot(aes(x = Timestamp, y = value, color = variable)) +
-    geom_line() +
-    facet_grid(~Plot)
+  geom_line() +
+  facet_grid(~Plot)
 ```
 
 ### Histogram of trees by DBH

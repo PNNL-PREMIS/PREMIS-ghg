@@ -51,6 +51,7 @@ plan <- drake_plan(
                           trigger = trigger(change = do_filedigest("../licor_data/"))),
   # Process, adding in treatment etc. information
   licor_data = process_licor_data(raw_licor_data, collar_data, plot_data),
+  # Reduce observations to a per-day average
   licor_daily_data = calculate_licor_daily_data(licor_data),
   
   # --------------------------------------------------------------------------------------------------------
