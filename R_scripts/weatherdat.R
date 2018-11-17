@@ -1,12 +1,5 @@
-# Process and analyze weather station data
+# Process weather station data
 # Stephanie Pennington | Created July 2018
-
-library(readr)
-library(dplyr)
-library(ggplot2)
-library(ggrepel)
-library(lubridate)
-library(tidyr)
 
 # Read a single weather station file, reshape, parse, and join with station information
 read_wxdat <- function(filename) {
@@ -28,7 +21,7 @@ read_wxdat <- function(filename) {
     select(-`Date Time, GMT-04:00`, -info1, -info2)
 }
 
-# Read all available weather station files, combine, and remove duplicate rows
+# Read all available weather or well station files, combine, and remove duplicate rows
 read_all_wxdat <- function(dir, read_function) {
   list.files(dir, pattern = "[0-9]{8}\\.csv$", full.names = TRUE) %>% 
     lapply(read_function) %>% 
