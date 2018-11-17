@@ -95,7 +95,8 @@ licor_data %>%
 ```{r, echo = FALSE}
 licor_data %>% 
   group_by(Date, Group, Collar) %>%
-  summarize(n = n(), mean_gt_2 = mean(Flux), mean_2 = mean(Flux[1:2])) ->
+  summarize(n = n(), mean_gt_2 = mean(Flux), mean_2 = mean(Flux[1:2])) %>% 
+  filter(n >= 3) ->
   lds
 
 ggplot(lds, aes(x = mean_gt_2, y = mean_2, color = n)) + 
