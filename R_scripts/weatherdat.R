@@ -37,39 +37,7 @@ read_all_wxdat <- function(dir) {
 }
 
 if(0) {
-  
-  cat("Generating wx diagnotics...")
-  # Calculate stdev for each temperature and moisture probe
-  qc_wx <- all_sites %>%
-    group_by(Site, Sensor_Depth, Sensor_Group, Timestamp) %>%
-    summarize(n = n(), meanValue = mean(Value), sdValue = sd(Value))
-  
-  cat("Generating weather plots...")
-  #check down LSLE
-  smoisture_wxplot <- ggplot(filter(all_sites, Sensor_Group == "Water Content"), aes(Timestamp, Value, color = Site, group = Sensor_SN)) + 
-    facet_wrap(~Sensor_Depth) + 
-    geom_line() +
-    ggtitle("Soil Moisture Content") +
-    labs(x = "Date", y = expression(m^3/m^3))
-  
-  TRH_wxplot <- ggplot(filter(all_sites, Sensor_Type == "TRH"), aes(Timestamp, Value, color = Sensor_Group, group = Sensor_Group)) + 
-    geom_line() +
-    facet_wrap(~Site) +
-    ggtitle("Atmospheric Temperature (Celsius) and Relative Humidity (%)") +
-    labs(x = "Date")
-  
-  stemp_wxplot <- ggplot(filter(na.omit(all_sites), Sensor_Group == "Temp"), aes(Timestamp, Value, color = Site, group = Sensor_SN)) + 
-    facet_wrap(~Sensor_Depth) + 
-    geom_line() +
-    ggtitle("Soil Temperature at 2CM and 20CM depth") +
-    labs(x = "Date", y = "Celsius")
-  
-  #ggplot(filter(qc_wx, Sensor_Depth == "20CM"), aes(Timestamp, meanValue, color = Site)) +
-  #  facet_wrap(~Site, ncol = 1) +
-  #  geom_errorbar(aes(x = Timestamp, ymin = meanValue - sdValue, ymax = meanValue + sdValue), color = "black") +
-  #  geom_line() +
-  #  ggtitle("20CM depth soil temperature with error bars")
-  
+
   # Read conductivity data
   cat("Reading conductivity data...")
   cond_HSLE <- read_csv("../well_data/HSLE_conductivity_20180806.csv", skip = 2,
@@ -93,10 +61,4 @@ if(0) {
   write_csv(all_sites, "../weather_data/wx_all_sites.csv")
   write_csv(cond_LSLE, "../well_data/cond_LSLE")
   
-  cat("Saving plots...")
-  wxfigures <- list()
-  wxfigures$smoisture_wxplot <- smoisture_wxplot
-  wxfigures$TRH_wxplot <- TRH_wxplot
-  wxfigures$stemp_wxplot <- stemp_wxplot
-  save(wxfigures, file = "../outputs/wxfigures.rda")
 }

@@ -102,15 +102,6 @@ ggE <- ggplot(cv_btwn_collars, aes(x = Timestamp, y = meanflux, group = Group, c
   ggtitle("Treatment means and errors")
 print(ggE)
 
-#----- Plot temperature vs. flux with regression line -----
-q10_plot <- ggplot(daily_dat, aes(x = meanTemp, y = meanFlux, color = Dest_Elevation)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  ggtitle("Temperature vs. Flux") +
-  labs(x = "Temperature (degC)", y = "Flux (µmol m-2 s-1)")
-print(q10_plot)
-#ggsave("../outputs/q10.pdf")
-
 
 #----- Plot observation CV (within collar) over time -----
 ggCV_btwn_obs <- ggplot(cv_btwn_obs, aes(x = Timestamp, y = CV)) +

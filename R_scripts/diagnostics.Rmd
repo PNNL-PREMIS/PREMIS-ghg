@@ -3,23 +3,25 @@ author: "SPennington"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+# Diagnostics as of `r date()`
+
+```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Diagnostics as of `r date()`
 
 ```{r, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
 
-# Load the licor data and calculate daily means
+# Load the licor and weather data
 licor_data <- readd("licor_data")
 licor_daily_data <- readd("licor_daily_data")
+weather_data <- readd("weather_data")
 
 # Calculate treatments means and s.d.
 licor_daily_data %>% 
   mutate(ControlGroup = if_else(Group == "Control", "Control (true)", "Transplant")) %>% 
-  group_by(Experiment, Origin_Plot, Dest_Salinity, Dest_Elevation, Destination_Plot,
-           Date, Group, ControlGroup) %>%  
+  group_by(Experiment, Origin_Plot, Dest_Salinity, Dest_Elevation, 
+           Destination_Plot, Date, Group, ControlGroup) %>%  
   summarise(Timestamp = mean(Timestamp), 
             sdFlux = sd(meanFlux), 
             meanFlux = mean(meanFlux), 
@@ -90,18 +92,41 @@ licor_data %>%
 ```
 
 ### Soil temperature at 20CM and 2CM depth
-```{r, echo = FALSE, eval = FALSE}
-wxfigures$stemp_wxplot
+```{r, echo = FALSE}
+weather_data %>% 
+  filter(Sensor_Group == "Temp") %>% 
+  ggplot(aes(Timestamp, Value, color = Site, group = Sensor_SN)) + 
+  facet_wrap(~Sensor_Depth) + 
+  geom_line() +
+  labs(x = "Date", y = expression(degree()~C))
 ```
 
 ### Air temperature and Relative Humidity
-```{r, echo = FALSE, eval = FALSE}
-wxfigures$TRH_wxplot
+```{r, echo = FALSE}
+weather_data %>% 
+  filter(Sensor_Type == "TRH") %>% 
+ggplot(aes(Timestamp, Value, color = Sensor_Group, group = Sensor_Group)) + 
+  geom_line() +
+  facet_wrap(~Site) +
+  ggtitle("Atmospheric Temperature (Celsius) and Relative Humidity (%)") +
+  labs(x = "Date")
 ```
 
 ### Soil moisure at 20CM and 2CM depth
-```{r, echo = FALSE, eval = FALSE}
-wxfigures$smoisture_wxplot
+```{r, echo = FALSE}
+weather_data %>% 
+  filter(Sensor_Group == "Water Content") %>% 
+  ggplot(aes(Timestamp, Value, color = Site, group = Sensor_SN)) + 
+  facet_wrap(~Sensor_Depth) + 
+  geom_line() +
+  labs(x = "Date", y = expression(m^3/m^3))
+```
+
+### Stdev for each temperature and moisture probe
+```{r, echo = FALSE}
+weather_data %>%
+  group_by(Site, Sensor_Depth, Sensor_Group, Timestamp) %>%
+  summarize(n = n(), meanValue = mean(Value), sdValue = sd(Value))
 ```
 
 ### Histogram of trees by DBH
