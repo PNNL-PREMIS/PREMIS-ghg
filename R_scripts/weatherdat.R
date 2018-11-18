@@ -2,8 +2,7 @@
 # Stephanie Pennington | Created July 2018
 
 # Read a single weather station file, reshape, parse, and join with station information
-read_wxdat <- function(filename) {
-  wstation_info <- readd("wstation_info")
+read_wxdat <- function(filename, wstation_info) {
   cat("Reading", filename, "...\n")
   filename %>% 
     read_csv(skip = 1, col_types = "icdddddddddd") %>%
@@ -22,9 +21,9 @@ read_wxdat <- function(filename) {
 }
 
 # Read all available weather or well station files, combine, and remove duplicate rows
-read_all_wxdat <- function(dir, read_function) {
+read_all_wxdat <- function(dir, read_function, ...) {
   list.files(dir, pattern = "[0-9]{8}\\.csv$", full.names = TRUE) %>% 
-    lapply(read_function) %>% 
+    lapply(read_function, ...) %>% 
     bind_rows %>% 
     distinct
 }

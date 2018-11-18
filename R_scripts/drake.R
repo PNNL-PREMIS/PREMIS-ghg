@@ -33,13 +33,13 @@ plan <- drake_plan(
   # `inventory_data` and `species_codes` hold tree information
   inventory_data = read_csv(file_in("../inventory_data/inventory.csv"), col_types = "ccccdccc"),
   species_codes = read_csv(file_in("../inventory_data/species_codes.csv"), col_types = "ccc"),
-  tree_data = make_tree_data(),
+  tree_data = make_tree_data(inventory_data, species_codes, plot_data),
   
   # Weather data from Hobo loggers and wells
   # We digest the filename list to detect when something changes in the data directories
   # Not perfect--this won't detect a change *within* a file
   wstation_info = read_csv(file_in("../weather_data/wstation_info.csv"), col_types = "cicic"),
-  weather_data = target(command = read_all_wxdat("../weather_data/", read_wxdat),
+  weather_data = target(command = read_all_wxdat("../weather_data/", read_wxdat, wstation_info),
                         trigger = trigger(change = do_filedigest("../weather_data/"))),
   # Conductivity data from wells
   well_data = target(command = read_all_wxdat("../well_data/", read_single_well),

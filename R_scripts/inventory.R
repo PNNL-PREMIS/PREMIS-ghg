@@ -3,11 +3,7 @@
 # Ben Bond-Lamberty
 
 # Join inventory data with species and plot information
-make_tree_data <- function() {
-  
-  inventory_data <- readd("inventory_data")
-  species_codes <- readd("species_codes")
-  plot_data <- readd("plot_data")
+make_tree_data <- function(inventory_data, species_codes, plot_data) {
   
   # Join the two and check for any unknown species code
   inventory_data %>% 
