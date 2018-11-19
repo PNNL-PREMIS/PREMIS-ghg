@@ -40,15 +40,6 @@ cv_btwn_collars <- licorDat %>%
   summarize( n = n(), CV = sd(Flux) / mean(Flux), meanflux = mean(Flux), sdflux=sd(Flux),
              Timestamp = mean(Timestamp), Collars = paste(Collar, collapse = " "))
 
-# Calculate CV between observations
-cv_btwn_obs <- licorDat %>% 
-  group_by(Date, Group, Collar) %>% 
-  summarise(CV = sd(Flux) / mean(Flux), n = n(), Timestamp = mean(Timestamp))
-
-# Calculate mean flux of all 3 observations in the meas. and the first 2 obs. in the meas.
-fluxMean <- licorDat %>% 
-  group_by(Date, Group, Collar) %>%
-  summarize(n = n(), mean_gt_2 = mean(Flux), mean_2 = mean(Flux[1:2]))
 
 cat("Making plots...\n")
 
@@ -106,21 +97,6 @@ ggE <- ggplot(cv_btwn_collars, aes(x = Timestamp, y = meanflux, group = Group, c
   ggtitle("Treatment means and errors")
 print(ggE)
 
-#----- Plot temperature vs. flux with regression line -----
-q10_plot <- ggplot(daily_dat, aes(x = meanTemp, y = meanFlux, color = Dest_Elevation)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  ggtitle("Temperature vs. Flux") +
-  labs(x = "Temperature (degC)", y = "Flux (µmol m-2 s-1)")
-print(q10_plot)
-#ggsave("../outputs/q10.pdf")
-
-#----- Plot collar CV (within treatment) over time -----
-ggCV_btwn_collars <- ggplot(data = cv_btwn_collars, aes(x = Timestamp, y = CV, color = Group)) +
-  geom_point() +
-  ggtitle("Coefficient of Variation Between Collars")
-print(ggCV_btwn_collars)
-#ggsave("../outputs/cv_btwn_exp.pdf")
 
 #----- Plot observation CV (within collar) over time -----
 ggCV_btwn_obs <- ggplot(cv_btwn_obs, aes(x = Timestamp, y = CV)) +
@@ -139,16 +115,6 @@ timesm_plot <- ggplot(daily_dat, aes(x = Timestamp, y = meanSM, color = Group, g
 print(timesm_plot)
 #ggsave("../outputs/timesm.pdf")
 
-#----- Plot mean flux with all 3 measurements vs. mean flux with only first two meas. -----
-# This is to test whether reducing observation size from 3 to 2 observations per measurement changes..
-# .. the flux
-var_test <- ggplot(fluxMean, aes(x = mean_gt_2, y = mean_2, color = n)) + 
-  geom_abline(slope = 1, intercept = 0, color = "blue") +
-  geom_point() + 
-  labs(x = "Mean flux of all measurements", y = "Mean flux of first 2 measurements") +
-  ggtitle("Mean Flux Per Collar (µmol m-2 s-1)")
-print(var_test)
-#ggsave("../diagnostics/mean_test.png")
 
 figures <- list()
 figures$timeflux_plot_dest <- timeflux_plot_dest
@@ -156,7 +122,6 @@ figures$timeflux_plot_dest_means <- timeflux_plot_dest_means
 figures$sm_plot_dest_means <- sm_plot_dest_means
 figures$timeflux_plot_origin <- timeflux_plot_origin
 figures$var_test <- var_test
-figures$ggCV_btwn_collars <- ggCV_btwn_collars
 figures$ggCV_btwn_obs <- ggCV_btwn_obs
 figures$q10_plot <- q10_plot
 figures$ggE <- ggE
