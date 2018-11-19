@@ -47,3 +47,20 @@ process_licor_data <- function(raw_data, collar_data, plot_data) {
            Group = if_else(Experiment == "Control", "Control", Group))
   
 }
+
+
+# Calculate daily averages for flux, temp, and soil moisture for each collar
+calculate_licor_daily_data <- function(licor_data) {
+  cat("Calculating daily averages, CVs, etc...\n")
+  licor_data %>% 
+    group_by(Date, Experiment, Group, Destination_Plot, Dest_Salinity, Dest_Elevation,
+             Origin_Plot, Origin_Salinity, Origin_Elevation, Collar) %>%
+    summarise(n = n(), 
+              Timestamp = mean(Timestamp),
+              meanFlux = mean(Flux), 
+              sdFlux = sd(Flux), 
+              meanSM = mean(SMoisture), 
+              meanT5 = mean(T5), 
+              meanT20 = mean(T20)) %>% 
+    ungroup
+}

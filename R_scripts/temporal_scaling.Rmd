@@ -1,0 +1,50 @@
+---
+title: "Seconds to decades: soil respiration variability and sensitivity across temporal scales"
+author: "Ben Bond-Lamberty"
+date: "11/17/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+licor_data <- readd("licor_data")
+```
+
+## Seconds to minutes
+
+How many times do we need to sample? Uses multiple Licor observations versus 1, 2, 3...
+
+```{r, echo = FALSE}
+licor_data %>% 
+  filter(Flux < 10) %>% 
+  group_by(Date, Group, Collar) %>%
+  summarize(n = n(), mean_gt_2 = mean(Flux), mean_1 = Flux[1], mean_2 = mean(Flux[1:2])) %>% 
+  filter(n >= 3) -> 
+  lds
+
+lds %>% 
+  gather(variable, value, mean_1, mean_2) ->
+  lds_plot
+
+ggplot(lds_plot, aes(x = mean_gt_2, y = value, color = variable)) + 
+  geom_abline(slope = 1, intercept = 0) +
+  geom_smooth(method = "lm", linetype = 2) +
+  geom_point() + 
+  labs(x = "Mean flux of all (>=3) measurements", 
+       y = "Mean flux of first 1 or 2 measurements")
+
+lds %>% 
+  gather(variable, value, mean_gt_2, mean_1, mean_2) %>% 
+  mutate(variable = factor(variable, levels = c("mean_gt_2", "mean_2", "mean_1"))) ->
+  lds_stats
+m <- lm(value ~ variable, data = lds_stats)
+summary(m)
+TukeyHSD(aov(m))
+```
+
+
+* **Minutes to hours to days**: how frequently do we need to sample? Uses GCREW continuous data. How frequently do we need to sample?
+* **Days to months**: how frequently do we need to sample for annual flux? Uses SERC survey data.
+* **Years**: how much coverage is needed for robust annual estimate? This uses `Annual_coverage` field of SRDB. Not clear about this one.
+* **Error introduced by RH versus RS**. Uses SRDB. Not sure about this.
+* **Years to decades**: how well can we detect trends? This is Nature paper SI work.
