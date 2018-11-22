@@ -64,3 +64,15 @@ calculate_licor_daily_data <- function(licor_data) {
               meanT20 = mean(T20)) %>% 
     ungroup
 }
+
+
+process_continuous_data <- function(raw_data) {
+  
+  # Ports 6 and 8 have no temperature or moisture probes at the moment
+  DATE_SENSORS_INSTALLED <- ymd("2018-11-20")
+  raw_data %>% 
+    filter(Port > 0) %>% 
+    rename(T5 = V3, SMoist = V2) %>% 
+    mutate(T5 = if_else(Port %in% c(6, 8) & Timestamp < DATE_SENSORS_INSTALLED, NA_real_, T5), 
+           SMoist = if_else(Port %in% c(6, 8) & Timestamp < DATE_SENSORS_INSTALLED, NA_real_, SMoist))
+}
