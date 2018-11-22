@@ -16,7 +16,7 @@ LT_licorDat <- read_licor_dir("../licor_data/longterm_dat/") %>%
   LT_licorDat
 
 # Ports 6 and 8 have no temperature or moisture probes at the moment
-DATE_SENSORS_INSTALLED <- ymd("2018-10-15")
+DATE_SENSORS_INSTALLED <- ymd("2018-11-20")
 LT_licorDat %>% 
   mutate(T5 = if_else(Port %in% c(6, 8) & Timestamp < DATE_SENSORS_INSTALLED, NA_real_, T5), 
          SMoist = if_else(Port %in% c(6, 8) & Timestamp < DATE_SENSORS_INSTALLED, NA_real_, SMoist)) ->
