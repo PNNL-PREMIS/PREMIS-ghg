@@ -54,6 +54,10 @@ plan <- drake_plan(
   # Reduce observations to a per-day average
   licor_daily_data = calculate_licor_daily_data(licor_data),
   
+  raw_con_licor_data = target(command = read_licor_dir("../licor_data/longterm_dat/"),
+                              trigger = trigger(change = do_filedigest("../licor_data/longterm_dat/"))),
+  con_licor_data = process_continuous_data(raw_con_licor_data),
+  
   # --------------------------------------------------------------------------------------------------------
   # Webpage diagnostics report
   diagnostics_report = rmarkdown::render(
