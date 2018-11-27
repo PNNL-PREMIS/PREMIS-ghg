@@ -10,6 +10,7 @@ library(drake)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+library(broom)
 
 # Define functions
 
@@ -23,9 +24,7 @@ basal_area_sum <- function(data, distance) {
 prox_model <- function(flux, T5, T20, SM, BA, site) {
   # Fit model
   
-  nlme::lme(log(flux) ~ T5 + T20 + SM + I(SM ^ 2) + BA, 
-            random = ~ 1 | site,
-            method = "ML")
+  lm(log(flux) ~ T5 + T20 + SM + I(SM ^ 2) + BA)
   
   # m1 <- lme4::lmer(log(Flux) ~ T5 + T20 + SMoisture + I(SMoisture ^ 2) + (BA_m2 | Dest_Salinity), data = control_cols)
 
@@ -84,7 +83,7 @@ ggplot(control_cols, aes(Timestamp, Flux)) + geom_point() + geom_line(aes(y = ex
 
 ### Table 2
 ```{r, echo = FALSE, warning = FALSE, message = FALSE}
-knitr::kable(p1$coefficients, digits = 3, format = "html") %>%
+knitr::kable(tidy(p1), digits = 3, format = "html") %>%
   kableExtra::kable_styling(c("striped", "bordered"), full_width = FALSE)
 ```
 
@@ -106,5 +105,23 @@ knitr::kable(p1$coefficients, digits = 3, format = "html") %>%
 
 ### Sensitivity test - BA significance with distance
 ```{r, echo = FALSE, warning = FALSE}
+# Site info
+licor_data <- readd("licor_data")
+treeProxDat <- readd("treeProxDat")
 
+# Filter Licor data for only true control collars
+control_cols <- filter(licor_data, Experiment == "Control", is.na(Notes), Dest_Salinity == "High")
+
+control_cols <- filter(control_cols, SMoisture > 0, SMoisture < 1)
+
+sens_output <- list()
+BA_output <- list()
+for (i in 2:15) {
+  BA <- basal_area_sum(treeProxDat, i)
+  data <- left_join(control_cols, BA, by = "Collar")
+  
+  model <- prox_model(data$Flux, data$T5, data$T20, data$SMoisture, data$BA_m2, data$Site)
+  sens_output[[i]] <- tidy(model)
+  BA_output[[i]] <- filter(sens_output[[i]], term == "BA")
+}
 ```
