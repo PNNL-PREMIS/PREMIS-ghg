@@ -6,6 +6,11 @@ output: html_document
 ---
 
 ```{r, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
+library(drake)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
 # Define functions
 
 basal_area_sum <- function(data, distance) {
@@ -17,10 +22,14 @@ basal_area_sum <- function(data, distance) {
 
 prox_model <- function(flux, T5, T20, SM, BA, site) {
   # Fit model
+  
   nlme::lme(log(flux) ~ T5 + T20 + SM + I(SM ^ 2) + BA, 
             random = ~ 1 | site,
             method = "ML")
   
+  # m1 <- lme4::lmer(log(Flux) ~ T5 + T20 + SMoisture + I(SMoisture ^ 2) + (BA_m2 | Dest_Salinity), data = control_cols)
+
+
   # Remove non-significant variables
   
   
@@ -31,7 +40,6 @@ prox_model <- function(flux, T5, T20, SM, BA, site) {
 
 ### Table 1
 ```{r, echo = FALSE, warning = FALSE, message = FALSE}
-
 readd("tree_data") %>% 
   group_by(Site, Salinity, Elevation) %>% 
   summarise(n = n(), Plot_area_m2 = mean(Plot_area_m2), `BA (m2/ha)` = sum((DBH_cm / 100 / 2) ^ 2 * pi, na.rm = TRUE) / mean(Plot_area_m2) * 10000) %>% 
@@ -67,7 +75,7 @@ BA5 <- basal_area_sum(treeProxDat, 5)
 control_cols <- left_join(control_cols, BA5, by = "Collar")
 
 control_cols <- filter(control_cols, SMoisture > 0, SMoisture < 1)
-p1 <- lm(log(Flux) ~ T5 + T20 + SMoisture + I(SMoisture ^ 2) +BA_m2, data = control_cols)
+p1 <- lm(log(Flux) ~ T5 + T20 + SMoisture + I(SMoisture ^ 2) + BA_m2, data = control_cols)
 summary(p1)
 plot(p1)
 control_cols$prediction <- predict(p1)
