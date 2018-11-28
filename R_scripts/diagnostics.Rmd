@@ -32,7 +32,11 @@ licor_daily_data %>%
             meanFlux = mean(meanFlux), 
             meanSM = mean(meanSM)) %>% 
   ungroup %>% 
-  mutate(Experiment = if_else(Origin_Plot == Destination_Plot, "Control", Experiment)) ->
+  mutate(Experiment = if_else(Origin_Plot == Destination_Plot, "Control", Experiment),
+         Dest_Elevation = paste(Dest_Elevation, "elevation"),
+         Dest_Salinity = paste(Dest_Salinity, "salinity"),
+         Dest_Elevation = factor(Dest_Elevation, levels = c("Low elevation", "Medium elevation", "High elevation")),
+         Dest_Salinity = factor(Dest_Salinity, levels = c("Low salinity", "Medium salinity", "High salinity"))) ->
   daily_treatment_means
 ```
 
