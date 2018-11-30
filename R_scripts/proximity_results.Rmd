@@ -72,7 +72,7 @@ ggplot(BA_dat, aes(x = dist, y = BA_m2, group = Collar, color = n_trees)) +
 ```
 
 
-### Table 1
+### Table 1 - site info
 ```{r, echo = FALSE, warning = FALSE, message = FALSE}
 tree_data %>% 
   group_by(Site, Salinity, Elevation) %>% 
@@ -96,6 +96,42 @@ x %>%
   knitr::kable(digits = 1, format = "html", col.names = c("Site", "Salinity", "Trees (/ha)", expression(BA~(m^2~ha^-1)))) %>%
   kableExtra::kable_styling(c("striped", "bordered"), full_width = FALSE)
 ```
+
+```{r co2_time, echo = FALSE, warning = FALSE}
+licor_daily_data <- readd("licor_daily_data")
+
+# Calculate treatments means and s.d.
+licor_daily_data %>% 
+  mutate(ControlGroup = if_else(Group == "Control", "Control (true)", "Transplant")) %>% 
+  group_by(Experiment, Origin_Plot, Dest_Salinity, Dest_Elevation, 
+           Destination_Plot, Date, Group, ControlGroup) %>%  
+  summarise(Timestamp = mean(Timestamp), 
+            sdFlux = sd(meanFlux), 
+            meanFlux = mean(meanFlux), 
+            meanSM = mean(meanSM)) %>% 
+  ungroup %>% 
+  mutate(Experiment = if_else(Origin_Plot == Destination_Plot, "Control", Experiment),
+         Dest_Elevation = paste(Dest_Elevation, "elevation"),
+         Dest_Salinity = paste(Dest_Salinity, "salinity"),
+         Dest_Elevation = factor(Dest_Elevation, levels = c("High elevation", "Medium elevation", "Low elevation")),
+         Dest_Salinity = factor(Dest_Salinity, levels = c("Low salinity", "Medium salinity", "High salinity"))) ->
+  daily_treatment_means
+
+daily_treatment_means %>% 
+  filter(!is.na(meanFlux), !is.na(sdFlux)) %>% 
+  filter(ControlGroup == "Control (true)") %>%
+  ggplot(aes(x = Timestamp, y = meanFlux, color = Experiment, group = Group)) +
+  geom_errorbar(aes(ymin = meanFlux - sdFlux, ymax = meanFlux + sdFlux, color = "tomato4")) +
+  geom_point(color = "tomato3") +
+  geom_line(size = 1, color = "tomato3") +
+  facet_grid(Dest_Elevation ~ Dest_Salinity) +
+  ggtitle("Flux over time - destination plots") +
+  labs(x = "Date", y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
+
+
 
 ### Hypothesis I - BA strong effect within 5 meters
 ```{r, echo = FALSE, warning = FALSE}
