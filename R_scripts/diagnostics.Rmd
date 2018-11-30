@@ -7,10 +7,15 @@ output: html_document
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(drake)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+theme_set(theme_bw())
 ```
 
 
-```{r, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
+```{r prep, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
 
 # Load the licor and weather data
 licor_data <- readd("licor_data")
@@ -27,11 +32,15 @@ licor_daily_data %>%
             meanFlux = mean(meanFlux), 
             meanSM = mean(meanSM)) %>% 
   ungroup %>% 
-  mutate(Experiment = if_else(Origin_Plot == Destination_Plot, "Control", Experiment)) ->
+  mutate(Experiment = if_else(Origin_Plot == Destination_Plot, "Control", Experiment),
+         Dest_Elevation = paste(Dest_Elevation, "elevation"),
+         Dest_Salinity = paste(Dest_Salinity, "salinity"),
+         Dest_Elevation = factor(Dest_Elevation, levels = c("High elevation", "Medium elevation", "Low elevation")),
+         Dest_Salinity = factor(Dest_Salinity, levels = c("Low salinity", "Medium salinity", "High salinity"))) ->
   daily_treatment_means
 ```
 
-```{r, echo = FALSE, message = FALSE}
+```{r sample_size_table, echo = FALSE, message = FALSE}
 # Auto-generate the sample size table
 readd("collar_data") %>% 
   group_by(Site, Experiment) %>% 
@@ -44,13 +53,13 @@ readd("collar_data") %>%
 
 Color indicates origin/destination plot pairings. Panels: left to right - High, Medium, Low salinity; top to bottom - Low, Medium, and High elevation.
 
-```{r, echo = FALSE, warning = FALSE}
+```{r co2_time, echo = FALSE, warning = FALSE}
 daily_treatment_means %>% 
   filter(!is.na(meanFlux), !is.na(sdFlux)) %>% 
   ggplot(aes(x = Timestamp, y = meanFlux, color = Experiment, group = Group)) +
+  geom_errorbar(aes(ymin = meanFlux - sdFlux, ymax = meanFlux + sdFlux)) +
   geom_point() +
   geom_line(aes(linetype = ControlGroup)) +
-  geom_errorbar(aes(ymin = meanFlux - sdFlux, ymax = meanFlux + sdFlux)) +
   facet_grid(Dest_Elevation ~ Dest_Salinity) +
   ggtitle("Flux over time - destination plots") +
   labs(x = "Date", y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
@@ -58,7 +67,7 @@ daily_treatment_means %>%
 ```
 
 ### Soil temperature versus CO2 flux for all cores
-```{r, echo = FALSE, warning = FALSE}
+```{r q10, echo = FALSE, warning = FALSE}
 licor_daily_data %>% 
   filter(!is.na(meanT20), !is.na(meanFlux)) %>% 
   ggplot(aes(x = meanT20, y = meanFlux, color = Dest_Elevation)) +
@@ -67,20 +76,21 @@ licor_daily_data %>%
 ```
 
 ### Licor soil moisture over time
-```{r, echo = FALSE}
+```{r licor_sm, echo = FALSE}
 daily_treatment_means %>% 
   filter(!is.na(meanSM)) %>% 
   ggplot(aes(x = Timestamp, y = meanSM, color = Experiment, group = Group)) +
   geom_point() +
   geom_line(aes(linetype = ControlGroup)) +
-  coord_cartesian(ylim = c(0, 0.6)) +
+  ylim(c(0,0.6)) +
+  #coord_cartesian(ylim = c(0, 0.6)) +
   facet_grid(Dest_Elevation ~ Dest_Salinity) +
   labs(x = "Date") +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
 ### Coefficient of variation between collars
-```{r, echo = FALSE, warning = FALSE}
+```{r collar_cv, echo = FALSE, warning = FALSE}
 licor_data %>% 
   group_by(Date, Group, Collar) %>% 
   summarise(CV = sd(Flux) / mean(Flux), 
@@ -92,7 +102,7 @@ licor_data %>%
 ```
 
 ### Mean flux of first 2 observations versus all observations
-```{r, echo = FALSE}
+```{r obs_var, echo = FALSE}
 licor_data %>% 
   group_by(Date, Group, Collar) %>%
   summarize(n = n(), mean_gt_2 = mean(Flux), mean_2 = mean(Flux[1:2])) %>% 
@@ -109,7 +119,7 @@ ggplot(lds, aes(x = mean_gt_2, y = mean_2, color = n)) +
 ```
 
 ### Soil temperature at 20CM and 2CM depth
-```{r, echo = FALSE}
+```{r soil_temp, echo = FALSE}
 weather_data %>% 
   filter(Sensor_Group == "Temp") %>% 
   ggplot(aes(Timestamp, Value, color = Site, group = Sensor_SN)) + 
@@ -119,7 +129,7 @@ weather_data %>%
 ```
 
 ### Air temperature and Relative Humidity
-```{r, echo = FALSE}
+```{r air_temp, echo = FALSE}
 weather_data %>% 
   filter(Sensor_Type == "TRH") %>% 
   ggplot(aes(Timestamp, Value, color = Sensor_Group, group = Sensor_Group)) + 
@@ -130,7 +140,7 @@ weather_data %>%
 ```
 
 ### Soil moisure at 20CM and 2CM depth
-```{r, echo = FALSE}
+```{r soil_moisture, echo = FALSE}
 weather_data %>% 
   filter(Sensor_Group == "Water Content") %>% 
   ggplot(aes(Timestamp, Value, color = Site, group = Sensor_SN)) + 
@@ -140,14 +150,14 @@ weather_data %>%
 ```
 
 ### Stdev for each temperature and moisture probe
-```{r, echo = FALSE}
+```{r weather_var, echo = FALSE}
 weather_data %>%
   group_by(Site, Sensor_Depth, Sensor_Group, Timestamp) %>%
   summarize(n = n(), meanValue = mean(Value), sdValue = sd(Value))
 ```
 
 ### Well conductivity data
-```{r, echo = FALSE}
+```{r wells, echo = FALSE}
 readd("well_data") %>% 
   gather(variable, value, Low_Range, High_Range) %>% 
   ggplot(aes(x = Timestamp, y = value, color = variable)) +
@@ -156,7 +166,7 @@ readd("well_data") %>%
 ```
 
 ### Histogram of trees by DBH
-```{r, echo = FALSE}
+```{r inventory, echo = FALSE}
 tree_data <- readd("tree_data")
 ggplot(tree_data, aes(DBH_cm, fill = Species)) + 
   geom_histogram(position = "stack", binwidth = 5) + 
