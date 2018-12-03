@@ -52,6 +52,7 @@ prox_data %>%
  tree_prox_data
 ```
 
+### Cumulative basal area for each collar
 ```{r}
 # Calculate cumulative basal area at each distance 
 BA_dat <- list()
@@ -59,13 +60,16 @@ for (i in 1:max(tree_prox_data$Distance_m)) {
   tree_prox_data %>% 
     filter(Distance_m <= i) %>% 
     group_by(Collar) %>% 
-    summarise(n_trees = n(), BA_m2 = sum(BA_sqm, na.rm = TRUE), dist = i) ->
+    summarise(n_trees = n(), BA_m2 = sum(BA_sqm, na.rm = TRUE), dist = i) -> #%>%
+#    complete(dist = i, nesting(Collar), fill = list(BA_m2 = 0, n_trees = 0))->
     BA_dat[[i]]
 }
 
 BA_dat <- bind_rows(BA_dat)
 ggplot(BA_dat, aes(x = dist, y = BA_m2, group = Collar, color = n_trees)) + 
   geom_line(size = 1) +
+  scale_colour_gradientn(colours = topo.colors(9)) +
+  ggtitle("Cumulative Basal Area") +
   xlab("Distance (meters)") +
   ylab("Basal Area (m2)")
 
@@ -97,6 +101,8 @@ x %>%
   kableExtra::kable_styling(c("striped", "bordered"), full_width = FALSE)
 ```
 
+
+### Flux over time for control collars
 ```{r co2_time, echo = FALSE, warning = FALSE}
 licor_daily_data <- readd("licor_daily_data")
 
@@ -120,12 +126,12 @@ licor_daily_data %>%
 daily_treatment_means %>% 
   filter(!is.na(meanFlux), !is.na(sdFlux)) %>% 
   filter(ControlGroup == "Control (true)") %>%
-  ggplot(aes(x = Timestamp, y = meanFlux, color = Experiment, group = Group)) +
-  geom_errorbar(aes(ymin = meanFlux - sdFlux, ymax = meanFlux + sdFlux, color = "tomato4")) +
+  ggplot(aes(x = Timestamp, y = meanFlux)) +
+  geom_errorbar(aes(ymin = meanFlux - sdFlux, ymax = meanFlux + sdFlux), color = "tomato4") +
   geom_point(color = "tomato3") +
   geom_line(size = 1, color = "tomato3") +
   facet_grid(Dest_Elevation ~ Dest_Salinity) +
-  ggtitle("Flux over time - destination plots") +
+  ggtitle("Flux over time") +
   labs(x = "Date", y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
@@ -180,7 +186,7 @@ knitr::kable(tidy(p1), digits = 3, format = "html") %>%
 
 sens_output <- list()
 BA_output <- list()
-for (i in 2:15) {
+for (i in 2:max(tree_prox_data$Distance_m)) {
   BA <- basal_area_sum(tree_prox_data, i)
   data <- left_join(control_cols, BA, by = "Collar") %>% filter(!is.na(BA_m2))
   
@@ -189,6 +195,7 @@ for (i in 2:15) {
   sens_output[[ichar]] <- tidy(model)
   BA_output[[ichar]] <- filter(sens_output[[ichar]], term == "BA")
 }
+
 bind_rows(sens_output, .id = "Distance") %>%
   filter(term == "BA") %>%
   mutate(Distance = as.integer(Distance)) %>%
