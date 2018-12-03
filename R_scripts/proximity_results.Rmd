@@ -10,6 +10,7 @@ library(drake)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+theme_set(theme_bw())
 library(broom)
 
 # Define functions
@@ -53,7 +54,7 @@ prox_data %>%
 ```
 
 ### Cumulative basal area for each collar
-```{r}
+```{r, fig.width = 9}
 # Calculate cumulative basal area at each distance 
 BA_dat <- list()
 for (i in 1:max(tree_prox_data$Distance_m)) {
@@ -61,16 +62,17 @@ for (i in 1:max(tree_prox_data$Distance_m)) {
     filter(Distance_m <= i) %>% 
     group_by(Collar) %>% 
     summarise(n_trees = n(), BA_m2 = sum(BA_sqm, na.rm = TRUE), dist = i) -> #%>%
-#    complete(dist = i, nesting(Collar), fill = list(BA_m2 = 0, n_trees = 0))->
+#    complete(dist = i, Collar, fill = list(BA_m2 = 0, n_trees = 0))->
     BA_dat[[i]]
 }
 
-BA_dat <- bind_rows(BA_dat)
+BA_dat <- bind_rows(BA_dat) %>% 
+  complete(Collar, dist=c(0:max(tree_prox_data$Distance_m)), fill = list(BA_m2=0, n_trees=0))
 ggplot(BA_dat, aes(x = dist, y = BA_m2, group = Collar, color = n_trees)) + 
   geom_line(size = 1) +
   scale_colour_gradientn(colours = topo.colors(9)) +
   ggtitle("Cumulative Basal Area") +
-  xlab("Distance (meters)") +
+  xlab("Radial distance from collar (in meters)") +
   ylab("Basal Area (m2)")
 
 ```
@@ -123,13 +125,14 @@ licor_daily_data %>%
          Dest_Salinity = factor(Dest_Salinity, levels = c("Low salinity", "Medium salinity", "High salinity"))) ->
   daily_treatment_means
 
-daily_treatment_means %>% 
+licor_daily_data %>% 
   filter(!is.na(meanFlux), !is.na(sdFlux)) %>% 
-  filter(ControlGroup == "Control (true)") %>%
-  ggplot(aes(x = Timestamp, y = meanFlux)) +
-  geom_errorbar(aes(ymin = meanFlux - sdFlux, ymax = meanFlux + sdFlux), color = "tomato4") +
-  geom_point(color = "tomato3") +
+  filter(Group == "Control") %>%
+  ggplot(aes(x = Timestamp, y = meanFlux, group = Collar, color = Collar)) +
+  geom_errorbar(aes(ymin = meanFlux - sdFlux, ymax = meanFlux + sdFlux), color = "tomato3") +
   geom_line(size = 1, color = "tomato3") +
+  geom_point(color = "tomato3") +
+  #scale_colour_gradientn(colours = rainbow(4)) +
   facet_grid(Dest_Elevation ~ Dest_Salinity) +
   ggtitle("Flux over time") +
   labs(x = "Date", y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
@@ -182,7 +185,7 @@ knitr::kable(tidy(p1), digits = 3, format = "html") %>%
 ```
 
 ### Sensitivity test - BA significance with distance
-```{r, echo = FALSE, warning = FALSE}
+```{r, echo = FALSE, warning = FALSE, fig.width = 9}
 
 sens_output <- list()
 BA_output <- list()
@@ -200,6 +203,10 @@ bind_rows(sens_output, .id = "Distance") %>%
   filter(term == "BA") %>%
   mutate(Distance = as.integer(Distance)) %>%
   print %>%
-  ggplot(aes(Distance, p.value)) + geom_line() + geom_hline(yintercept = 0.05, linetype = 2) +
-  xlab("Radius of distance from collar considered") + ylab("p-value for test of BA significance to flux")
+  ggplot(aes(Distance, p.value)) + 
+  geom_line(color = "grey") + 
+  geom_point(size = 2, color = "tomato3") +
+  geom_hline(yintercept = 0.05, linetype = 2) +
+  ggtitle("Basal Area Significance") +
+  xlab("Radial distance from collar (in meters)") + ylab("P-value for test of BA significance to flux")
 ```
