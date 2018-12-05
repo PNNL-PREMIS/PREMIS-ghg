@@ -72,8 +72,7 @@ ggplot(BA_dat, aes(x = dist, y = BA_m2, group = Collar, color = n_trees)) +
   geom_line(size = 1) +
   scale_colour_gradientn(colours = topo.colors(9)) +
   ggtitle("Cumulative Basal Area") +
-  xlab("Radial distance from collar (in meters)") +
-  ylab("Basal Area (m2)")
+  labs(x = "Radial distance from collar (in meters)", y = expression(Basal~Area~(m^2)), color = "Number \nof Trees")
 
 ```
 
@@ -108,23 +107,7 @@ x %>%
 ```{r co2_time, echo = FALSE, warning = FALSE}
 licor_daily_data <- readd("licor_daily_data")
 
-# Calculate treatments means and s.d.
-licor_daily_data %>% 
-  mutate(ControlGroup = if_else(Group == "Control", "Control (true)", "Transplant")) %>% 
-  group_by(Experiment, Origin_Plot, Dest_Salinity, Dest_Elevation, 
-           Destination_Plot, Date, Group, ControlGroup) %>%  
-  summarise(Timestamp = mean(Timestamp), 
-            sdFlux = sd(meanFlux), 
-            meanFlux = mean(meanFlux), 
-            meanSM = mean(meanSM)) %>% 
-  ungroup %>% 
-  mutate(Experiment = if_else(Origin_Plot == Destination_Plot, "Control", Experiment),
-         Dest_Elevation = paste(Dest_Elevation, "elevation"),
-         Dest_Salinity = paste(Dest_Salinity, "salinity"),
-         Dest_Elevation = factor(Dest_Elevation, levels = c("High elevation", "Medium elevation", "Low elevation")),
-         Dest_Salinity = factor(Dest_Salinity, levels = c("Low salinity", "Medium salinity", "High salinity"))) ->
-  daily_treatment_means
-
+# s.d. is based on successive measurements at same collar
 licor_daily_data %>% 
   filter(!is.na(meanFlux), !is.na(sdFlux)) %>% 
   filter(Group == "Control") %>%
@@ -204,8 +187,8 @@ bind_rows(sens_output, .id = "Distance") %>%
   mutate(Distance = as.integer(Distance)) %>%
   print %>%
   ggplot(aes(Distance, p.value)) + 
-  geom_line(color = "grey") + 
-  geom_point(size = 2, color = "tomato3") +
+  geom_line(size = 1, color = "grey") + 
+  geom_point(size = 2.5, color = "tomato3") +
   geom_hline(yintercept = 0.05, linetype = 2) +
   ggtitle("Basal Area Significance") +
   xlab("Radial distance from collar (in meters)") + ylab("P-value for test of BA significance to flux")
