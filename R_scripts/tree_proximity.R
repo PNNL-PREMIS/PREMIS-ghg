@@ -13,14 +13,14 @@ proxDat$Tag <- as.character(proxDat$Tag)
 
 # ----- Step 2: QC/error check -----
 # Warning generated if duplicate tag/tree is found
-cat("Checking for duplicate trees...\n")
-for(i in nrow(proxDat)) {
-  if (any(duplicated(proxDat$Tag))) {
-    stop("\n Tag duplicated: ", proxDat$Tag[duplicated(proxDat$Tag)])
-  } else {
-    cat("No duplicates found.")
-  }
-}
+# cat("Checking for duplicate trees...\n")
+# for(i in nrow(proxDat)) {
+#   if (any(duplicated(proxDat$Tag))) {
+#     stop("\n Tag duplicated: ", proxDat$Tag[duplicated(proxDat$Tag)])
+#   } else {
+#     cat("No duplicates found.")
+#   }
+# }
 
 # ----- Step 3: Read Licor and tre inventory data -----
 cat("Reading Licor data...\n")

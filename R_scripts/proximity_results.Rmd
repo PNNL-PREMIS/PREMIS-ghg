@@ -10,6 +10,8 @@ library(drake)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+theme_set(theme_bw())
+library(broom)
 
 # Define functions
 
@@ -23,9 +25,7 @@ basal_area_sum <- function(data, distance) {
 prox_model <- function(flux, T5, T20, SM, BA, site) {
   # Fit model
   
-  nlme::lme(log(flux) ~ T5 + T20 + SM + I(SM ^ 2) + BA, 
-            random = ~ 1 | site,
-            method = "ML")
+  lm(log(flux) ~ T5 + T20 + SM + I(SM ^ 2) + BA)
   
   # m1 <- lme4::lmer(log(Flux) ~ T5 + T20 + SMoisture + I(SMoisture ^ 2) + (BA_m2 | Dest_Salinity), data = control_cols)
 
@@ -38,9 +38,48 @@ prox_model <- function(flux, T5, T20, SM, BA, site) {
 
 ```
 
-### Table 1
+```{r joindata}
+tree_data <- readd("tree_data")
+prox_data <- readd("prox_data")
+
+prox_data %>%
+  select(-Date) %>% 
+  mutate(Tag = as.character(Tag)) %>%
+  left_join(tree_data, by = c("Site", "Plot", "Tag"), na_matches = "never") %>%
+# Replace DBH with recorded value for non-tagged trees
+  mutate(DBH_cm = if_else(is.na(Tag), No_tag_DBH, DBH_cm),
+         Species_code = if_else(is.na(Tag), No_tag_species, Species_code)) %>%
+  mutate(BA_sqm = (DBH_cm / 100 / 2) ^ 2 * pi) ->  # from DBH (cm) to area (m2)
+ tree_prox_data
+```
+
+### Cumulative basal area for each collar
+```{r, fig.width = 9}
+# Calculate cumulative basal area at each distance 
+BA_dat <- list()
+for (i in 1:max(tree_prox_data$Distance_m)) {
+  tree_prox_data %>% 
+    filter(Distance_m <= i) %>% 
+    group_by(Collar) %>% 
+    summarise(n_trees = n(), BA_m2 = sum(BA_sqm, na.rm = TRUE), dist = i) -> #%>%
+#    complete(dist = i, Collar, fill = list(BA_m2 = 0, n_trees = 0))->
+    BA_dat[[i]]
+}
+
+BA_dat <- bind_rows(BA_dat) %>% 
+  complete(Collar, dist=c(0:max(tree_prox_data$Distance_m)), fill = list(BA_m2=0, n_trees=0))
+ggplot(BA_dat, aes(x = dist, y = BA_m2, group = Collar, color = n_trees)) + 
+  geom_line(size = 1) +
+  scale_colour_gradientn(colours = topo.colors(9)) +
+  ggtitle("Cumulative Basal Area") +
+  labs(x = "Radial distance from collar (in meters)", y = expression(Basal~Area~(m^2)), color = "Number \nof Trees")
+
+```
+
+
+### Table 1 - site info
 ```{r, echo = FALSE, warning = FALSE, message = FALSE}
-readd("tree_data") %>% 
+tree_data %>% 
   group_by(Site, Salinity, Elevation) %>% 
   summarise(n = n(), Plot_area_m2 = mean(Plot_area_m2), `BA (m2/ha)` = sum((DBH_cm / 100 / 2) ^ 2 * pi, na.rm = TRUE) / mean(Plot_area_m2) * 10000) %>% 
   mutate(`Trees (/ha)` = n / Plot_area_m2 * 10000) %>% 
@@ -63,28 +102,52 @@ x %>%
   kableExtra::kable_styling(c("striped", "bordered"), full_width = FALSE)
 ```
 
+
+### Flux over time for control collars
+```{r co2_time, echo = FALSE, warning = FALSE}
+licor_daily_data <- readd("licor_daily_data")
+
+# s.d. is based on successive measurements at same collar
+licor_daily_data %>% 
+  filter(!is.na(meanFlux), !is.na(sdFlux)) %>% 
+  filter(Group == "Control") %>%
+  ggplot(aes(x = Timestamp, y = meanFlux, group = Collar, color = Collar)) +
+  geom_errorbar(aes(ymin = meanFlux - sdFlux, ymax = meanFlux + sdFlux), color = "tomato3") +
+  geom_line(size = 1, color = "tomato3") +
+  geom_point(color = "tomato3") +
+  #scale_colour_gradientn(colours = rainbow(4)) +
+  facet_grid(Dest_Elevation ~ Dest_Salinity) +
+  ggtitle("Flux over time") +
+  labs(x = "Date", y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
+
+
+
 ### Hypothesis I - BA strong effect within 5 meters
 ```{r, echo = FALSE, warning = FALSE}
 # Site info
 licor_data <- readd("licor_data")
-treeProxDat <- readd("treeProxDat")
 
 # Filter Licor data for only true control collars
-control_cols <- filter(licor_data, Experiment == "Control", is.na(Notes), Dest_Salinity == "High")
-BA5 <- basal_area_sum(treeProxDat, 5)
-control_cols <- left_join(control_cols, BA5, by = "Collar")
-
+control_cols <- filter(licor_data, Experiment == "Control", is.na(Notes))
 control_cols <- filter(control_cols, SMoisture > 0, SMoisture < 1)
-p1 <- lm(log(Flux) ~ T5 + T20 + SMoisture + I(SMoisture ^ 2) + BA_m2, data = control_cols)
+
+BA5 <- basal_area_sum(tree_prox_data, 5)
+control_cols_5m <- left_join(control_cols, BA5, by = "Collar")
+control_cols_5m <- filter(control_cols_5m, !is.na(BA_m2))
+
+p1 <- with(control_cols_5m, prox_model(Flux, T5, T20, SMoisture, BA_m2, Site))
 summary(p1)
 plot(p1)
-control_cols$prediction <- predict(p1)
-ggplot(control_cols, aes(Timestamp, Flux)) + geom_point() + geom_line(aes(y = exp(prediction))) + facet_wrap(~Collar)
+control_cols_5m$prediction <- predict(p1)
+ggplot(control_cols_5m, aes(Timestamp, Flux)) + geom_point() + geom_line(aes(y = exp(prediction))) + facet_wrap(~Collar)
 ```
 
 ### Table 2
 ```{r, echo = FALSE, warning = FALSE, message = FALSE}
-knitr::kable(p1$coefficients, digits = 3, format = "html") %>%
+knitr::kable(tidy(p1), digits = 3, format = "html") %>%
   kableExtra::kable_styling(c("striped", "bordered"), full_width = FALSE)
 ```
 
@@ -105,6 +168,28 @@ knitr::kable(p1$coefficients, digits = 3, format = "html") %>%
 ```
 
 ### Sensitivity test - BA significance with distance
-```{r, echo = FALSE, warning = FALSE}
+```{r, echo = FALSE, warning = FALSE, fig.width = 9}
 
+sens_output <- list()
+BA_output <- list()
+for (i in 2:max(tree_prox_data$Distance_m)) {
+  BA <- basal_area_sum(tree_prox_data, i)
+  data <- left_join(control_cols, BA, by = "Collar") %>% filter(!is.na(BA_m2))
+  
+  model <- prox_model(data$Flux, data$T5, data$T20, data$SMoisture, data$BA_m2, data$Site)
+  ichar <- as.character(i)
+  sens_output[[ichar]] <- tidy(model)
+  BA_output[[ichar]] <- filter(sens_output[[ichar]], term == "BA")
+}
+
+bind_rows(sens_output, .id = "Distance") %>%
+  filter(term == "BA") %>%
+  mutate(Distance = as.integer(Distance)) %>%
+  print %>%
+  ggplot(aes(Distance, p.value)) + 
+  geom_line(size = 1, color = "grey") + 
+  geom_point(size = 2.5, color = "tomato3") +
+  geom_hline(yintercept = 0.05, linetype = 2) +
+  ggtitle("Basal Area Significance") +
+  xlab("Radial distance from collar (in meters)") + ylab("P-value for test of BA significance to flux")
 ```
