@@ -161,6 +161,52 @@ Cells with _significant_ positive slope (observations with `r round(median_error
 # Next steps
 
 Next: make a nice graph of change over time 
- using a subset of data for readability
- Convert array to data frame and plot rs versus time
- with a line for each grid cell
+using a subset of data for readability
+Convert array to data frame and plot rs versus time
+with a line for each grid cell
+
+# Simple: when would expect to see significance?
+
+```{r simple, echo=FALSE}
+set.seed(1234)
+
+do_sim <- function() {
+  # Temperature has risen 0.9 C in 40 years, more or less
+  dTdt <- 0.9 / 40.0
+  q10 <- 2
+  R0 = 1.0
+  test <- tibble(Year = 1:100,
+                 Temp = dTdt * Year,
+                 Resp = R0 * q10 ^ (Temp / 10)) 
+  test$Resp_fuzz <- test$Resp * rnorm(nrow(test), mean = 1, sd = median_error)
+  
+  test$trend_p <- NA
+  for(i in seq_len(nrow(test))) {
+    if(i > 2) {
+      m <- lm(Resp_fuzz ~ Year, data = test[1:i,])
+      test$trend_p[i] <- summary(m)$coefficients["Year", "Pr(>|t|)"]
+    }
+  }
+  test
+}
+
+results <- list()
+for(s in 1:100) {
+  results[[s]] <- do_sim()
+}
+results %>% 
+  bind_rows %>% 
+  group_by(Year) %>% 
+  summarise(n = n(), 
+            Temp = mean(Temp), 
+            Resp = mean(Resp),
+            Resp_fuzz_sd = sd(Resp_fuzz),          
+            Resp_fuzz = mean(Resp_fuzz), 
+            trend_p_sd = sd(trend_p), 
+            trend_p = mean(trend_p)) %>% 
+  filter(!is.na(trend_p)) ->
+  results_summary
+qplot(Year, trend_p, data = results_summary, color = trend_p < 0.05) +
+  geom_line(aes(y = Resp_fuzz))
+```
+
