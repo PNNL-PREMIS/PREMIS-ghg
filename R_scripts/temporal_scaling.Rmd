@@ -18,10 +18,10 @@ library(kableExtra)
 
 licor_data <- readd("licor_data")
 
-save_agu_plot <- function(fn, plot = last_plot()) {
+save_agu_plot <- function(fn, plot = last_plot(), ...) {
   dir <- "~/Desktop/agu_slides/"
   if(!dir.exists(dir)) dir.create(dir)
-  ggsave(file.path(dir, fn), plot)
+  suppressMessages(ggsave(file.path(dir, fn), plot, ...))
 }
 
 fuzz <- function(x, error) {
@@ -77,6 +77,39 @@ TukeyHSD(aov(m))
 
 ```{r srdb, echo=FALSE}
 srdb <- readd("srdb")
+srdb$Rs_interann_cv <- with(srdb, Rs_interann_err / Rs_annual)
+median_interann_cv <- median(srdb$Rs_interann_cv, na.rm = TRUE)
+
+srdb %>% 
+  filter(!is.na(Rs_interann_cv)) %>% 
+  ggplot(aes(x = Rs_interann_cv)) + geom_histogram(bins = 30) +
+  scale_x_continuous(labels = scales::percent) +
+  xlim(c(0, 1.5)) +
+  geom_vline(xintercept = median_interann_cv, color = "red") +
+  xlab("CV") + ylab("CV between successive years")
+save_agu_plot("srdb_cv.png")
+
+# Site records
+srdb %>% 
+  filter(!is.na(Longitude), !is.na(Rs_annual), Manipulation == "None") %>% 
+  mutate(lon = round(Longitude, 2), lat = round(Latitude, 2)) ->
+  srdb
+
+srdb %>% 
+  # Compute the longest records
+  group_by(lon, lat, Leaf_habit, Ecosystem_type) %>% 
+  summarise(Years = length(unique(Study_midyear))) %>% ungroup %>% 
+  arrange(desc(Years)) %>% 
+  top_n(10) %>% 
+  left_join(select(srdb, Site_name, lon, lat, Ecosystem_type, Study_midyear, YearsOfData),
+            by = c("lon", "lat", "Ecosystem_type")) %>% 
+  mutate(Site_name = substr(Site_name, 1, 10)) ->
+  site_smry
+
+ggplot(site_smry, aes(Study_midyear, Site_name, 
+                      color = paste(Leaf_habit, Ecosystem_type))) + 
+  geom_point() + xlab("Year") + ylab("") + scale_color_discrete("")
+save_agu_plot("site_records.png", width = 8, height = 4)
 ```
 
 
@@ -92,8 +125,8 @@ licor_data %>%
 median_error <- median(meas_error_1$cv)
 ggplot(meas_error_1, aes(x = cv)) + geom_histogram(bins = 30) +
   scale_x_continuous(labels = scales::percent) +
-  geom_vline(xintercept = median_error, color = "red")
-ylab("CV between successive IRGA measurements")
+  geom_vline(xintercept = median_error, color = "red") +
+  xlab("CV") + ylab("CV between successive IRGA measurements")
 save_agu_plot("licor12_cv.png")
 ```
 OK, so the median measurement error here is ~`r round(median_error * 100, 0)`% for `r nrow(meas_error_1)` observations of fluxes between `r round(min(meas_error_1$meanFlux), 2)` and `r round(max(meas_error_1$meanFlux), 2)` µmol/m2/s.
