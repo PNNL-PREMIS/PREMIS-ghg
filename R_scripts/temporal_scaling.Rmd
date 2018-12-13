@@ -16,12 +16,14 @@ theme_set(theme_bw())
 library(lubridate)
 library(kableExtra)
 
+library(mblm)  # for Theil-Sen robust trend test
+
 licor_data <- readd("licor_data")
 
+plot_dir <- "~/Desktop/agu_slides/"
 save_agu_plot <- function(fn, plot = last_plot(), ...) {
-  dir <- "~/Desktop/agu_slides/"
-  if(!dir.exists(dir)) dir.create(dir)
-  suppressMessages(ggsave(file.path(dir, fn), plot, ...))
+  if(!dir.exists(plot_dir)) dir.create(plot_dir)
+  suppressMessages(ggsave(file.path(plot_dir, fn), plot, ...))
 }
 
 fuzz <- function(x, error) {
@@ -86,7 +88,7 @@ srdb %>%
   scale_x_continuous(labels = scales::percent) +
   xlim(c(0, 1.5)) +
   geom_vline(xintercept = median_interann_cv, color = "red") +
-  xlab("CV") + ylab("CV between successive years")
+  ylab("Count") + xlab("CV between successive years")
 save_agu_plot("srdb_cv.png")
 
 # Site records
@@ -126,7 +128,7 @@ median_error <- median(meas_error_1$cv)
 ggplot(meas_error_1, aes(x = cv)) + geom_histogram(bins = 30) +
   scale_x_continuous(labels = scales::percent) +
   geom_vline(xintercept = median_error, color = "red") +
-  xlab("CV") + ylab("CV between successive IRGA measurements")
+  ylab("Count") + xlab("CV between successive IRGA measurements")
 save_agu_plot("licor12_cv.png")
 ```
 OK, so the median measurement error here is ~`r round(median_error * 100, 0)`% for `r nrow(meas_error_1)` observations of fluxes between `r round(min(meas_error_1$meanFlux), 2)` and `r round(max(meas_error_1$meanFlux), 2)` µmol/m2/s.
@@ -143,8 +145,14 @@ nc <- nc_open(ncfiles[1])
 # These annual data start in 1901; extract 1990-2012
 co2 <- ncvar_get(nc, "co2", start = c(1, 1, 1, 90), count = c(-1, -1, 1, 23))
 nc_close(nc)
-#co2 <- co2[400:600, 220:360,]  # punch a hole for testing: North America
-co2 <- co2[500:540, 320:360,]  # punch a hole for testing: part of North America
+
+
+png(file.path(plot_dir, "co2.png"))
+image(co2[,,1])
+dev.off()
+
+co2 <- co2[400:600, 220:360,]  # punch a hole for testing: North America
+#co2 <- co2[500:540, 320:360,]  # punch a hole for testing: part of North America
 
 do_fitting <- function(co2) {
   
@@ -171,8 +179,12 @@ do_fitting <- function(co2) {
 
 out <- do_fitting(co2)
 
+png(file.path(plot_dir, "co2-slopes.png"))
 image(out$slopes)
+dev.off()
+png(file.path(plot_dir, "co2-signif.png"))
 image(out$signif)
+dev.off()
 hist(out$signif)
 
 ncells <- sum(!is.na(out$slopes))
@@ -239,13 +251,19 @@ Once for data + iav + observational error
 ```{r simple, echo=FALSE}
 set.seed(1234)
 
-trend_emergence <- function(rd) {
+trend_emergence <- function(rd, theilsen = F) {
   Year <- seq_len(length(rd))
   trend_p <- rep(NA, length(rd))
   for(i in seq_along(trend_p)) {
     if(i > 2) {
-      m <- lm(rd[1:i] ~ Year[1:i])
-      trend_p[i] <- summary(m)$coefficients[2, "Pr(>|t|)"]
+      if(theilsen) {
+        df <- tibble(Year = Year[1:i], rd = rd[1:i])
+        suppressWarnings(m <- mblm::mblm(rd ~ Year, data = df))  # mblm doesn't like form below
+      } else {
+        m <- suppressWarnings(lm(rd[1:i] ~ Year[1:i]))
+      }
+      # Extract 2nd row (Year) and 4th column (Pr>[t] or Pr>|V|)
+      trend_p[i] <- summary(m)$coefficients[2, 4]
     }
   }
   trend_p
@@ -328,7 +346,7 @@ p <- ggplot(results_summary, aes(Year, trend_p, color = trend_p < 0.05)) +
                   fill = trend_p < 0.05), color = NA, alpha = I(0.35)) +
   guides(color = FALSE, fill = FALSE) +
   annotate("text", 10, 1.5, label = paste("N =", n_sims)) +
-  ylab("p-value   ///   Respiration")
+  ylab("Theil-sen p-value   ///   Respiration")
 print(p)
 save_agu_plot("simple_sim.png")
 ```
