@@ -17,13 +17,23 @@ library(lubridate)
 library(kableExtra)
 
 licor_data <- readd("licor_data")
+
+save_agu_plot <- function(fn, plot = last_plot()) {
+  dir <- "~/Desktop/agu_slides/"
+  if(!dir.exists(dir)) dir.create(dir)
+  ggsave(file.path(dir, fn), plot)
+}
+
+fuzz <- function(x, error) {
+  x * rnorm(length(x), mean = 1, sd = error)
+}
 ```
 
 ## Seconds to minutes
 
 How many times do we need to sample? Uses multiple Licor observations versus 1, 2, 3...
 
-```{r, echo = FALSE}
+```{r howmanytimes, echo = FALSE}
 licor_data %>% 
   filter(Flux < 10) %>% 
   group_by(Date, Group, Collar) %>%
@@ -63,26 +73,34 @@ TukeyHSD(aov(m))
 * **Years to decades**: how well can we detect trends? This is Nature paper SI work.
 
 
+### What's the SRDB interannual variability?
+
+```{r srdb, echo=FALSE}
+srdb <- readd("srdb")
+```
+
 
 ### What's the CV between survey measurements 1 and 2?
 
-```{r, echo = FALSE}
+```{r cv12, echo = FALSE}
 licor_data %>% 
   group_by(Date, Group, Collar) %>%
   summarise(n = n(), meanFlux = mean(Flux), cv = sd(Flux) / mean(Flux)) %>% 
   filter(n == 2) ->
   meas_error_1
 
+median_error <- median(meas_error_1$cv)
 ggplot(meas_error_1, aes(x = cv)) + geom_histogram(bins = 30) +
   scale_x_continuous(labels = scales::percent) +
-  ggtitle("CV between successive Licor measurements")
-median_error <- median(meas_error_1$cv)
+  geom_vline(xintercept = median_error, color = "red")
+ylab("CV between successive IRGA measurements")
+save_agu_plot("licor12_cv.png")
 ```
 OK, so the median measurement error here is ~`r round(median_error * 100, 0)`% for `r nrow(meas_error_1)` observations of fluxes between `r round(min(meas_error_1$meanFlux), 2)` and `r round(max(meas_error_1$meanFlux), 2)` µmol/m2/s.
 
 ### Nature paper analysis
 
-```{r, echo=FALSE}
+```{r hashimoto, echo=FALSE}
 library(ncdf4)
 # Downloaded August 25, 2017 from http://cse.ffpri.affrc.go.jp/shojih/data/index.html
 ncfiles <- c("~/Data/Hashimoto/RH_yr_Hashimoto2015.nc",
@@ -93,7 +111,7 @@ nc <- nc_open(ncfiles[1])
 co2 <- ncvar_get(nc, "co2", start = c(1, 1, 1, 90), count = c(-1, -1, 1, 23))
 nc_close(nc)
 #co2 <- co2[400:600, 220:360,]  # punch a hole for testing: North America
-co2 <- co2[500:600, 320:360,]  # punch a hole for testing: part of North America
+co2 <- co2[500:540, 320:360,]  # punch a hole for testing: part of North America
 
 do_fitting <- function(co2) {
   
@@ -140,8 +158,7 @@ Cells with _significant_ positive slope = `r signif_pos_slope` or `r round(signi
 
 ```{r fuzz, echo=FALSE}
 
-co2_fuzz <- co2 * rnorm(length(co2), mean = 1, sd = median_error)
-
+co2_fuzz <- fuzz(co2, error = median_error)
 out <- do_fitting(co2_fuzz)
 
 image(out$slopes)
@@ -152,6 +169,21 @@ ncells <- sum(!is.na(out$slopes))
 pos_slope <- sum(out$slopes > 0, na.rm = TRUE)
 signif_pos_slope <- sum(out$slopes > 0 & out$signif < 0.05, na.rm = TRUE)
 
+# Convert to a data frame for ggplot2 plotting
+ro = nrow(co2_fuzz)
+co = ncol(co2_fuzz)
+yr = dim(co2_fuzz)[3]
+co2_fuzz_df <- tibble(
+  flux = as.vector(co2_fuzz),
+  lat = rep(seq_len(ro), times = co * yr),
+  lon = rep(rep(seq_len(co), each = ro), times = yr),
+  year = rep(seq_len(yr), each = ro * co)
+) %>% 
+  filter(!is.na(flux))
+
+co2_fuzz_df$p <- out$signif[co2_fuzz_df$lat, co2_fuzz_df$lon]
+
+ggplot(sample_frac(co2_fuzz_df, 0.01), aes(year, flux, group = paste(lat, lon))) + geom_line()
 ```
 
 Total cells = `r ncells`.
@@ -167,46 +199,104 @@ with a line for each grid cell
 
 # Simple: when would expect to see significance?
 
+We'd like to do this once for perfect data
+Once for data + interannual variability
+Once for data + iav + observational error
+
 ```{r simple, echo=FALSE}
 set.seed(1234)
 
-do_sim <- function() {
-  # Temperature has risen 0.9 C in 40 years, more or less
-  dTdt <- 0.9 / 40.0
-  q10 <- 2
-  R0 = 1.0
-  test <- tibble(Year = 1:100,
-                 Temp = dTdt * Year,
-                 Resp = R0 * q10 ^ (Temp / 10)) 
-  test$Resp_fuzz <- test$Resp * rnorm(nrow(test), mean = 1, sd = median_error)
-  
-  test$trend_p <- NA
-  for(i in seq_len(nrow(test))) {
+trend_emergence <- function(rd) {
+  Year <- seq_len(length(rd))
+  trend_p <- rep(NA, length(rd))
+  for(i in seq_along(trend_p)) {
     if(i > 2) {
-      m <- lm(Resp_fuzz ~ Year, data = test[1:i,])
-      test$trend_p[i] <- summary(m)$coefficients["Year", "Pr(>|t|)"]
+      m <- lm(rd[1:i] ~ Year[1:i])
+      trend_p[i] <- summary(m)$coefficients[2, "Pr(>|t|)"]
     }
   }
-  test
+  trend_p
+}
+
+
+# Temperature has risen 0.9 C in 40 years, more or less
+dTdt <- round(0.9 / 40.0, 3)
+q10 <- 2
+R0 = 1.0
+respdata <- tibble(Year = 1:100,
+                   Temp = dTdt * Year,
+                   Resp = R0 * q10 ^ (Temp / 10),
+                   # This is interannual variability
+                   Resp_iav = fuzz(Resp, 0.098),  # this is SRDB Rs_interannual_err
+                   Resp_fuzz = fuzz(Resp_iav, median_error))
+
+# Make a nice plot--first with ideal curve, then IAV, then observations
+p <- ggplot(respdata, aes(Year, Resp)) + 
+  geom_point(color = "grey") + 
+  ylab("Respiration") + ylim(c(0.75, 1.5)) + 
+  annotate("text", 10, 1.4, label = paste("Q10 =", q10)) + 
+  annotate("text", 10, 1.3, label = paste("dT/dt =", dTdt))
+save_agu_plot("01.png")
+p <- p + geom_point(aes(y = Resp_iav))
+save_agu_plot("02.png")
+p <- p + geom_errorbar(aes(ymin = Resp_iav - Resp_iav * median_error,
+                           ymax = Resp_iav + Resp_iav * median_error))
+save_agu_plot("03.png")
+
+save_agu_plot("04.png",
+              p + geom_line(aes(y = Resp), color = "red", size = 2))
+
+save_agu_plot("05.png",
+              p + geom_line(aes(y = Resp), color = "pink", size = 2) +
+                geom_line(aes(y = Resp_iav), color = "red", size = 2))
+
+save_agu_plot("06.png",
+              p + geom_line(aes(y = Resp), color = "pink", size = 2) +
+                geom_line(aes(y = Resp_iav), color = "pink", size = 2) +
+                geom_line(aes(y = Resp_fuzz), color = "red", size = 2))
+
+
+do_sim <- function(respdata, error = 0.0) {
+  # This is observational error
+  respdata$Resp_fuzz <- fuzz(respdata$Resp_iav, error)
+  respdata$trend_p <- trend_emergence(respdata$Resp_fuzz)
+  respdata
 }
 
 results <- list()
-for(s in 1:100) {
-  results[[s]] <- do_sim()
-}
+library(parallel)
+n_sims <- 100
+for(i in seq_len(n_sims)) results[[i]] <- do_sim(respdata, error = median_error)
+
+#results <- mclapply(1:100, do_sim, respdata)
+#names(results) <- seq_along(results)
+
 results %>% 
   bind_rows %>% 
   group_by(Year) %>% 
   summarise(n = n(), 
             Temp = mean(Temp), 
             Resp = mean(Resp),
+            Resp_iav_sd = sd(Resp_iav),
+            Resp_iav = mean(Resp_iav),
             Resp_fuzz_sd = sd(Resp_fuzz),          
             Resp_fuzz = mean(Resp_fuzz), 
             trend_p_sd = sd(trend_p), 
             trend_p = mean(trend_p)) %>% 
   filter(!is.na(trend_p)) ->
   results_summary
-qplot(Year, trend_p, data = results_summary, color = trend_p < 0.05) +
-  geom_line(aes(y = Resp_fuzz))
+
+p <- ggplot(results_summary, aes(Year, trend_p, color = trend_p < 0.05)) +
+  geom_point() +
+  geom_line(aes(y = Resp_fuzz)) +
+  geom_line(aes(y = Resp), color = "grey") +
+  geom_ribbon(aes(ymin = Resp_fuzz - Resp_fuzz_sd, 
+                  ymax = Resp_fuzz + Resp_fuzz_sd, 
+                  fill = trend_p < 0.05), color = NA, alpha = I(0.35)) +
+  guides(color = FALSE, fill = FALSE) +
+  annotate("text", 10, 1.5, label = paste("N =", n_sims)) +
+  ylab("p-value   ///   Respiration")
+print(p)
+save_agu_plot("simple_sim.png")
 ```
 

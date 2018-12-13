@@ -76,7 +76,9 @@ plan <- drake_plan(
     quiet = TRUE),
   
   # --------------------------------------------------------------------------------------------------------
-  # Proximity data for SP's proximity analysis manuscript
+  # SRDB data for Ben's temporal analysis manuscript
+  srdb = read.csv(file_in("../ancillary_data/srdb-data.csv")),
+  
   ts_report = rmarkdown::render(
     knitr_in("temporal_scaling.Rmd"),
     output_file = file_out("temporal_scaling.html"),
