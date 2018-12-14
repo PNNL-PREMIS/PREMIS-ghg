@@ -85,9 +85,8 @@ median_interann_cv <- median(srdb$Rs_interann_cv, na.rm = TRUE)
 
 srdb %>% 
   filter(!is.na(Rs_interann_cv)) %>% 
-  ggplot(aes(x = Rs_interann_cv)) + geom_histogram(bins = 30) +
-  scale_x_continuous(labels = scales::percent) +
-  xlim(c(0, 1.5)) +
+  ggplot(aes(x = Rs_interann_cv)) + geom_histogram(bins = 20) +
+  scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
   geom_vline(xintercept = median_interann_cv, color = "red") +
   ylab("Count") + xlab("CV between successive years")
 save_agu_plot("srdb_cv.png")
@@ -126,8 +125,8 @@ licor_data %>%
   meas_error_1
 
 median_error <- median(meas_error_1$cv)
-ggplot(meas_error_1, aes(x = cv)) + geom_histogram(bins = 30) +
-  scale_x_continuous(labels = scales::percent) +
+ggplot(meas_error_1, aes(x = cv)) + geom_histogram(bins = 20) +
+  scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
   geom_vline(xintercept = median_error, color = "red") +
   ylab("Count") + xlab("CV between successive IRGA measurements")
 save_agu_plot("licor12_cv.png")
@@ -193,6 +192,10 @@ ncells <- sum(!is.na(out$slopes))
 pos_slope <- sum(out$slopes > 0, na.rm = TRUE)
 signif_pos_slope <- sum(out$slopes > 0 & out$signif < 0.05, na.rm = TRUE)
 
+lat_weight <- abs(cos(seq(-pi/2, pi/2, length.out = nrow(out$slopes))))
+ncells_areawt <- sum(lat_weight * ncol(out$slopes))
+pos_slope_areawt <- sum(out$slopes > 0 * lat_weight, na.rm = TRUE)
+signif_pos_slope_areawt <- sum(out$slopes > 0 & out$signif < 0.05 * lat_weight, na.rm = TRUE)
 ```
 
 Total cells = `r ncells`.
@@ -200,6 +203,10 @@ Total cells = `r ncells`.
 Cells with positive slope = `r pos_slope` or `r round(pos_slope / ncells * 100, 0)`%.
 
 Cells with _significant_ positive slope = `r signif_pos_slope` or `r round(signif_pos_slope / ncells * 100, 0)`%.
+
+Area with positive slope = `r round(pos_slope_areawt / ncells_areawt * 100, 0)`%.
+
+Area with _significant_ positive slope = `r round(signif_pos_slope_areawt / ncells_areawt * 100, 0)`%.
 
 ### Re-do analysis with assumed error rate
 
@@ -219,6 +226,11 @@ hist(out$signif)
 ncells <- sum(!is.na(out$slopes))
 pos_slope <- sum(out$slopes > 0, na.rm = TRUE)
 signif_pos_slope <- sum(out$slopes > 0 & out$signif < 0.05, na.rm = TRUE)
+
+lat_weight <- abs(cos(seq(-pi/2, pi/2, length.out = nrow(out$slopes))))
+ncells_areawt <- sum(lat_weight * ncol(out$slopes))
+pos_slope_areawt <- sum(out$slopes > 0 * lat_weight, na.rm = TRUE)
+signif_pos_slope_areawt <- sum(out$slopes > 0 & out$signif < 0.05 * lat_weight, na.rm = TRUE)
 
 # Convert to a data frame for ggplot2 plotting
 ro = nrow(co2_fuzz)
@@ -251,6 +263,9 @@ save_agu_plot("fuzz_over_time.png")
 Total cells = `r ncells`.
 
 Cells with _significant_ positive slope (observations with `r round(median_error * 100, 0)`% measurement error) = `r signif_pos_slope` or `r round(signif_pos_slope / ncells * 100, 0)`%.
+
+Area with _significant_ positive slope = `r round(signif_pos_slope_areawt / ncells_areawt * 100, 0)`%.
+
 
 # Next steps
 
@@ -301,7 +316,7 @@ respdata <- tibble(Year = 1:100,
 # Make a nice plot--first with ideal curve, then IAV, then observations
 p <- ggplot(respdata, aes(Year, Resp)) + 
   geom_point(color = "grey") + 
-  ylab("Respiration") + ylim(c(0.75, 1.5)) + 
+  ylab("Respiration") + coord_cartesian(ylim = c(0.75, 1.5)) + 
   annotate("text", 10, 1.4, label = paste("Q10 =", q10)) + 
   annotate("text", 10, 1.3, label = paste("dT/dt =", dTdt))
 save_agu_plot("01.png")
