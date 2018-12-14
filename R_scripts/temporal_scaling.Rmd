@@ -15,6 +15,7 @@ library(ggplot2)
 theme_set(theme_bw())
 library(lubridate)
 library(kableExtra)
+library(lattice)
 
 library(mblm)  # for Theil-Sen robust trend test
 
@@ -148,7 +149,7 @@ nc_close(nc)
 
 
 png(file.path(plot_dir, "co2.png"))
-image(co2[,,1])
+lattice::levelplot(co2[,,1])
 dev.off()
 
 co2 <- co2[400:600, 220:360,]  # punch a hole for testing: North America
@@ -178,12 +179,13 @@ do_fitting <- function(co2) {
 }
 
 out <- do_fitting(co2)
+summary(as.vector(out$slopes))
 
 png(file.path(plot_dir, "co2-slopes.png"))
-image(out$slopes)
+lattice::levelplot(out$slopes > 0)
 dev.off()
 png(file.path(plot_dir, "co2-signif.png"))
-image(out$signif)
+lattice::levelplot(out$signif < 0.05)
 dev.off()
 hist(out$signif)
 
@@ -206,8 +208,12 @@ Cells with _significant_ positive slope = `r signif_pos_slope` or `r round(signi
 co2_fuzz <- fuzz(co2, error = median_error)
 out <- do_fitting(co2_fuzz)
 
-image(out$slopes)
-image(out$signif)
+png(file.path(plot_dir, "co2-fuzz-slopes.png"))
+lattice::levelplot(out$slopes > 0)
+dev.off()
+png(file.path(plot_dir, "co2-fuzz-signif.png"))
+lattice::levelplot(out$signif < 0.05)
+dev.off()
 hist(out$signif)
 
 ncells <- sum(!is.na(out$slopes))
@@ -222,13 +228,24 @@ co2_fuzz_df <- tibble(
   flux = as.vector(co2_fuzz),
   lat = rep(seq_len(ro), times = co * yr),
   lon = rep(rep(seq_len(co), each = ro), times = yr),
-  year = rep(seq_len(yr), each = ro * co)
-) %>% 
-  filter(!is.na(flux))
+  year = rep(seq_len(yr), each = ro * co),
+  p = rep(as.vector(out$signif), times = yr)
+)
 
-co2_fuzz_df$p <- out$signif[co2_fuzz_df$lat, co2_fuzz_df$lon]
+co2_fuzz_df %>% 
+  filter(!is.na(p)) %>% 
+  # pick a subset of grid cells for a readable plot
+  distinct(lon, lat) %>% 
+  sample_n(250) %>% 
+  left_join(co2_fuzz_df, by = c("lon", "lat")) ->
+  co2_fuzz_subsampled
 
-ggplot(sample_frac(co2_fuzz_df, 0.01), aes(year, flux, group = paste(lat, lon))) + geom_line()
+co2_fuzz_subsampled %>% 
+  ggplot(aes(year + 1990, flux, group = paste(lat, lon))) + 
+  geom_line(color = "lightgrey") +
+  xlab("Year") + ylab("Flux (gC/m2/yr)") +
+  geom_line(data = filter(co2_fuzz_subsampled, p < 0.05), color = "red", alpha = I(0.5))
+save_agu_plot("fuzz_over_time.png")
 ```
 
 Total cells = `r ncells`.
@@ -244,9 +261,9 @@ with a line for each grid cell
 
 # Simple: when would expect to see significance?
 
-We'd like to do this once for perfect data
-Once for data + interannual variability
-Once for data + iav + observational error
+* We'd like to do this once for perfect data
+* Once for data + interannual variability
+* Once for data + iav + observational error
 
 ```{r simple, echo=FALSE}
 set.seed(1234)
@@ -307,7 +324,7 @@ save_agu_plot("06.png",
                 geom_line(aes(y = Resp_fuzz), color = "red", size = 2))
 
 
-do_sim <- function(respdata, error = 0.0) {
+do_sim <- function(i, respdata, error = 0.0) {
   # This is observational error
   respdata$Resp_fuzz <- fuzz(respdata$Resp_iav, error)
   respdata$trend_p <- trend_emergence(respdata$Resp_fuzz)
@@ -316,11 +333,8 @@ do_sim <- function(respdata, error = 0.0) {
 
 results <- list()
 library(parallel)
-n_sims <- 100
-for(i in seq_len(n_sims)) results[[i]] <- do_sim(respdata, error = median_error)
-
-#results <- mclapply(1:100, do_sim, respdata)
-#names(results) <- seq_along(results)
+n_sims <- 10
+results <- mclapply(seq_len(n_sims), do_sim, respdata, error = median_error)
 
 results %>% 
   bind_rows %>% 
@@ -350,4 +364,3 @@ p <- ggplot(results_summary, aes(Year, trend_p, color = trend_p < 0.05)) +
 print(p)
 save_agu_plot("simple_sim.png")
 ```
-
