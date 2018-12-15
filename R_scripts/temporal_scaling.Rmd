@@ -131,6 +131,7 @@ ggplot(meas_error_1, aes(x = cv)) + geom_histogram(bins = 20) +
   ylab("Count") + xlab("CV between successive IRGA measurements")
 save_agu_plot("licor12_cv.png")
 ```
+
 OK, so the median measurement error here is ~`r round(median_error * 100, 0)`% for `r nrow(meas_error_1)` observations of fluxes between `r round(min(meas_error_1$meanFlux), 2)` and `r round(max(meas_error_1$meanFlux), 2)` µmol/m2/s.
 
 ### Nature paper analysis
@@ -348,7 +349,7 @@ do_sim <- function(i, respdata, error = 0.0) {
 
 results <- list()
 library(parallel)
-n_sims <- 10
+n_sims <- 100
 results <- mclapply(seq_len(n_sims), do_sim, respdata, error = median_error)
 
 results %>% 
