@@ -1,7 +1,8 @@
 # 
 # Stephanie Pennington | March 2018
+library(lubridate)
 
-process_licor_data <- function(raw_data, collar_data, plot_data) {
+process_licor_data <- function(raw_data, collar_data, plot_data, temp_data) {
   
   raw_data %>%
     rename(T5 = V4, 
@@ -12,9 +13,13 @@ process_licor_data <- function(raw_data, collar_data, plot_data) {
            Collar = as.integer(Collar)) ->
     rawDat
   
+  temp_data %>%
+    mutate(Date = mdy(Date)) ->
+    temp_data
+  
   cat("Joining datasets and calculating...\n")
   
-  # Merge these three datasets together based on collar number and plot name
+  # Merge these datasets together based on collar number and plot name
   licorDat <- left_join(rawDat, collar_data, by = "Collar") %>% 
     rename(Origin_Plot = Plot) %>%
     select(-Site) %>% 
@@ -34,6 +39,15 @@ process_licor_data <- function(raw_data, collar_data, plot_data) {
     select(-Longitude, -Latitude, -Plot_area_m2) %>% 
     left_join(plot_data, by = c("Destination_Plot" = "Plot")) %>%
     rename(Dest_Salinity = Salinity, Dest_Elevation = Elevation)
+  
+  # Merge licor data with 5cm temperature taken by hand due to broken sensor
+  licorDat %>% 
+    summarise(Date = mdy(Timestamp)) %>%
+    left_join(temp_data, by = c("Date", "Collar")) -> 
+    licorDat
+  
+  
+  
   
   # Reorder labels by making them into factors and return
   HML <- c("High", "Medium", "Low")
