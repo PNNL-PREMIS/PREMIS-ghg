@@ -1,5 +1,7 @@
 # 
 # Stephanie Pennington | March 2018
+# Function to process one licor file
+
 library(lubridate)
 
 process_licor_data <- function(raw_data, collar_data, plot_data, temp_data) {
@@ -14,7 +16,7 @@ process_licor_data <- function(raw_data, collar_data, plot_data, temp_data) {
     rawDat
   
   temp_data %>%
-    mutate(Date = mdy(Date)) ->
+    mutate(Date = dmy(Date)) ->
     temp_data
   
   cat("Joining datasets and calculating...\n")
@@ -42,9 +44,10 @@ process_licor_data <- function(raw_data, collar_data, plot_data, temp_data) {
   
   # Merge licor data with 5cm temperature taken by hand due to broken sensor
   licorDat %>% 
-    summarise(Date = mdy(Timestamp)) %>%
+    mutate(Date = floor_date(Timestamp, unit = "day")) %>% 
     left_join(temp_data, by = c("Date", "Collar")) -> 
     licorDat
+    
   
   
   
@@ -78,7 +81,6 @@ calculate_licor_daily_data <- function(licor_data) {
               meanT20 = mean(T20)) %>% 
     ungroup
 }
-
 
 process_continuous_data <- function(raw_data) {
   
