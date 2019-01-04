@@ -138,16 +138,16 @@ BA5 <- basal_area_sum(tree_prox_data, 5)
 control_cols_5m <- left_join(control_cols, BA5, by = "Collar")
 control_cols_5m <- filter(control_cols_5m, !is.na(BA_m2))
 
-p1 <- with(control_cols_5m, prox_model(Flux, T5, T20, SMoisture, BA_m2, Site))
-summary(p1)
-plot(p1)
+h1 <- with(control_cols_5m, prox_model(Flux, T5, T20, SMoisture, BA_m2, Site))
+summary(h1)
+plot(h1)
 control_cols_5m$prediction <- predict(p1)
 ggplot(control_cols_5m, aes(Timestamp, Flux)) + geom_point() + geom_line(aes(y = exp(prediction))) + facet_wrap(~Collar)
 ```
 
 ### Table 2
 ```{r, echo = FALSE, warning = FALSE, message = FALSE}
-knitr::kable(tidy(p1), digits = 3, format = "html") %>%
+knitr::kable(tidy(h1), digits = 3, format = "html") %>%
   kableExtra::kable_styling(c("striped", "bordered"), full_width = FALSE)
 ```
 
