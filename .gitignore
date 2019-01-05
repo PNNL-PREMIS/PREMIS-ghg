@@ -32,6 +32,9 @@ vignettes/*.pdf
 *.utf8.md
 *.knit.md
 
+# OS files
+.DS_Store
+
 licor_test_data/readTest.R
 .Rproj.user
 outputs/*.pdf

@@ -48,11 +48,9 @@ readd("collar_data") %>%
   knitr::kable()
 ```
 
+# IRGA data
 
 ### CO2 flux over time
-
-Color indicates origin/destination plot pairings. Panels: left to right - High, Medium, Low salinity; top to bottom - Low, Medium, and High elevation.
-
 ```{r co2_time, echo = FALSE, warning = FALSE}
 daily_treatment_means %>% 
   filter(!is.na(meanFlux), !is.na(sdFlux)) %>% 
@@ -72,7 +70,7 @@ licor_daily_data %>%
   filter(!is.na(meanT20), !is.na(meanFlux)) %>% 
   ggplot(aes(x = meanT20, y = meanFlux, color = Dest_Elevation)) +
   geom_point() + geom_smooth(method = "loess") +
-  labs(x = "Temperature (degC)", y = "Flux (µmol m-2 s-1)")
+  labs(x = "Temperature (°C)", y = expression(Flux~(µmol~CO[2]~m^-2~s^-1)))
 ```
 
 ### Licor soil moisture over time
@@ -118,6 +116,8 @@ ggplot(lds, aes(x = mean_gt_2, y = mean_2, color = n)) +
        y = "Mean flux of first 2 measurements")
 ```
 
+# Weather station data
+
 ### Soil temperature at 20CM and 2CM depth
 ```{r soil_temp, echo = FALSE}
 weather_data %>% 
@@ -156,6 +156,8 @@ weather_data %>%
   summarize(n = n(), meanValue = mean(Value), sdValue = sd(Value))
 ```
 
+# Wells
+
 ### Well conductivity data
 ```{r wells, echo = FALSE}
 readd("well_data") %>% 
@@ -164,6 +166,8 @@ readd("well_data") %>%
   geom_line() +
   facet_grid(~Plot)
 ```
+
+# Other
 
 ### Histogram of trees by DBH
 ```{r inventory, echo = FALSE}

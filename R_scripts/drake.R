@@ -68,7 +68,7 @@ plan <- drake_plan(
   # --------------------------------------------------------------------------------------------------------
   # Proximity data for SP's proximity analysis manuscript
   prox_data = read_csv(file_in("../inventory_data/collar_proximity.csv"), col_types = "ccidicdc"),
-
+  
   # Proximity analysis report
   prox_report = rmarkdown::render(
     knitr_in("proximity_results.Rmd"),
@@ -76,14 +76,21 @@ plan <- drake_plan(
     quiet = TRUE),
   
   # --------------------------------------------------------------------------------------------------------
-  # SRDB data for Ben's temporal analysis manuscript
-  srdb = read.csv(file_in("../ancillary_data/srdb-data.csv"), stringsAsFactors = FALSE)
+  # SRDB data for Ben's trend emergence presentation
+  srdb = read.csv(file_in("../ancillary_data/srdb-data.csv"), stringsAsFactors = FALSE),
   
-  # ts_presentation = rmarkdown::render(
-  #   knitr_in("temporal_scaling.Rpres"),
-  #   output_file = file_out("temporal_scaling_presentation.html"),
-  #   quiet = TRUE)
-
+  # Trend emergence presentation
+  trend_report = rmarkdown::render(
+    knitr_in("trend_emergence.Rmd"),
+    output_file = file_out("trend_emergence.html"),
+    quiet = TRUE),
+  
+  # Temporal scaling report
+  ts_report = rmarkdown::render(
+    knitr_in("temporal_scaling.Rmd"),
+    output_file = file_out("temporal_scaling.html"),
+    quiet = TRUE)
+  
 )
 
 # Now type `make(plan)` at command line
