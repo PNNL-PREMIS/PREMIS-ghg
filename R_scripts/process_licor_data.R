@@ -16,7 +16,7 @@ process_licor_data <- function(raw_data, collar_data, plot_data, temp_data) {
     rawDat
   
   temp_data %>%
-    mutate(Date = dmy(Date)) ->
+    mutate(Date = as.POSIXct(mdy(Date, tz = "UTC"))) ->
     temp_data
   
   cat("Joining datasets and calculating...\n")
@@ -48,9 +48,13 @@ process_licor_data <- function(raw_data, collar_data, plot_data, temp_data) {
     left_join(temp_data, by = c("Date", "Collar")) -> 
     licorDat
     
+  # Replace error T5 data
+  t5_replace <- which(!is.na(licorDat$T5.y))
+  licorDat$T5.x[t5_replace] <- licorDat$T5.y[t5_replace]
   
-  
-  
+  licorDat %>%
+    select(-T5.y) %>%
+    rename(T5 = T5.x) -> licorDat
   
   # Reorder labels by making them into factors and return
   HML <- c("High", "Medium", "Low")
