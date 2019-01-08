@@ -89,3 +89,9 @@ read_licor_dir <- function(path) {
   lapply(files, read_licor_data) %>% 
     bind_rows
 }
+
+read_temp_data <- function(path) {
+  files <- list.files(path, pattern = ".csv", full.names = TRUE)
+  lapply(files, read_csv) %>% 
+    bind_rows 
+}
