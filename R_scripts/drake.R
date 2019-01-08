@@ -49,8 +49,11 @@ plan <- drake_plan(
   # We digest the filename list to detect when something changes in the licor_data directory
   raw_licor_data = target(command = read_licor_dir("../licor_data/"),
                           trigger = trigger(change = do_filedigest("../licor_data/"))),
+  # T5 taken by hand because of broken sensor
+  temp_data = target(command = read_temp_data("../licor_data/temp_dat/"),
+                     trigger = trigger(change = do_filedigest("../licor_data/temp_dat/"))),
   # Process, adding in treatment etc. information
-  licor_data = process_licor_data(raw_licor_data, collar_data, plot_data),
+  licor_data = process_licor_data(raw_licor_data, collar_data, plot_data, temp_data),
   # Reduce observations to a per-day average
   licor_daily_data = calculate_licor_daily_data(licor_data),
   
