@@ -12,6 +12,7 @@ library(tidyr)
 library(ggplot2)
 theme_set(theme_bw())
 library(broom)
+library(lubridate)
 
 # Define functions
 
@@ -143,7 +144,7 @@ control_cols_5m %>%
 h1 <- with(control_cols_5m, prox_model(Flux, T5, T20, SMoisture, BA_m2, Site))
 summary(h1)
 plot(h1)
-control_cols_5m$prediction <- predict(p1)
+control_cols_5m$prediction <- predict(h1)
 ggplot(control_cols_5m, aes(Timestamp, Flux)) + geom_point() + geom_line(aes(y = exp(prediction))) + facet_wrap(~Collar)
 ```
 
