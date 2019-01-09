@@ -20,7 +20,7 @@ More info [here!](https://osf.io/at9hr)
 Real-time data diagnostics
 ==========================
 
-**Last run: Wed Jan 9 14:03:07 2019**
+**Last run: Wed Jan 9 14:05:23 2019**
 
 <table>
 <thead>
@@ -94,7 +94,7 @@ IRGA data
 ![](R_scripts/figures/README-collar_cv-1.png)
 
 Weather station data
-====================
+--------------------
 
 ### Soil temperature at 20CM and 2CM depth
 
@@ -122,7 +122,7 @@ Weather station data
     #> # … with 1.928e+05 more rows, and 1 more variable: sdValue <dbl>
 
 Wells
-=====
+-----
 
 ### Well conductivity data
 
@@ -131,10 +131,12 @@ Wells
 ![](R_scripts/figures/README-wells-1.png)
 
 Other
-=====
+-----
 
 ### Histogram of trees by DBH
 
     #> Warning: Removed 3 rows containing non-finite values (stat_bin).
 
 ![](R_scripts/figures/README-inventory-1.png)
+
+### Coming soon: litter data!

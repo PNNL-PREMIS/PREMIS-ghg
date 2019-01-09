@@ -126,7 +126,7 @@ licor_data %>%
   geom_point()
 ```
 
-# Weather station data
+## Weather station data
 
 ### Soil temperature at 20CM and 2CM depth
 ```{r soil_temp, echo = FALSE}
@@ -166,7 +166,7 @@ weather_data %>%
   summarize(n = n(), meanValue = mean(Value), sdValue = sd(Value))
 ```
 
-# Wells
+## Wells
 
 ### Well conductivity data
 ```{r wells, echo = FALSE}
@@ -177,7 +177,7 @@ readd("well_data") %>%
   facet_grid(~Plot)
 ```
 
-# Other
+## Other
 
 ### Histogram of trees by DBH
 ```{r inventory, echo = FALSE}
@@ -186,3 +186,5 @@ ggplot(tree_data, aes(DBH_cm, fill = Species)) +
   geom_histogram(position = "stack", binwidth = 5) + 
   facet_grid(Salinity ~ Elevation)
 ```
+
+### Coming soon: litter data!
