@@ -41,7 +41,6 @@ library(ggplot2)
 theme_set(theme_bw())
 ```
 
-
 ```{r prep, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
 
 # Load the licor and weather data
@@ -74,6 +73,7 @@ readd("collar_data") %>%
   summarise(N = n()) %>% 
   knitr::kable()
 ```
+
 
 ## IRGA data
 
@@ -128,7 +128,7 @@ licor_data %>%
 
 ## Weather station data
 
-### Soil temperature at 20CM and 2CM depth
+### Soil temperature at 20 cm and 2 cm depth
 ```{r soil_temp, echo = FALSE}
 weather_data %>% 
   filter(Sensor_Group == "Temp") %>% 

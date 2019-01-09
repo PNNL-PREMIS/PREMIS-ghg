@@ -20,7 +20,7 @@ More info [here!](https://osf.io/at9hr)
 Real-time data diagnostics
 ==========================
 
-**Last run: Wed Jan 9 14:05:23 2019**
+**Last run: Wed Jan 9 14:14:48 2019**
 
 <table>
 <thead>
@@ -96,7 +96,7 @@ IRGA data
 Weather station data
 --------------------
 
-### Soil temperature at 20CM and 2CM depth
+### Soil temperature at 20 cm and 2 cm depth
 
 ![](R_scripts/figures/README-soil_temp-1.png)
 
