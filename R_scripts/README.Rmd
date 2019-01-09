@@ -10,7 +10,8 @@ output:
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  fig.path = "figures/README-"
+  fig.path = "figures/README-",
+  fig.width = 9
 )
 options(tibble.print_min = 5, tibble.print_max = 5)
 ```
@@ -78,7 +79,7 @@ readd("collar_data") %>%
 ## IRGA data
 
 ### CO2 flux over time
-```{r co2_time, echo = FALSE, warning = FALSE, fig.width=8}
+```{r co2_time, echo = FALSE, warning = FALSE}
 daily_treatment_means %>% 
   filter(!is.na(meanFlux), !is.na(sdFlux)) %>% 
   ggplot(aes(x = Timestamp, y = meanFlux, color = Experiment, group = Group)) +

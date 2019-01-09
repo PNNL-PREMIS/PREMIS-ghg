@@ -20,7 +20,7 @@ More info [here!](https://osf.io/at9hr)
 Real-time data diagnostics
 ==========================
 
-**Last run: Wed Jan 9 14:14:48 2019**
+**Last run: Wed Jan 9 14:17:14 2019**
 
 <table>
 <thead>
