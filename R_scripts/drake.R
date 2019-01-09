@@ -62,10 +62,11 @@ plan <- drake_plan(
   con_licor_data = process_continuous_data(raw_con_licor_data),
   
   # --------------------------------------------------------------------------------------------------------
-  # Webpage diagnostics report
+  # Webpage README and diagnostics
   readme = rmarkdown::render(
     knitr_in("README.Rmd"),
     output_file = file_out("README.md"),
+    output_dir = "../",
     quiet = TRUE),
   
   # --------------------------------------------------------------------------------------------------------
