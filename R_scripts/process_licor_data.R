@@ -1,7 +1,10 @@
 # 
 # Stephanie Pennington | March 2018
+# Function to process one licor file
 
-process_licor_data <- function(raw_data, collar_data, plot_data) {
+library(lubridate)
+
+process_licor_data <- function(raw_data, collar_data, plot_data, temp_data) {
   
   raw_data %>%
     rename(T5 = V4, 
@@ -12,9 +15,13 @@ process_licor_data <- function(raw_data, collar_data, plot_data) {
            Collar = as.integer(Collar)) ->
     rawDat
   
+  temp_data %>%
+    mutate(Date = as.POSIXct(mdy(Date, tz = "UTC"))) ->
+    temp_data
+  
   cat("Joining datasets and calculating...\n")
   
-  # Merge these three datasets together based on collar number and plot name
+  # Merge these datasets together based on collar number and plot name
   licorDat <- left_join(rawDat, collar_data, by = "Collar") %>% 
     rename(Origin_Plot = Plot) %>%
     select(-Site) %>% 
@@ -34,6 +41,20 @@ process_licor_data <- function(raw_data, collar_data, plot_data) {
     select(-Longitude, -Latitude, -Plot_area_m2) %>% 
     left_join(plot_data, by = c("Destination_Plot" = "Plot")) %>%
     rename(Dest_Salinity = Salinity, Dest_Elevation = Elevation)
+  
+  # Merge licor data with 5cm temperature taken by hand due to broken sensor
+  licorDat %>% 
+    mutate(Date = floor_date(Timestamp, unit = "day")) %>% 
+    left_join(temp_data, by = c("Date", "Collar")) -> 
+    licorDat
+    
+  # Replace error T5 data
+  t5_replace <- which(!is.na(licorDat$T5.y))
+  licorDat$T5.x[t5_replace] <- licorDat$T5.y[t5_replace]
+  
+  licorDat %>%
+    select(-T5.y) %>%
+    rename(T5 = T5.x) -> licorDat
   
   # Reorder labels by making them into factors and return
   HML <- c("High", "Medium", "Low")
@@ -64,7 +85,6 @@ calculate_licor_daily_data <- function(licor_data) {
               meanT20 = mean(T20)) %>% 
     ungroup
 }
-
 
 process_continuous_data <- function(raw_data) {
   
