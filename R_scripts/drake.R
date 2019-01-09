@@ -63,9 +63,9 @@ plan <- drake_plan(
   
   # --------------------------------------------------------------------------------------------------------
   # Webpage diagnostics report
-  diagnostics_report = rmarkdown::render(
-    knitr_in("diagnostics.Rmd"),
-    output_file = file_out("diagnostics.html"),
+  readme = rmarkdown::render(
+    knitr_in("README.Rmd"),
+    output_file = file_out("README.md"),
     quiet = TRUE),
   
   # --------------------------------------------------------------------------------------------------------
