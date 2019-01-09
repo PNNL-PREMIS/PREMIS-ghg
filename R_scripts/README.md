@@ -77,36 +77,36 @@ IRGA data
 
 ### CO2 flux over time
 
-![](R_scripts/figures/README-co2_time-1.png)
+![](figures/README-co2_time-1.png)
 
 ### Soil temperature versus CO2 flux for all cores
 
-![](R_scripts/figures/README-q10-1.png)
+![](figures/README-q10-1.png)
 
 ### Licor soil moisture over time
 
     #> Warning: Removed 72 rows containing missing values (geom_point).
 
-![](R_scripts/figures/README-licor_sm-1.png)
+![](figures/README-licor_sm-1.png)
 
 ### Coefficient of variation between collars
 
-![](R_scripts/figures/README-collar_cv-1.png)
+![](figures/README-collar_cv-1.png)
 
 Weather station data
 --------------------
 
 ### Soil temperature at 20CM and 2CM depth
 
-![](R_scripts/figures/README-soil_temp-1.png)
+![](figures/README-soil_temp-1.png)
 
 ### Air temperature and Relative Humidity
 
-![](R_scripts/figures/README-air_temp-1.png)
+![](figures/README-air_temp-1.png)
 
 ### Soil moisure at 20CM and 2CM depth
 
-![](R_scripts/figures/README-soil_moisture-1.png)
+![](figures/README-soil_moisture-1.png)
 
 ### Stdev for each temperature and moisture probe
 
@@ -128,7 +128,7 @@ Wells
 
     #> Warning: Removed 4 rows containing missing values (geom_path).
 
-![](R_scripts/figures/README-wells-1.png)
+![](figures/README-wells-1.png)
 
 Other
 -----
@@ -137,6 +137,6 @@ Other
 
     #> Warning: Removed 3 rows containing non-finite values (stat_bin).
 
-![](R_scripts/figures/README-inventory-1.png)
+![](figures/README-inventory-1.png)
 
 ### Coming soon: litter data!
