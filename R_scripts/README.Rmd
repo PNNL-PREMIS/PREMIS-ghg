@@ -28,3 +28,50 @@ More info [here!](https://osf.io/at9hr)
 
 ![](https://github.com/PNNL-PREMIS/PREMIS-ghg/blob/master/photos/cores_in_cart.jpeg) ![](https://github.com/PNNL-PREMIS/PREMIS-ghg/blob/master/photos/BBL_SP_snow.jpeg) ![](https://github.com/PNNL-PREMIS/PREMIS-ghg/blob/master/photos/cores_in_ground.jpeg)
 
+# Real-time data diagnostics
+
+**Last run: `r date()`**
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(drake)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+theme_set(theme_bw())
+```
+
+
+```{r prep, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
+
+# Load the licor and weather data
+licor_data <- readd("licor_data")
+licor_daily_data <- readd("licor_daily_data")
+weather_data <- readd("weather_data")
+
+# Calculate treatments means and s.d.
+licor_daily_data %>% 
+  mutate(ControlGroup = if_else(Group == "Control", "Control (true)", "Transplant")) %>% 
+  group_by(Experiment, Origin_Plot, Dest_Salinity, Dest_Elevation, 
+           Destination_Plot, Date, Group, ControlGroup) %>%  
+  summarise(Timestamp = mean(Timestamp), 
+            sdFlux = sd(meanFlux), 
+            meanFlux = mean(meanFlux), 
+            meanSM = mean(meanSM)) %>% 
+  ungroup %>% 
+  mutate(Experiment = if_else(Origin_Plot == Destination_Plot, "Control", Experiment),
+         Dest_Elevation = paste(Dest_Elevation, "elevation"),
+         Dest_Salinity = paste(Dest_Salinity, "salinity"),
+         Dest_Elevation = factor(Dest_Elevation, levels = c("High elevation", "Medium elevation", "Low elevation")),
+         Dest_Salinity = factor(Dest_Salinity, levels = c("Low salinity", "Medium salinity", "High salinity"))) ->
+  daily_treatment_means
+```
+
+```{r sample_size_table, echo = FALSE, message = FALSE}
+# Auto-generate the sample size table
+readd("collar_data") %>% 
+  group_by(Site, Experiment) %>% 
+  summarise(N = n()) %>% 
+  knitr::kable()
+```
+
