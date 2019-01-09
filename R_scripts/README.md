@@ -77,4 +77,4 @@ IRGA data
 
 ### CO2 flux over time
 
-![](R_scripts/figures/README-co2_time-1.png)
+![](figures/README-co2_time-1.png)
