@@ -12,11 +12,15 @@ process_licor_data <- function(raw_data, collar_data, plot_data, temp_data) {
            Collar = Label,      # we record Collar in the label field
            T20 = Comments) %>%  # we record T20 in the comments field
     mutate(T20 = as.numeric(T20),
-           Collar = as.integer(Collar)) ->
+           Collar = as.integer(Collar), 
+           # The Licor doesn't write out timezone information, and when this is read in,
+           # UTC is assumed. Change this. *** NOTE *** this code will not work is used
+           # for anywhere other than the East Coast (looking at you Beaver Creek!)
+           Timestamp = force_tz(Timestamp, tz = "America/New_York")) ->
     rawDat
   
   temp_data %>%
-    mutate(Date = as.POSIXct(mdy(Date, tz = "UTC"))) ->
+    mutate(Date = mdy(Date, tz = "America/New_York")) ->
     temp_data
   
   cat("Joining datasets and calculating...\n")

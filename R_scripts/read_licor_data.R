@@ -99,5 +99,6 @@ read_temp_dir <- function(path) {
     bind_rows %>%
     # Occasionally we measured a collar's temperature twice, so average
     group_by(Date, Collar) %>%
-    summarise(T5 = mean(T5))
+    summarise(T5 = mean(T5)) %>%
+    ungroup
 }

@@ -157,13 +157,15 @@ knitr::kable(tidy(h1), digits = 3, format = "html") %>%
 ### Hypothesis II - growing vs. dormant season
 ```{r, echo = FALSE, warning = FALSE}
 # Filter true controls for growing season
-growing_flux <- filter(control_cols_5m, Timestamp > "2018-04-15 00:00:00", Timestamp < "2018-10-14 23:59:59")
+print(summary(control_cols_5m$Timestamp))
+control_cols_5m$Growing_season <- month(control_cols_5m$Timestamp) >= 4 & month(control_cols_5m$Timestamp) <= 10
 
+growing_flux <- filter(control_cols_5m, Growing_season)
 h2g <- with(growing_flux, prox_model(Flux, T5, T20, SMoisture, BA_m2, Site))
 
 # Filter true controls for dormant season
-dormant_flux <- filter(control_cols_5m, Timestamp > "2018-10-15 00:00:00", Timestamp < "2018-04-14 23:59:59")
-
+dormant_flux <- filter(control_cols_5m, !Growing_season)
+print(dormant_flux)
 h2d <- with(dormant_flux, prox_model(Flux, T5, T20, SMoisture, BA_m2, Site))
 
 # summary, plotting, comparisons, etc.
