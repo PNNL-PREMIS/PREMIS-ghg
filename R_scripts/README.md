@@ -20,7 +20,7 @@ More info [here!](https://osf.io/at9hr)
 Real-time data diagnostics
 ==========================
 
-**Last run: Wed Jan 9 13:45:51 2019**
+**Last run: Wed Jan 9 13:56:15 2019**
 
 <table>
 <thead>
@@ -73,7 +73,7 @@ Salinity transplant
 </tbody>
 </table>
 IRGA data
-=========
+---------
 
 ### CO2 flux over time
 
