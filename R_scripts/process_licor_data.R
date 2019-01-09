@@ -34,6 +34,9 @@ process_licor_data <- function(raw_data, collar_data, plot_data, temp_data) {
   # table for this...
   lookup_table <- select(collar_data, Collar, Destination_Plot = Plot)
   
+  # The following operations should NOT change number of observations
+  nobs <- nrow(licorDat)
+  
   # ...and then merge back into main data frame. Now "Lookup_Plot" holds the plot info for
   # where each core ENDED UP, not where it STARTED
   licorDat <- left_join(licorDat, lookup_table, by = c("Core_placement" = "Collar")) %>% 
@@ -42,7 +45,9 @@ process_licor_data <- function(raw_data, collar_data, plot_data, temp_data) {
     left_join(plot_data, by = c("Destination_Plot" = "Plot")) %>%
     rename(Dest_Salinity = Salinity, Dest_Elevation = Elevation)
   
-  # Merge licor data with 5cm temperature taken by hand due to broken sensor
+  # The Licor temperature was broken for several months in fall-winter 2018
+  # For those times, we took T5 by hand and entered it into a dedicated file
+  # Here we merge licor data with these 5cm temperatures
   licorDat %>% 
     mutate(Date = floor_date(Timestamp, unit = "day")) %>% 
     left_join(temp_data, by = c("Date", "Collar")) -> 
@@ -55,6 +60,9 @@ process_licor_data <- function(raw_data, collar_data, plot_data, temp_data) {
   licorDat %>%
     select(-T5.y) %>%
     rename(T5 = T5.x) -> licorDat
+
+  # Check 
+  stopifnot(nobs == nrow(licorDat))  # should not have changed
   
   # Reorder labels by making them into factors and return
   HML <- c("High", "Medium", "Low")
@@ -66,7 +74,7 @@ process_licor_data <- function(raw_data, collar_data, plot_data, temp_data) {
            Date = paste(month(Timestamp), "/", day(Timestamp)),
            Group = paste(Origin_Plot, "->", Destination_Plot),
            Group = if_else(Experiment == "Control", "Control", Group))
-  
+
 }
 
 
