@@ -20,7 +20,7 @@ More info [here!](https://osf.io/at9hr)
 Real-time data diagnostics
 ==========================
 
-**Last run: Wed Jan 9 13:56:15 2019**
+**Last run: Wed Jan 9 14:03:07 2019**
 
 <table>
 <thead>
@@ -78,3 +78,63 @@ IRGA data
 ### CO2 flux over time
 
 ![](figures/README-co2_time-1.png)
+
+### Soil temperature versus CO2 flux for all cores
+
+![](figures/README-q10-1.png)
+
+### Licor soil moisture over time
+
+    #> Warning: Removed 72 rows containing missing values (geom_point).
+
+![](figures/README-licor_sm-1.png)
+
+### Coefficient of variation between collars
+
+![](figures/README-collar_cv-1.png)
+
+Weather station data
+====================
+
+### Soil temperature at 20CM and 2CM depth
+
+![](figures/README-soil_temp-1.png)
+
+### Air temperature and Relative Humidity
+
+![](figures/README-air_temp-1.png)
+
+### Soil moisure at 20CM and 2CM depth
+
+![](figures/README-soil_moisture-1.png)
+
+### Stdev for each temperature and moisture probe
+
+    #> # A tibble: 192,810 x 7
+    #> # Groups:   Site, Sensor_Depth, Sensor_Group [?]
+    #>   Site  Sensor_Depth Sensor_Group Timestamp               n meanValue
+    #>   <chr> <chr>        <chr>        <dttm>              <int>     <dbl>
+    #> 1 HSLE  20CM         Temp         2018-06-12 13:53:03     3      17.6
+    #> 2 HSLE  20CM         Temp         2018-06-12 14:08:03     3      17.6
+    #> 3 HSLE  20CM         Temp         2018-06-12 14:23:03     3      17.6
+    #> 4 HSLE  20CM         Temp         2018-06-12 14:38:03     3      17.6
+    #> 5 HSLE  20CM         Temp         2018-06-12 14:53:03     3      17.6
+    #> # … with 1.928e+05 more rows, and 1 more variable: sdValue <dbl>
+
+Wells
+=====
+
+### Well conductivity data
+
+    #> Warning: Removed 4 rows containing missing values (geom_path).
+
+![](figures/README-wells-1.png)
+
+Other
+=====
+
+### Histogram of trees by DBH
+
+    #> Warning: Removed 3 rows containing non-finite values (stat_bin).
+
+![](figures/README-inventory-1.png)

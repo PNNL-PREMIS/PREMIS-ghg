@@ -90,3 +90,99 @@ daily_treatment_means %>%
   labs(x = "Date", y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
+
+### Soil temperature versus CO2 flux for all cores
+```{r q10, echo = FALSE, warning = FALSE}
+licor_daily_data %>% 
+  filter(!is.na(meanT20), !is.na(meanFlux)) %>% 
+  ggplot(aes(x = meanT20, y = meanFlux, color = Dest_Elevation)) +
+  geom_point() + geom_smooth(method = "loess") +
+  labs(x = "Temperature (°C)", y = expression(Flux~(µmol~CO[2]~m^-2~s^-1)))
+```
+
+### Licor soil moisture over time
+```{r licor_sm, echo = FALSE}
+daily_treatment_means %>% 
+  filter(!is.na(meanSM)) %>% 
+  ggplot(aes(x = Timestamp, y = meanSM, color = Experiment, group = Group)) +
+  geom_point() +
+  geom_line(aes(linetype = ControlGroup)) +
+  ylim(c(0,0.6)) +
+  #coord_cartesian(ylim = c(0, 0.6)) +
+  facet_grid(Dest_Elevation ~ Dest_Salinity) +
+  labs(x = "Date") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+### Coefficient of variation between collars
+```{r collar_cv, echo = FALSE, warning = FALSE}
+licor_data %>% 
+  group_by(Date, Group, Collar) %>% 
+  summarise(CV = sd(Flux) / mean(Flux), 
+            n = n(), 
+            Timestamp = mean(Timestamp)) %>%
+  filter(!is.na(CV)) %>% 
+  ggplot(aes(x = Timestamp, y = CV, color = Group)) +
+  geom_point()
+```
+
+# Weather station data
+
+### Soil temperature at 20CM and 2CM depth
+```{r soil_temp, echo = FALSE}
+weather_data %>% 
+  filter(Sensor_Group == "Temp") %>% 
+  ggplot(aes(Timestamp, Value, color = Site, group = Sensor_SN)) + 
+  facet_wrap(~Sensor_Depth) + 
+  geom_line() +
+  labs(x = "Date", y = expression(degree()~C))
+```
+
+### Air temperature and Relative Humidity
+```{r air_temp, echo = FALSE}
+weather_data %>% 
+  filter(Sensor_Type == "TRH") %>% 
+  ggplot(aes(Timestamp, Value, color = Sensor_Group, group = Sensor_Group)) + 
+  geom_line() +
+  facet_wrap(~Site) +
+  ggtitle("Atmospheric Temperature (Celsius) and Relative Humidity (%)") +
+  labs(x = "Date")
+```
+
+### Soil moisure at 20CM and 2CM depth
+```{r soil_moisture, echo = FALSE}
+weather_data %>% 
+  filter(Sensor_Group == "Water Content") %>% 
+  ggplot(aes(Timestamp, Value, color = Site, group = Sensor_SN)) + 
+  facet_wrap(~Sensor_Depth) + 
+  geom_line() +
+  labs(x = "Date", y = expression(m^3/m^3))
+```
+
+### Stdev for each temperature and moisture probe
+```{r weather_var, echo = FALSE}
+weather_data %>%
+  group_by(Site, Sensor_Depth, Sensor_Group, Timestamp) %>%
+  summarize(n = n(), meanValue = mean(Value), sdValue = sd(Value))
+```
+
+# Wells
+
+### Well conductivity data
+```{r wells, echo = FALSE}
+readd("well_data") %>% 
+  gather(variable, value, Low_Range, High_Range) %>% 
+  ggplot(aes(x = Timestamp, y = value, color = variable)) +
+  geom_line() +
+  facet_grid(~Plot)
+```
+
+# Other
+
+### Histogram of trees by DBH
+```{r inventory, echo = FALSE}
+tree_data <- readd("tree_data")
+ggplot(tree_data, aes(DBH_cm, fill = Species)) + 
+  geom_histogram(position = "stack", binwidth = 5) + 
+  facet_grid(Salinity ~ Elevation)
+```
