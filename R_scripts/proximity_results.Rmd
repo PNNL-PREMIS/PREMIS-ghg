@@ -6,8 +6,13 @@ output: html_document
 ---
 
 ```{r, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
+#
+library(nlme) # 3.1.137
+#library(lme4) # 1.1-19
+library(MASS) # 7.3-51.1 
+
 library(drake)
-library(dplyr)
+library(dplyr)   # needs to come after MASS above so select() isn't masked
 library(tidyr)
 library(ggplot2)
 theme_set(theme_bw())
@@ -21,18 +26,28 @@ basal_area_sum <- function(data, distance) {
   data %>% 
     filter(Distance_m <= distance) %>% 
     group_by(Collar) %>% 
-    summarise(n_trees = n(), BA_m2 = round(sum(BA_sqm, na.rm = TRUE), digits = 3), dist = distance)
+    summarise(n_trees = n(), 
+              BA_m2 = round(sum(BA_sqm, na.rm = TRUE), digits = 3), 
+              dist = distance)
 }
 
 # Fit the main statistical model testing for effect of basal area (BA) on soil respiration
 prox_model <- function(flux, T5, T20, SM, BA, site) {
   # Fit model
-  lm(log(flux) ~ T5 + T20 + SM + I(SM ^ 2) + BA)  # temporary
-  # m1 <- lme4::lmer(log(Flux) ~ T5 + T20 + SMoisture + I(SMoisture ^ 2) + (BA_m2 | Dest_Salinity), data = control_cols)
+  #mod_full <- lm(log(flux) ~ T5 + T20 + SM + I(SM ^ 2) + BA)  # temporary
+  #mod_full <- lme4::lmer(log(Flux) ~ T5 + T20 + SMoisture + I(SMoisture ^ 2) + (BA_m2 | site))
+  
+  mod_full <- nlme::lme(log(flux) ~ T5 * BA + T20 * BA + SM + I(SM ^ 2) + BA, 
+                        # allow for random variation across sites
+                        random = ~ 1 | site,
+                        method = "ML" # because we're doing stepAIC below
+  )
   
   # Remove non-significant variables
+  mod_reduced <- stepAIC(mod_full, direction = "both", trace = 0)
   
   # Return model
+  mod_reduced
 }
 
 ```
@@ -149,13 +164,34 @@ BA5 <- basal_area_sum(tree_prox_data, distance = 5)
 # Join the respiration data with the BA proximity data; this is main analysis dataset
 control_cols %>% 
   left_join(BA5, by = "Collar") %>% 
-  filter(!is.na(BA_m2)) %>%
   mutate(Timestamp = ymd_hms(Timestamp)) -> 
   control_cols_5m
 
+# ===============================================================================
+# TEMPORARY: at this point we add in fake data, because right now (January 2019)
+# there's only GCREW proximity data available.  This means we can't run the
+# mixed-effects model, which needs multiple sites (as the random effect is 
+# site/salinity level). So generate some fake data for the other sites. -BBL
+add_fake_data <- function(dat) {
+  dat$FAKE <- FALSE
+  m <- lm(BA_m2 ~ Flux, data = dat)
+  dat %>% 
+    filter(is.na(BA_m2)) %>% 
+    # predict BA from flux
+    mutate(BA_m2 = predict(m, newdata = data.frame(Flux = Flux)),
+           # add some random noise
+           BA_m2 = BA_m2 + rnorm(n = n(), sd = 2 * sd(BA_m2)),
+           FAKE = TRUE) %>% 
+    bind_rows(filter(dat, !is.na(BA_m2)))
+} 
+
+control_cols_5m <- add_fake_data(control_cols_5m)
+# ===============================================================================
+
 # Run the main analysis
-h1 <- with(control_cols_5m, prox_model(Flux, T5, T20, SMoisture, BA_m2, Site))
+h1 <- with(control_cols_5m, prox_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity))
 summary(h1)
+anova(h1)
 plot(h1)
 control_cols_5m$prediction <- predict(h1)
 ggplot(control_cols_5m, aes(Timestamp, Flux)) + 
@@ -204,19 +240,22 @@ sens_output <- list()
 BA_output <- list()
 for (i in 2:max(tree_prox_data$Distance_m)) {
   BA <- basal_area_sum(tree_prox_data, i)
-  data <- left_join(control_cols, BA, by = "Collar") %>% filter(!is.na(BA_m2))
+  data <- left_join(control_cols, BA, by = "Collar")
   
-  model <- prox_model(data$Flux, data$T5, data$T20, data$SMoisture, data$BA_m2, data$Site)
+  data <- add_fake_data(data)  # TEMPORARY. See note above.
+  
+  model <- with(data, prox_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity))
+  smry <- anova(model)
+  smry$term = rownames(smry)
   ichar <- as.character(i)
-  sens_output[[ichar]] <- tidy(model)
-  BA_output[[ichar]] <- filter(sens_output[[ichar]], term == "BA")
+  sens_output[[ichar]] <- as_tibble(smry)
 }
 
 bind_rows(sens_output, .id = "Distance") %>%
   filter(term == "BA") %>%
   mutate(Distance = as.integer(Distance)) %>%
   print %>%
-  ggplot(aes(Distance, p.value)) + 
+  ggplot(aes(Distance, `p-value`)) + 
   geom_line(size = 1, color = "grey") + 
   geom_point(size = 2.5, color = "tomato3") +
   geom_hline(yintercept = 0.05, linetype = 2) +
