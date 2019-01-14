@@ -146,7 +146,7 @@ readd("licor_data") %>%
 # Calculate basal area within 5 m
 BA5 <- basal_area_sum(tree_prox_data, distance = 5)
 
-# Join the respiration data with the BA proximity data; this is main anlaysis dataset
+# Join the respiration data with the BA proximity data; this is main analysis dataset
 control_cols %>% 
   left_join(BA5, by = "Collar") %>% 
   filter(!is.na(BA_m2)) %>%
