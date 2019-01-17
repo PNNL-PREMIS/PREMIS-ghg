@@ -32,24 +32,25 @@ basal_area_sum <- function(data, distance) {
 }
 
 # Fit the main statistical model testing for effect of basal area (BA) on soil respiration
-prox_model <- function(flux, T5, T20, SM, BA, site) {
-  # Fit model
-  #mod_full <- lm(log(flux) ~ T5 + T20 + SM + I(SM ^ 2) + BA)  # temporary
-  #mod_full <- lme4::lmer(log(Flux) ~ T5 + T20 + SMoisture + I(SMoisture ^ 2) + (BA_m2 | site))
-  
-  mod_full <- nlme::lme(log(flux) ~ T5 * BA + T20 * BA + SM + I(SM ^ 2) + BA, 
-                        # allow for random variation across sites
-                        random = ~ 1 | site,
-                        method = "ML" # because we're doing stepAIC below
-  )
+prox_model <- function(flux, T5, T20, SM, BA, site, model_type) {
+  if(model_type == "linear") {
+    mod_full <- lm(log(flux) ~ T5 * BA + T20 * BA + SM + I(SM ^ 2) + BA)
+  } else if(model_type == "lme") {
+    mod_full <- nlme::lme(log(flux) ~ T5 * BA + T20 * BA + SM + I(SM ^ 2) + BA, 
+                          # allow for random variation across sites
+                          random = ~ 1 | site,
+                          method = "ML" # because we're doing stepAIC below
+    )
+  } else {
+    stop("Unknown model type ", model_type)
+  }
   
   # Remove non-significant variables
   mod_reduced <- stepAIC(mod_full, direction = "both", trace = 0)
   
-  # Return model
-  mod_reduced
+  # Return models
+  list(full_model = mod_full, reduced_model = mod_reduced)
 }
-
 ```
 
 
@@ -189,21 +190,26 @@ control_cols_5m <- add_fake_data(control_cols_5m)
 # ===============================================================================
 
 # Run the main analysis
-h1 <- with(control_cols_5m, prox_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity))
-summary(h1)
-anova(h1)
-plot(h1)
-control_cols_5m$prediction <- predict(h1)
+MODEL_TYPE <- "linear"
+mods <- with(control_cols_5m, 
+           prox_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = MODEL_TYPE))
+m_reduced <- mods$reduced_model
+summary(m_reduced)
+anova(m_reduced)
+plot(m_reduced)
+control_cols_5m$prediction <- predict(m_reduced)
 ggplot(control_cols_5m, aes(Timestamp, Flux)) + 
   geom_point() + 
   geom_line(aes(y = exp(prediction))) + 
-  facet_wrap(~Collar)
+  facet_wrap(~Collar) +
+  ggtitle(MODEL_TYPE)
 ```
 
 
 ### Table 2
 ```{r, echo = FALSE, warning = FALSE, message = FALSE}
-knitr::kable(tidy(h1), digits = 3, format = "html") %>%
+print(MODEL_TYPE)
+knitr::kable(tidy(anova(m_reduced)), digits = 3, format = "html") %>%
   kableExtra::kable_styling(c("striped", "bordered"), full_width = FALSE)
 ```
 
@@ -216,12 +222,12 @@ GS_MONTHS <- 4:10  # growing season months, i.e. April-October
 control_cols_5m$Growing_season <- month(control_cols_5m$Timestamp) %in% GS_MONTHS
 
 growing_flux <- filter(control_cols_5m, Growing_season)
-h2g <- with(growing_flux, prox_model(Flux, T5, T20, SMoisture, BA_m2, Site))
+h2g <- with(growing_flux, prox_model(Flux, T5, T20, SMoisture, BA_m2, Site, model_type = MODEL_TYPE))
 
 # Filter true controls for dormant season
 dormant_flux <- filter(control_cols_5m, !Growing_season)
 print(dormant_flux)
-h2d <- with(dormant_flux, prox_model(Flux, T5, T20, SMoisture, BA_m2, Site))
+h2d <- with(dormant_flux, prox_model(Flux, T5, T20, SMoisture, BA_m2, Site, model_type = MODEL_TYPE))
 
 # summary, plotting, comparisons, etc.
 ```
@@ -238,15 +244,22 @@ h2d <- with(dormant_flux, prox_model(Flux, T5, T20, SMoisture, BA_m2, Site))
 
 sens_output <- list()
 BA_output <- list()
-for (i in 2:max(tree_prox_data$Distance_m)) {
+for (i in seq.int(2, max(tree_prox_data$Distance_m))) {
   BA <- basal_area_sum(tree_prox_data, i)
   data <- left_join(control_cols, BA, by = "Collar")
   
   data <- add_fake_data(data)  # TEMPORARY. See note above.
   
-  model <- with(data, prox_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity))
+  mods <- with(data, prox_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = MODEL_TYPE))
+  model <- mods$reduced_model
   smry <- anova(model)
   smry$term = rownames(smry)
+  
+  # linear and lme models return differently-named p-value columns, which isn't handy
+  if("Pr(>F)" %in% colnames(smry)) {
+    smry <- rename(smry, `p-value` = `Pr(>F)`)
+  }
+  
   ichar <- as.character(i)
   sens_output[[ichar]] <- as_tibble(smry)
 }
@@ -259,7 +272,7 @@ bind_rows(sens_output, .id = "Distance") %>%
   geom_line(size = 1, color = "grey") + 
   geom_point(size = 2.5, color = "tomato3") +
   geom_hline(yintercept = 0.05, linetype = 2) +
-  ggtitle("Basal Area Significance") +
+  ggtitle(paste("Basal Area Significance -", MODEL_TYPE)) +
   xlab("Radial distance from collar (in meters)") + 
   ylab("P-value for test of BA significance to flux")
 ```
