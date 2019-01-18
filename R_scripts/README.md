@@ -20,58 +20,14 @@ More info [here!](https://osf.io/at9hr)
 Real-time data diagnostics
 ==========================
 
-**Last run: Wed Jan 9 14:17:14 2019**
+**Last run: Fri Jan 11 11:02:55 2019**
 
-<table>
-<thead>
-<tr>
-<th style="text-align:left;">
-Site
-</th>
-<th style="text-align:left;">
-Experiment
-</th>
-<th style="text-align:right;">
-N
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:left;">
-SERC
-</td>
-<td style="text-align:left;">
-Control
-</td>
-<td style="text-align:right;">
-56
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-SERC
-</td>
-<td style="text-align:left;">
-Elevation transplant
-</td>
-<td style="text-align:right;">
-32
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-SERC
-</td>
-<td style="text-align:left;">
-Salinity transplant
-</td>
-<td style="text-align:right;">
-36
-</td>
-</tr>
-</tbody>
-</table>
+| Site | Experiment           |    N|
+|:-----|:---------------------|----:|
+| SERC | Control              |   56|
+| SERC | Elevation transplant |   32|
+| SERC | Salinity transplant  |   36|
+
 IRGA data
 ---------
 
@@ -119,7 +75,7 @@ Weather station data
     #> 3 HSLE  20CM         Temp         2018-06-12 14:23:03     3      17.6
     #> 4 HSLE  20CM         Temp         2018-06-12 14:38:03     3      17.6
     #> 5 HSLE  20CM         Temp         2018-06-12 14:53:03     3      17.6
-    #> # … with 1.928e+05 more rows, and 1 more variable: sdValue <dbl>
+    #> # ... with 1.928e+05 more rows, and 1 more variable: sdValue <dbl>
 
 Wells
 -----
