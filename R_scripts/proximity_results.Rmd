@@ -117,21 +117,21 @@ tree_data %>%
   tabledata
 
 # Site info
-x$tree_mean <- round(x$tree_mean, digits = 1)
-x$tree_sd <- round(x$tree_sd, digits = 1)
-x$BA_mean <- round(x$BA_mean, digits = 1)
-x$BA_sd <- round(x$BA_sd, digits = 1)
-x$Salinity <- sub("Salinity H", "High", x$Salinity)
-x$Salinity <- sub("Salinity M", "Medium", x$Salinity)
-x$Salinity <- sub("Salinity L", "Low", x$Salinity)
-x$Soil_Type[1] <- "Collington-Wist complex; Collington and Annapolis soils"
-x$Soil_Type[2] <- "Annapolis fine sandy loam"
-x$Soil_Type[3] <- "Collington and Annapolis soils; Collington, Wist, and Westphalia soils"
+tabledata$tree_mean <- round(tabledata$tree_mean, digits = 1)
+tabledata$tree_sd <- round(tabledata$tree_sd, digits = 1)
+tabledata$BA_mean <- round(tabledata$BA_mean, digits = 1)
+tabledata$BA_sd <- round(tabledata$BA_sd, digits = 1)
+tabledata$Salinity <- sub("Salinity H", "High", tabledata$Salinity)
+tabledata$Salinity <- sub("Salinity M", "Medium", tabledata$Salinity)
+tabledata$Salinity <- sub("Salinity L", "Low", tabledata$Salinity)
+tabledata$Soil_Type[1] <- "Collington-Wist complex; Collington and Annapolis soils"
+tabledata$Soil_Type[2] <- "Annapolis fine sandy loam"
+tabledata$Soil_Type[3] <- "Collington and Annapolis soils; Collington, Wist, and Westphalia soils"
 
-x %>% 
+tabledata %>% 
   unite(col = 'Trees (/ha)', tree_mean, tree_sd, sep = " ± ") %>%
   unite(col = 'BA (m2/ha)', BA_mean, BA_sd, sep = " ± ") %>%
-  knitr::kable(digits = 1, format = "html", col.names = c("Site", "Salinity", "Trees (/ha)", expression(BA~(m^2~ha^-1)), "Soil Type")) %>%
+  knitr::kable(digits = 1, format = "html", col.names = c("Site", "Salinity", "Trees (/ha)", expression(BA~(m^2~ha^-1)), "Soil Type"))
 
 tabledata$Salinity <- sub("Salinity H", "High", tabledata$Salinity)
 tabledata$Salinity <- sub("Salinity M", "Medium", tabledata$Salinity)
