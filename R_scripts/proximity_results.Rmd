@@ -16,6 +16,7 @@ library(lubridate)
 
 # Define functions
 
+# Compute the sum of per-tree basal area within a certain distance (to respiration collars)
 basal_area_sum <- function(data, distance) {
   data %>% 
     filter(Distance_m <= distance) %>% 
@@ -23,21 +24,19 @@ basal_area_sum <- function(data, distance) {
     summarise(n_trees = n(), BA_m2 = round(sum(BA_sqm, na.rm = TRUE), digits = 3), dist = distance)
 }
 
+# Fit the main statistical model testing for effect of basal area (BA) on soil respiration
 prox_model <- function(flux, T5, T20, SM, BA, site) {
   # Fit model
-  
-  lm(log(flux) ~ T5 + T20 + SM + I(SM ^ 2) + BA)
-  
+  lm(log(flux) ~ T5 + T20 + SM + I(SM ^ 2) + BA)  # temporary
   # m1 <- lme4::lmer(log(Flux) ~ T5 + T20 + SMoisture + I(SMoisture ^ 2) + (BA_m2 | Dest_Salinity), data = control_cols)
-
-
-  # Remove non-significant variables
   
+  # Remove non-significant variables
   
   # Return model
 }
 
 ```
+
 
 ```{r joindata}
 tree_data <- readd("tree_data")
@@ -47,14 +46,16 @@ prox_data %>%
   select(-Date) %>% 
   mutate(Tag = as.character(Tag)) %>%
   left_join(tree_data, by = c("Site", "Plot", "Tag"), na_matches = "never") %>%
-# Replace DBH with recorded value for non-tagged trees
+  # Replace DBH with recorded value for non-tagged trees
   mutate(DBH_cm = if_else(is.na(Tag), No_tag_DBH, DBH_cm),
-         Species_code = if_else(is.na(Tag), No_tag_species, Species_code)) %>%
-  mutate(BA_sqm = (DBH_cm / 100 / 2) ^ 2 * pi) ->  # from DBH (cm) to area (m2)
- tree_prox_data
+         Species_code = if_else(is.na(Tag), No_tag_species, Species_code),
+         # Compute basal area for each tree
+         BA_sqm = (DBH_cm / 100 / 2) ^ 2 * pi) ->  # from DBH (cm) to area (m2)
+  tree_prox_data
 ```
 
-### Cumulative basal area for each collar
+
+### Prep work: compute cumulative basal area for each collar
 ```{r, fig.width = 9}
 # Calculate cumulative basal area at each distance 
 BA_dat <- list()
@@ -62,19 +63,25 @@ for (i in 1:max(tree_prox_data$Distance_m)) {
   tree_prox_data %>% 
     filter(Distance_m <= i) %>% 
     group_by(Collar) %>% 
-    summarise(n_trees = n(), BA_m2 = sum(BA_sqm, na.rm = TRUE), dist = i) -> #%>%
-#    complete(dist = i, Collar, fill = list(BA_m2 = 0, n_trees = 0))->
+    summarise(n_trees = n(), 
+              BA_m2 = sum(BA_sqm, na.rm = TRUE), 
+              dist = i) -> #%>%
+    #    complete(dist = i, Collar, fill = list(BA_m2 = 0, n_trees = 0))->
     BA_dat[[i]]
 }
 
-BA_dat <- bind_rows(BA_dat) %>% 
-  complete(Collar, dist=c(0:max(tree_prox_data$Distance_m)), fill = list(BA_m2=0, n_trees=0))
-ggplot(BA_dat, aes(x = dist, y = BA_m2, group = Collar, color = n_trees)) + 
+# Combine and complete data (in particular, adding values for 0 m)
+bind_rows(BA_dat) %>% 
+  complete(Collar, dist = c(0:max(tree_prox_data$Distance_m)),
+           fill = list(BA_m2 = 0, n_trees = 0)) %>% 
+  # ...and plot
+  ggplot(aes(x = dist, y = BA_m2, group = Collar, color = n_trees)) + 
   geom_line(size = 1) +
   scale_colour_gradientn(colours = topo.colors(9)) +
   ggtitle("Cumulative Basal Area") +
-  labs(x = "Radial distance from collar (in meters)", y = expression(Basal~Area~(m^2)), color = "Number \nof Trees")
-
+  labs(x = "Radial distance from collar (m)", 
+       y = expression(Basal~Area~(m^2)), 
+       color = "Number \nof Trees")
 ```
 
 
@@ -82,12 +89,19 @@ ggplot(BA_dat, aes(x = dist, y = BA_m2, group = Collar, color = n_trees)) +
 ```{r, echo = FALSE, warning = FALSE, message = FALSE}
 tree_data %>% 
   group_by(Site, Salinity, Elevation) %>% 
-  summarise(n = n(), Plot_area_m2 = mean(Plot_area_m2), `BA (m2/ha)` = sum((DBH_cm / 100 / 2) ^ 2 * pi, na.rm = TRUE) / mean(Plot_area_m2) * 10000) %>% 
+  summarise(n = n(), 
+            Plot_area_m2 = mean(Plot_area_m2), 
+            `BA (m2/ha)` = sum((DBH_cm / 100 / 2) ^ 2 * pi, na.rm = TRUE) / 
+              mean(Plot_area_m2) * 10000) %>% 
   mutate(`Trees (/ha)` = n / Plot_area_m2 * 10000) %>% 
-  summarise(tree_mean = mean(`Trees (/ha)`), tree_sd = sd(`Trees (/ha)`), BA_mean = mean(`BA (m2/ha)`), BA_sd = sd(`BA (m2/ha)`)) ->
-  x
+  summarise(tree_mean = mean(`Trees (/ha)`) %>% round(1), 
+            tree_sd = sd(`Trees (/ha)`) %>% round(1), 
+            BA_mean = mean(`BA (m2/ha)`) %>% round(1), 
+            BA_sd = sd(`BA (m2/ha)`) %>% round(1)) ->
+  tabledata
 
 # Site info
+<<<<<<< HEAD
 x$tree_mean <- round(x$tree_mean, digits = 1)
 x$tree_sd <- round(x$tree_sd, digits = 1)
 x$BA_mean <- round(x$BA_mean, digits = 1)
@@ -95,16 +109,30 @@ x$BA_sd <- round(x$BA_sd, digits = 1)
 x$Salinity <- sub("Salinity H", "High", x$Salinity)
 x$Salinity <- sub("Salinity M", "Medium", x$Salinity)
 x$Salinity <- sub("Salinity L", "Low", x$Salinity)
+x$Soil_Type[1] <- "Collington-Wist complex; Collington and Annapolis soils"
+x$Soil_Type[2] <- "Annapolis fine sandy loam"
+x$Soil_Type[3] <- "Collington and Annapolis soils; Collington, Wist, and Westphalia soils"
 
 x %>% 
   unite(col = 'Trees (/ha)', tree_mean, tree_sd, sep = " ± ") %>%
   unite(col = 'BA (m2/ha)', BA_mean, BA_sd, sep = " ± ") %>%
-  knitr::kable(digits = 1, format = "html", col.names = c("Site", "Salinity", "Trees (/ha)", expression(BA~(m^2~ha^-1)))) %>%
+  knitr::kable(digits = 1, format = "html", col.names = c("Site", "Salinity", "Trees (/ha)", expression(BA~(m^2~ha^-1)), "Soil Type")) %>%
+=======
+tabledata$Salinity <- sub("Salinity H", "High", tabledata$Salinity)
+tabledata$Salinity <- sub("Salinity M", "Medium", tabledata$Salinity)
+tabledata$Salinity <- sub("Salinity L", "Low", tabledata$Salinity)
+
+tabledata %>% 
+  unite(col = 'Trees (/ha)', tree_mean, tree_sd, sep = " ± ") %>%
+  unite(col = 'BA (m2/ha)', BA_mean, BA_sd, sep = " ± ") %>%
+  knitr::kable(digits = 1, format = "html", 
+               col.names = c("Site", "Salinity", "Trees (/ha)", expression(BA~(m^2~ha^-1)))) %>%
+>>>>>>> 30d69b16ab34b51d9d1826d84a44d4b6d1bdbf77
   kableExtra::kable_styling(c("striped", "bordered"), full_width = FALSE)
 ```
 
 
-### Flux over time for control collars
+### Flux over time figure for control collars
 ```{r co2_time, echo = FALSE, warning = FALSE}
 licor_daily_data <- readd("licor_daily_data")
 
@@ -119,46 +147,56 @@ licor_daily_data %>%
   #scale_colour_gradientn(colours = rainbow(4)) +
   facet_grid(Dest_Elevation ~ Dest_Salinity) +
   ggtitle("Flux over time") +
-  labs(x = "Date", y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
+  labs(x = "Date", 
+       y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
-
 ```
-
 
 
 ### Hypothesis I - BA strong effect within 5 meters
 ```{r, echo = FALSE, warning = FALSE}
-# Site info
-licor_data <- readd("licor_data")
+# Filter Licor data for only true control collars and screen out bad SM data
+readd("licor_data") %>% 
+  filter(Experiment == "Control", is.na(Notes)) %>% 
+  filter(SMoisture > 0, SMoisture < 1) ->
+  control_cols
 
-# Filter Licor data for only true control collars
-control_cols <- filter(licor_data, Experiment == "Control", is.na(Notes))
-control_cols <- filter(control_cols, SMoisture > 0, SMoisture < 1)
+# Calculate basal area within 5 m
+BA5 <- basal_area_sum(tree_prox_data, distance = 5)
 
-BA5 <- basal_area_sum(tree_prox_data, 5)
-control_cols_5m <- left_join(control_cols, BA5, by = "Collar")
-control_cols_5m %>% 
+# Join the respiration data with the BA proximity data; this is main analysis dataset
+control_cols %>% 
+  left_join(BA5, by = "Collar") %>% 
   filter(!is.na(BA_m2)) %>%
-  mutate(Timestamp = ymd_hms(Timestamp)) -> control_cols_5m
+  mutate(Timestamp = ymd_hms(Timestamp)) -> 
+  control_cols_5m
 
+# Run the main analysis
 h1 <- with(control_cols_5m, prox_model(Flux, T5, T20, SMoisture, BA_m2, Site))
 summary(h1)
 plot(h1)
 control_cols_5m$prediction <- predict(h1)
-ggplot(control_cols_5m, aes(Timestamp, Flux)) + geom_point() + geom_line(aes(y = exp(prediction))) + facet_wrap(~Collar)
+ggplot(control_cols_5m, aes(Timestamp, Flux)) + 
+  geom_point() + 
+  geom_line(aes(y = exp(prediction))) + 
+  facet_wrap(~Collar)
 ```
+
 
 ### Table 2
 ```{r, echo = FALSE, warning = FALSE, message = FALSE}
+# Change row names
 knitr::kable(tidy(h1), digits = 3, format = "html") %>%
   kableExtra::kable_styling(c("striped", "bordered"), full_width = FALSE)
 ```
+
 
 ### Hypothesis II - growing vs. dormant season
 ```{r, echo = FALSE, warning = FALSE}
 # Filter true controls for growing season
 print(summary(control_cols_5m$Timestamp))
-control_cols_5m$Growing_season <- month(control_cols_5m$Timestamp) >= 4 & month(control_cols_5m$Timestamp) <= 10
+GS_MONTHS <- 4:10  # growing season months, i.e. April-October
+control_cols_5m$Growing_season <- month(control_cols_5m$Timestamp) %in% GS_MONTHS
 
 growing_flux <- filter(control_cols_5m, Growing_season)
 h2g <- with(growing_flux, prox_model(Flux, T5, T20, SMoisture, BA_m2, Site))
@@ -202,5 +240,6 @@ bind_rows(sens_output, .id = "Distance") %>%
   geom_point(size = 2.5, color = "tomato3") +
   geom_hline(yintercept = 0.05, linetype = 2) +
   ggtitle("Basal Area Significance") +
-  xlab("Radial distance from collar (in meters)") + ylab("P-value for test of BA significance to flux")
+  xlab("Radial distance from collar (in meters)") + 
+  ylab("P-value for test of BA significance to flux")
 ```
