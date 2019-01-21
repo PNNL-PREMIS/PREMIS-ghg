@@ -51,6 +51,26 @@ prox_model <- function(flux, T5, T20, SM, BA, site, model_type) {
   # Return models
   list(full_model = mod_full, reduced_model = mod_reduced)
 }
+
+# This function runs prox_model() and returns plots
+run_model <- function(data, model_type) {
+  MODEL_TYPE <- model_type
+  
+  mods <- with(data, 
+             prox_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = MODEL_TYPE))
+  m_reduced <- mods$reduced_model
+  summary(m_reduced)
+  anova(m_reduced)
+  plot(m_reduced)
+  data$prediction <- predict(m_reduced)
+  
+  ggplot(data, aes(Timestamp, Flux)) + 
+    geom_point() + 
+    geom_line(aes(y = exp(prediction))) + 
+    facet_wrap(~Collar) +
+    ggtitle(MODEL_TYPE)
+}
+
 ```
 
 
@@ -206,19 +226,7 @@ control_cols_5m <- add_fake_data(control_cols_5m)
 # ===============================================================================
 
 # Run the main analysis
-MODEL_TYPE <- "linear"
-mods <- with(control_cols_5m, 
-           prox_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = MODEL_TYPE))
-m_reduced <- mods$reduced_model
-summary(m_reduced)
-anova(m_reduced)
-plot(m_reduced)
-control_cols_5m$prediction <- predict(m_reduced)
-ggplot(control_cols_5m, aes(Timestamp, Flux)) + 
-  geom_point() + 
-  geom_line(aes(y = exp(prediction))) + 
-  facet_wrap(~Collar) +
-  ggtitle(MODEL_TYPE)
+h1 <- run_model(control_cols_5m, model_type = "linear")
 ```
 
 
@@ -238,12 +246,12 @@ GS_MONTHS <- 4:10  # growing season months, i.e. April-October
 control_cols_5m$Growing_season <- month(control_cols_5m$Timestamp) %in% GS_MONTHS
 
 growing_flux <- filter(control_cols_5m, Growing_season)
-h2g <- with(growing_flux, prox_model(Flux, T5, T20, SMoisture, BA_m2, Site, model_type = MODEL_TYPE))
+h2g <- run_model(growing_flux, model_type = "linear")
 
 # Filter true controls for dormant season
 dormant_flux <- filter(control_cols_5m, !Growing_season)
 print(dormant_flux)
-h2d <- with(dormant_flux, prox_model(Flux, T5, T20, SMoisture, BA_m2, Site, model_type = MODEL_TYPE))
+h2d <- run_model(dormant_flux, model_type = "linear")
 
 # summary, plotting, comparisons, etc.
 ```
@@ -251,7 +259,17 @@ h2d <- with(dormant_flux, prox_model(Flux, T5, T20, SMoisture, BA_m2, Site, mode
 ### Hypothesis III - moisture-limited times
 ```{r, echo = FALSE, warning = FALSE}
 
-# Filter true controls for soil moisture < x
+## replace with actual variable name once drake is working
+SMOISTURE_MEDIAN <- median(control_cols_5m$SOILMOISTURE)
+
+# Filter true controls for the bottom and top 50% soil moisture values; this will be our "limited" and "ample" moisture times
+m_limited <- filter(control_cols_5m, SOILMOISTURE < SMOISTURE_MEDIAN)
+print(m_limited)
+h3l <- run_model(m_limited, model_type = "linear")
+  
+m_ample <- filter(control_cols_5m, SOILMOISTURE >= SMOISTURE_MEDIAN)
+print(m_ample)
+h3a <- run_model(m_ample, model_type = "linear")
 
 ```
 
