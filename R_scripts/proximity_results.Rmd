@@ -52,24 +52,23 @@ prox_model <- function(flux, T5, T20, SM, BA, site, model_type) {
   list(full_model = mod_full, reduced_model = mod_reduced)
 }
 
-# This function runs prox_model() and returns plots
-run_model <- function(data, model_type) {
-  MODEL_TYPE <- model_type
-  
-  mods <- with(data, 
-             prox_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = MODEL_TYPE))
-  m_reduced <- mods$reduced_model
-  summary(m_reduced)
-  anova(m_reduced)
-  plot(m_reduced)
-  data$prediction <- predict(m_reduced)
-  
-  ggplot(data, aes(Timestamp, Flux)) + 
-    geom_point() + 
-    geom_line(aes(y = exp(prediction))) + 
-    facet_wrap(~Collar) +
-    ggtitle(MODEL_TYPE)
-}
+# # This function takes prox_model() objects and produces summaries and plots
+# model_stats <- function(mods) {
+#   
+#   mods <- with(data, 
+#              prox_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = model_type))
+#   m_reduced <- mods$reduced_model
+#   summary(m_reduced)
+#   anova(m_reduced)
+#   plot(m_reduced)
+#   data$prediction <- predict(m_reduced)
+#   
+#   ggplot(data, aes(Timestamp, Flux)) + 
+#     geom_point() + 
+#     geom_line(aes(y = exp(prediction))) + 
+#     facet_wrap(~Collar) +
+#     ggtitle(MODEL_TYPE)
+# }
 
 ```
 
@@ -226,7 +225,9 @@ control_cols_5m <- add_fake_data(control_cols_5m)
 # ===============================================================================
 
 # Run the main analysis
-h1 <- run_model(control_cols_5m, model_type = "linear")
+h1 <- with(control_cols_5m, prox_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = "linear"))
+
+#model_stats(h1)
 ```
 
 
@@ -246,12 +247,16 @@ GS_MONTHS <- 4:10  # growing season months, i.e. April-October
 control_cols_5m$Growing_season <- month(control_cols_5m$Timestamp) %in% GS_MONTHS
 
 growing_flux <- filter(control_cols_5m, Growing_season)
-h2g <- run_model(growing_flux, model_type = "linear")
+h2g <- with(growing_flux, prox_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = "linear"))
+
+#model_stats(h2g)
 
 # Filter true controls for dormant season
 dormant_flux <- filter(control_cols_5m, !Growing_season)
 print(dormant_flux)
-h2d <- run_model(dormant_flux, model_type = "linear")
+h2d <- with(dormant_flux, prox_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = "linear"))
+
+#model_stats(h2d)
 
 # summary, plotting, comparisons, etc.
 ```
@@ -265,12 +270,15 @@ SMOISTURE_MEDIAN <- median(control_cols_5m$SOILMOISTURE)
 # Filter true controls for the bottom and top 50% soil moisture values; this will be our "limited" and "ample" moisture times
 m_limited <- filter(control_cols_5m, SOILMOISTURE < SMOISTURE_MEDIAN)
 print(m_limited)
-h3l <- run_model(m_limited, model_type = "linear")
-  
+h3l <- with(m_limited, prox_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = "linear"))
+
+#model_stats(h3l)
+
 m_ample <- filter(control_cols_5m, SOILMOISTURE >= SMOISTURE_MEDIAN)
 print(m_ample)
-h3a <- run_model(m_ample, model_type = "linear")
+h3a <- with(m_ample, prox_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = "linear"))
 
+#model_stats(h3a)
 ```
 
 ### Sensitivity test - BA significance with distance
@@ -309,4 +317,5 @@ bind_rows(sens_output, .id = "Distance") %>%
   ggtitle(paste("Basal Area Significance -", MODEL_TYPE)) +
   xlab("Radial distance from collar (in meters)") + 
   ylab("P-value for test of BA significance to flux")
+
 ```
