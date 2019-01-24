@@ -6,6 +6,4 @@ The data files can get quite large (for example, `SALT_20181207_LT.81x` download
 ```
 split -l 100000 SALT_20181207_LT.81x SALT_20181207_LT.81x_SPLIT_ 
 ```
-This splits the file into 100,000 line sub-files, which are then put together in a folder.
-
-The data-reading code looks for these files with "SPLIT" in their names, and reads and concatenates them before parsing.
+This splits the file into 100,000 line sub-files. The data-reading code looks for these files with "SPLIT" in their names, and re-concatenates them before parsing.

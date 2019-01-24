@@ -103,6 +103,7 @@ read_licor_dir <- function(path) {
   lapply(splitdata, cat, file = tf, sep = "\n", append = TRUE)
   cat("- processing...\n")
   splitdata <- read_licor_data(tf)
+  unlink(tf)
   
   # Normal, un-split files only take a single step
   files <- list.files(path, pattern = ".81x$", full.names = TRUE)
