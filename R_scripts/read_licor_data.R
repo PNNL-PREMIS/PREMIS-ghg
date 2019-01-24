@@ -5,7 +5,7 @@ read_licor_data <- function(filename, debug = FALSE) {
   # Read file into memory and find records
   filedata <- readLines(filename)
   record_starts <- grep(pattern = "^LI-8100", filedata)
-  cat("Reading...", filename, " lines =", length(filedata), "observations =", length(record_starts), "\n")
+  cat("Reading...", basename(filename), " lines =", length(filedata), "observations =", length(record_starts), "\n")
   
   # Helper function to pull out data from line w/ specific label prefix
   find_parse <- function(tabletext, lbl) {
@@ -58,6 +58,13 @@ read_licor_data <- function(filename, debug = FALSE) {
       readr::read_tsv(col_names = col_names) ->
       df
     
+    errorlines <- which(df$Type < 0)
+    if(length(errorlines)) {
+      message("Error message in ", basename(filename), ":\n", paste(df$Tcham[errorlines], collapse = ";"))
+      message("Skipping")
+      next()
+    }
+    
     # Pull out the data we're interested in
     index <- which(df$Type == 1)
     results$Timestamp[i] <- mean(df$Date)
@@ -85,9 +92,24 @@ read_licor_data <- function(filename, debug = FALSE) {
 
 #----- Function to loop through directory and call function to read licor data -----
 read_licor_dir <- function(path) {
-  files <- list.files(path, pattern = ".81x", full.names = TRUE)
-  lapply(files, read_licor_data) %>% 
-    bind_rows
+  # Some LI-8100 outputs files are too large for GitHub, so we break them apart before committing
+  # using e.g.: split -l 100000 <file> <file>_SPLIT_ 
+  # and then put into subfolders. Reassemble these files into a tempfile and read
+  splitfiles <- list.files(path, pattern = "SPLIT", full.names = TRUE, recursive = TRUE)
+  cat("Found", length(splitfiles), "split LI-8100 files\n")
+  tf <- tempfile("splitdata_tempfile_")
+  cat("- concatenating to tempfile...\n")
+  splitdata <- lapply(splitfiles, readLines)
+  lapply(splitdata, cat, file = tf, sep = "\n", append = TRUE)
+  cat("- processing...\n")
+  splitdata <- read_licor_data(tf)
+  unlink(tf)
+  
+  # Normal, un-split files only take a single step
+  files <- list.files(path, pattern = ".81x$", full.names = TRUE)
+  lapply(files, read_licor_data) %>%
+    bind_rows %>% 
+    bind_rows(splitdata)
 }
 
 # The Licor temperature was broken for several months in fall-winter 2018
