@@ -92,24 +92,9 @@ read_licor_data <- function(filename, debug = FALSE) {
 
 #----- Function to loop through directory and call function to read licor data -----
 read_licor_dir <- function(path) {
-  # Some LI-8100 outputs files are too large for GitHub, so we break them apart before committing
-  # using e.g.: split -l 100000 <file> <file>_SPLIT_ 
-  # and then put into subfolders. Reassemble these files into a tempfile and read
-  splitfiles <- list.files(path, pattern = "SPLIT", full.names = TRUE, recursive = TRUE)
-  cat("Found", length(splitfiles), "split LI-8100 files\n")
-  tf <- tempfile("splitdata_tempfile_")
-  cat("- concatenating to tempfile...\n")
-  splitdata <- lapply(splitfiles, readLines)
-  lapply(splitdata, cat, file = tf, sep = "\n", append = TRUE)
-  cat("- processing...\n")
-  splitdata <- read_licor_data(tf)
-  unlink(tf)
-  
-  # Normal, un-split files only take a single step
   files <- list.files(path, pattern = ".81x$", full.names = TRUE)
   lapply(files, read_licor_data) %>%
-    bind_rows %>% 
-    bind_rows(splitdata)
+    bind_rows
 }
 
 # The Licor temperature was broken for several months in fall-winter 2018
