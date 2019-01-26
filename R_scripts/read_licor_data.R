@@ -10,7 +10,11 @@ read_licor_data <- function(filename, debug = FALSE) {
   # Helper function to pull out data from line w/ specific label prefix
   find_parse <- function(tabletext, lbl) {
     line <- tail(grep(lbl, tabletext), n = 1)
-    if(length(line)) gsub(lbl, "", tabletext[line]) else ""
+    if(length(line)) {
+      gsub(lbl, "", tabletext[line]) }
+    else {
+      ""
+    }
   }
   
   results <- tibble(table = seq_along(record_starts),
@@ -36,7 +40,8 @@ read_licor_data <- function(filename, debug = FALSE) {
     # ...and get rid of blank lines because that can screw up paste(collapse()) below
     record <- record[grep("^$", record, invert = TRUE)]
     
-    if(debug) cat("Record", i, "lines", record_starts[i], ":", record_end, "length", length(record), "\n")
+    if(debug) cat("Record", i, "lines", record_starts[i], ":", 
+                  record_end, "length", length(record), "\n")
     
     # Find the data table start
     table_start <- tail(grep("^Type\t", record), n = 1)
@@ -60,7 +65,8 @@ read_licor_data <- function(filename, debug = FALSE) {
     
     errorlines <- which(df$Type < 0)
     if(length(errorlines)) {
-      message("Error message in ", basename(filename), ":\n", paste(df$Tcham[errorlines], collapse = ";"))
+      message("Error message in ", basename(filename), ":\n", 
+              paste(df$Tcham[errorlines], collapse = ";"))
       message("Skipping")
       next()
     }
@@ -80,7 +86,8 @@ read_licor_data <- function(filename, debug = FALSE) {
     results$RH[i] <- mean(df$RH[index])
     results$Cdry[i] <- mean(df$Cdry[index])
     results$Comments[i] <- find_parse(record, "^Comments:\t")
-    if(debug) cat(as.character(results$Timestamp[i]), results$Label[i], results$Port[i], results$Flux[i], results$Comments[i], "\n")
+    if(debug) cat(as.character(results$Timestamp[i]), results$Label[i], 
+                  results$Port[i], results$Flux[i], results$Comments[i], "\n")
   }
   
   # Clean up and return
