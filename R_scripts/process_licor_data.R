@@ -1,8 +1,6 @@
-# 
+# process_licor_data.R
 # Stephanie Pennington | March 2018
 # Function to process one licor file
-
-library(lubridate)
 
 process_licor_data <- function(raw_data, collar_data, plot_data, temp_data) {
   
@@ -33,16 +31,16 @@ process_licor_data <- function(raw_data, collar_data, plot_data, temp_data) {
     rename(Origin_Salinity = Salinity, Origin_Elevation = Elevation) %>%
     select(-Site)
   
-  # For any transplant core X, we know (in "Core_placement") the hole in which it ended up (or
-  # rather, the core number of the hole). We actually need to know the plot. So create a lookup
-  # table for this...
+  # For any transplant core X, we know (in "Core_placement") the hole in which it 
+  # ended up (or rather, the core number of the hole). We actually need to know 
+  # the plot. So create a lookup table for this...
   lookup_table <- select(collar_data, Collar, Destination_Plot = Plot)
   
   # The following operations should NOT change number of observations
   nobs <- nrow(licorDat)
   
-  # ...and then merge back into main data frame. Now "Lookup_Plot" holds the plot info for
-  # where each core ENDED UP, not where it STARTED
+  # ...and then merge back into main data frame. Now "Lookup_Plot" holds the plot
+  # info for where each core ENDED UP, not where it STARTED
   licorDat <- left_join(licorDat, lookup_table, by = c("Core_placement" = "Collar")) %>% 
     # Remove duplicate variables
     select(-Longitude, -Latitude, -Plot_area_m2) %>% 
@@ -78,7 +76,6 @@ process_licor_data <- function(raw_data, collar_data, plot_data, temp_data) {
            Date = paste(month(Timestamp), "/", day(Timestamp)),
            Group = paste(Origin_Plot, "->", Destination_Plot),
            Group = if_else(Experiment == "Control", "Control", Group))
-
 }
 
 
@@ -99,7 +96,6 @@ calculate_licor_daily_data <- function(licor_data) {
 }
 
 process_continuous_data <- function(raw_data) {
-  
   # Ports 6 and 8 have no temperature or moisture probes at the moment
   DATE_SENSORS_INSTALLED <- ymd("2018-11-20")
   raw_data %>% 
