@@ -6,10 +6,8 @@ output: html_document
 ---
 
 ```{r, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
-#
 library(nlme) # 3.1.137
 #library(lme4) # 1.1-19
-library(MASS) # 7.3-51.1 
 
 library(drake)
 library(dplyr)   # needs to come after MASS above so select() isn't masked
@@ -184,31 +182,10 @@ control_cols %>%
   mutate(Timestamp = ymd_hms(Timestamp)) -> 
   control_cols_5m
 
-# ===============================================================================
-# TEMPORARY: at this point we add in fake data, because right now (January 2019)
-# there's only GCREW proximity data available.  This means we can't run the
-# mixed-effects model, which needs multiple sites (as the random effect is 
-# site/salinity level). So generate some fake data for the other sites. -BBL
-add_fake_data <- function(dat) {
-  dat$FAKE <- FALSE
-  m <- lm(BA_m2 ~ Flux, data = dat)
-  dat %>% 
-    filter(is.na(BA_m2)) %>% 
-    # predict BA from flux
-    mutate(BA_m2 = predict(m, newdata = data.frame(Flux = Flux)),
-           # add some random noise
-           BA_m2 = BA_m2 + rnorm(n = n(), sd = 2 * sd(BA_m2)),
-           FAKE = TRUE) %>% 
-    bind_rows(filter(dat, !is.na(BA_m2)))
-} 
-
-control_cols_5m <- add_fake_data(control_cols_5m)
-# ===============================================================================
-
 # Run the main analysis
 MODEL_TYPE <- "linear"
-mods <- with(control_cols_5m, 
-           prox_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = MODEL_TYPE))
+mods <- with(control_cols_5m, prox_model(Flux, T5, T20, SMoisture, BA_m2, 
+                                         site = Dest_Salinity, model_type = MODEL_TYPE))
 m_reduced <- mods$reduced_model
 summary(m_reduced)
 anova(m_reduced)
@@ -238,12 +215,14 @@ GS_MONTHS <- 4:10  # growing season months, i.e. April-October
 control_cols_5m$Growing_season <- month(control_cols_5m$Timestamp) %in% GS_MONTHS
 
 growing_flux <- filter(control_cols_5m, Growing_season)
-h2g <- with(growing_flux, prox_model(Flux, T5, T20, SMoisture, BA_m2, Site, model_type = MODEL_TYPE))
+h2g <- with(growing_flux, prox_model(Flux, T5, T20, SMoisture, BA_m2, 
+                                     Site, model_type = MODEL_TYPE))
 
 # Filter true controls for dormant season
 dormant_flux <- filter(control_cols_5m, !Growing_season)
 print(dormant_flux)
-h2d <- with(dormant_flux, prox_model(Flux, T5, T20, SMoisture, BA_m2, Site, model_type = MODEL_TYPE))
+h2d <- with(dormant_flux, prox_model(Flux, T5, T20, SMoisture, BA_m2, 
+                                     Site, model_type = MODEL_TYPE))
 
 # summary, plotting, comparisons, etc.
 ```
@@ -264,9 +243,8 @@ for (i in seq.int(2, max(tree_prox_data$Distance_m))) {
   BA <- basal_area_sum(tree_prox_data, i)
   data <- left_join(control_cols, BA, by = "Collar")
   
-  data <- add_fake_data(data)  # TEMPORARY. See note above.
-  
-  mods <- with(data, prox_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = MODEL_TYPE))
+  mods <- with(data, prox_model(Flux, T5, T20, SMoisture, BA_m2, 
+                                site = Dest_Salinity, model_type = MODEL_TYPE))
   model <- mods$reduced_model
   smry <- anova(model)
   smry$term = rownames(smry)

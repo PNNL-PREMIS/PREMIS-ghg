@@ -10,7 +10,11 @@ read_licor_data <- function(filename, debug = FALSE) {
   # Helper function to pull out data from line w/ specific label prefix
   find_parse <- function(tabletext, lbl) {
     line <- tail(grep(lbl, tabletext), n = 1)
-    if(length(line)) gsub(lbl, "", tabletext[line]) else ""
+    if(length(line)) {
+      gsub(lbl, "", tabletext[line]) }
+    else {
+      ""
+    }
   }
   
   results <- tibble(table = seq_along(record_starts),
@@ -36,7 +40,8 @@ read_licor_data <- function(filename, debug = FALSE) {
     # ...and get rid of blank lines because that can screw up paste(collapse()) below
     record <- record[grep("^$", record, invert = TRUE)]
     
-    if(debug) cat("Record", i, "lines", record_starts[i], ":", record_end, "length", length(record), "\n")
+    if(debug) cat("Record", i, "lines", record_starts[i], ":", 
+                  record_end, "length", length(record), "\n")
     
     # Find the data table start
     table_start <- tail(grep("^Type\t", record), n = 1)
@@ -60,7 +65,8 @@ read_licor_data <- function(filename, debug = FALSE) {
     
     errorlines <- which(df$Type < 0)
     if(length(errorlines)) {
-      message("Error message in ", basename(filename), ":\n", paste(df$Tcham[errorlines], collapse = ";"))
+      message("Error message in ", basename(filename), ":\n", 
+              paste(df$Tcham[errorlines], collapse = ";"))
       message("Skipping")
       next()
     }
@@ -80,7 +86,8 @@ read_licor_data <- function(filename, debug = FALSE) {
     results$RH[i] <- mean(df$RH[index])
     results$Cdry[i] <- mean(df$Cdry[index])
     results$Comments[i] <- find_parse(record, "^Comments:\t")
-    if(debug) cat(as.character(results$Timestamp[i]), results$Label[i], results$Port[i], results$Flux[i], results$Comments[i], "\n")
+    if(debug) cat(as.character(results$Timestamp[i]), results$Label[i], 
+                  results$Port[i], results$Flux[i], results$Comments[i], "\n")
   }
   
   # Clean up and return
@@ -92,24 +99,9 @@ read_licor_data <- function(filename, debug = FALSE) {
 
 #----- Function to loop through directory and call function to read licor data -----
 read_licor_dir <- function(path) {
-  # Some LI-8100 outputs files are too large for GitHub, so we break them apart before committing
-  # using e.g.: split -l 100000 <file> <file>_SPLIT_ 
-  # and then put into subfolders. Reassemble these files into a tempfile and read
-  splitfiles <- list.files(path, pattern = "SPLIT", full.names = TRUE, recursive = TRUE)
-  cat("Found", length(splitfiles), "split LI-8100 files\n")
-  tf <- tempfile("splitdata_tempfile_")
-  cat("- concatenating to tempfile...\n")
-  splitdata <- lapply(splitfiles, readLines)
-  lapply(splitdata, cat, file = tf, sep = "\n", append = TRUE)
-  cat("- processing...\n")
-  splitdata <- read_licor_data(tf)
-  unlink(tf)
-  
-  # Normal, un-split files only take a single step
   files <- list.files(path, pattern = ".81x$", full.names = TRUE)
   lapply(files, read_licor_data) %>%
-    bind_rows %>% 
-    bind_rows(splitdata)
+    bind_rows
 }
 
 # The Licor temperature was broken for several months in fall-winter 2018
