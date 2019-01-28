@@ -6,11 +6,11 @@ output: html_document
 ---
 
 ```{r, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
+
 library(nlme) # 3.1.137
 #library(lme4) # 1.1-19
-
 library(drake)
-library(dplyr)   # needs to come after MASS above so select() isn't masked
+library(dplyr)
 library(tidyr)
 library(ggplot2)
 theme_set(theme_bw())
@@ -30,7 +30,7 @@ basal_area_sum <- function(data, distance) {
 }
 
 # Fit the main statistical model testing for effect of basal area (BA) on soil respiration
-prox_model <- function(flux, T5, T20, SM, BA, site, model_type) {
+run_model <- function(flux, T5, T20, SM, BA, site, model_type) {
   if(model_type == "linear") {
     mod_full <- lm(log(flux) ~ T5 * BA + T20 * BA + SM + I(SM ^ 2) + BA)
   } else if(model_type == "lme") {
@@ -50,28 +50,29 @@ prox_model <- function(flux, T5, T20, SM, BA, site, model_type) {
   list(full_model = mod_full, reduced_model = mod_reduced)
 }
 
-# # This function takes prox_model() objects and produces summaries and plots
-# model_stats <- function(mods) {
-#   
-#   mods <- with(data, 
-#              prox_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = model_type))
-#   m_reduced <- mods$reduced_model
-#   summary(m_reduced)
-#   anova(m_reduced)
-#   plot(m_reduced)
-#   data$prediction <- predict(m_reduced)
-#   
-#   ggplot(data, aes(Timestamp, Flux)) + 
-#     geom_point() + 
-#     geom_line(aes(y = exp(prediction))) + 
-#     facet_wrap(~Collar) +
-#     ggtitle(MODEL_TYPE)
-# }
+# This function takes run_model() objects and produces summaries and plots
+model_stats <- function(mods) {
+  
+  m_reduced <- mods$reduced_model
+  summary(m_reduced)
+  anova(m_reduced)
+  plot(m_reduced)
+  data$prediction <- predict(m_reduced)
+
+  ggplot(data, aes(Timestamp, Flux)) +
+    geom_point() +
+    geom_line(aes(y = exp(prediction))) +
+    facet_wrap(~Collar) +
+    ggtitle(MODEL_TYPE)
+  
+  #whatever other plots we want to make
+}
 
 ```
 
 
 ```{r joindata}
+
 tree_data <- readd("tree_data")
 prox_data <- readd("prox_data")
 
@@ -85,11 +86,13 @@ prox_data %>%
          # Compute basal area for each tree
          BA_sqm = (DBH_cm / 100 / 2) ^ 2 * pi) ->  # from DBH (cm) to area (m2)
   tree_prox_data
+
 ```
 
 
 ### Prep work: compute cumulative basal area for each collar
 ```{r, fig.width = 9}
+
 # Calculate cumulative basal area at each distance 
 BA_dat <- list()
 for (i in 1:max(tree_prox_data$Distance_m)) {
@@ -115,11 +118,13 @@ bind_rows(BA_dat) %>%
   labs(x = "Radial distance from collar (m)", 
        y = expression(Basal~Area~(m^2)), 
        color = "Number \nof Trees")
+
 ```
 
 
 ### Table 1 - site info
 ```{r, echo = FALSE, warning = FALSE, message = FALSE}
+
 tree_data %>% 
   group_by(Site, Salinity, Elevation) %>% 
   summarise(n = n(), 
@@ -141,18 +146,9 @@ tabledata$BA_sd <- round(tabledata$BA_sd, digits = 1)
 tabledata$Salinity <- sub("Salinity H", "High", tabledata$Salinity)
 tabledata$Salinity <- sub("Salinity M", "Medium", tabledata$Salinity)
 tabledata$Salinity <- sub("Salinity L", "Low", tabledata$Salinity)
-tabledata$Soil_Type[1] <- "Collington-Wist complex; Collington and Annapolis soils"
-tabledata$Soil_Type[2] <- "Annapolis fine sandy loam"
-tabledata$Soil_Type[3] <- "Collington and Annapolis soils; Collington, Wist, and Westphalia soils"
-
-tabledata %>% 
-  unite(col = 'Trees (/ha)', tree_mean, tree_sd, sep = " ± ") %>%
-  unite(col = 'BA (m2/ha)', BA_mean, BA_sd, sep = " ± ") %>%
-  knitr::kable(digits = 1, format = "html", col.names = c("Site", "Salinity", "Trees (/ha)", expression(BA~(m^2~ha^-1)), "Soil Type"))
-
-tabledata$Salinity <- sub("Salinity H", "High", tabledata$Salinity)
-tabledata$Salinity <- sub("Salinity M", "Medium", tabledata$Salinity)
-tabledata$Salinity <- sub("Salinity L", "Low", tabledata$Salinity)
+# tabledata$Soil_Type[1] <- "Collington-Wist complex; Collington and Annapolis soils"
+# tabledata$Soil_Type[2] <- "Annapolis fine sandy loam"
+# tabledata$Soil_Type[3] <- "Collington and Annapolis soils; Collington, Wist, and Westphalia soils"
 
 tabledata %>% 
   unite(col = 'Trees (/ha)', tree_mean, tree_sd, sep = " ± ") %>%
@@ -160,6 +156,7 @@ tabledata %>%
   knitr::kable(digits = 1, format = "html", 
                col.names = c("Site", "Salinity", "Trees (/ha)", expression(BA~(m^2~ha^-1)))) %>%
   kableExtra::kable_styling(c("striped", "bordered"), full_width = FALSE)
+
 ```
 
 
@@ -179,14 +176,17 @@ licor_daily_data %>%
   facet_grid(Dest_Elevation ~ Dest_Salinity) +
   ggtitle("Flux over time") +
   labs(x = "Date", 
-       y = expression(Flux~(Âµmol~CO[2]~m^-2~s^-1))) +
+       y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
 ```
 
 
 ### Hypothesis I - BA strong effect within 5 meters
 ```{r, echo = FALSE, warning = FALSE}
 # Filter Licor data for only true control collars and screen out bad SM data
+MODEL_TYPE <- "linear"
+
 readd("licor_data") %>% 
   filter(Experiment == "Control", is.na(Notes)) %>% 
   filter(SMoisture > 0, SMoisture < 1) ->
@@ -202,17 +202,20 @@ control_cols %>%
   control_cols_5m
 
 # Run the main analysis
-h1 <- with(control_cols_5m, prox_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = "linear"))
+h1 <- with(control_cols_5m, run_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = MODEL_TYPE))
 
-#model_stats(h1)
+# model_stats(h1)
+
 ```
 
 
 ### Table 2
 ```{r, echo = FALSE, warning = FALSE, message = FALSE}
-print(MODEL_TYPE)
-knitr::kable(tidy(anova(m_reduced)), digits = 3, format = "html") %>%
-  kableExtra::kable_styling(c("striped", "bordered"), full_width = FALSE)
+
+# print(MODEL_TYPE)
+# knitr::kable(tidy(anova(m_reduced)), digits = 3, format = "html") %>%
+#   kableExtra::kable_styling(c("striped", "bordered"), full_width = FALSE)
+
 ```
 
 
@@ -224,40 +227,40 @@ GS_MONTHS <- 4:10  # growing season months, i.e. April-October
 control_cols_5m$Growing_season <- month(control_cols_5m$Timestamp) %in% GS_MONTHS
 
 growing_flux <- filter(control_cols_5m, Growing_season)
-h2g <- with(growing_flux, prox_model(Flux, T5, T20, SMoisture, BA_m2, 
-                                     site = Dest_Salinity, model_type = "linear"))
+h2g <- with(growing_flux, run_model(Flux, T5, T20, SMoisture, BA_m2, 
+                                     site = Dest_Salinity, model_type = MODEL_TYPE))
 
-#model_stats(h2g)
+# model_stats(h2g)
 
 # Filter true controls for dormant season
 dormant_flux <- filter(control_cols_5m, !Growing_season)
 print(dormant_flux)
-h2d <- with(dormant_flux, prox_model(Flux, T5, T20, SMoisture, BA_m2, 
-                                     site = Dest_Salinity, model_type = "linear"))
+h2d <- with(dormant_flux, run_model(Flux, T5, T20, SMoisture, BA_m2, 
+                                     site = Dest_Salinity, model_type = MODEL_TYPE))
 
-#model_stats(h2d)
+# model_stats(h2d)
 
-# summary, plotting, comparisons, etc.
 ```
 
 ### Hypothesis III - moisture-limited times
 ```{r, echo = FALSE, warning = FALSE}
 
 ## replace with actual variable name once drake is working
-SMOISTURE_MEDIAN <- median(control_cols_5m$SOILMOISTURE)
+smoisture_median <- median(control_cols_5m$SMoisture)
 
 # Filter true controls for the bottom and top 50% soil moisture values; this will be our "limited" and "ample" moisture times
-m_limited <- filter(control_cols_5m, SOILMOISTURE < SMOISTURE_MEDIAN)
-print(m_limited)
-h3l <- with(m_limited, prox_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = "linear"))
+m_low <- filter(control_cols_5m, SMoisture < smoisture_median)
+print(m_low)
+h3l <- with(m_low, run_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = MODEL_TYPE))
 
-#model_stats(h3l)
+# model_stats(h3l)
 
-m_ample <- filter(control_cols_5m, SOILMOISTURE >= SMOISTURE_MEDIAN)
-print(m_ample)
-h3a <- with(m_ample, prox_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = "linear"))
+m_high <- filter(control_cols_5m, SMoisture >= smoisture_median)
+print(m_high)
+h3a <- with(m_high, run_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = MODEL_TYPE))
+ 
+# model_stats(h3a)
 
-#model_stats(h3a)
 ```
 
 ### Sensitivity test - BA significance with distance
@@ -269,7 +272,7 @@ for (i in seq.int(2, max(tree_prox_data$Distance_m))) {
   BA <- basal_area_sum(tree_prox_data, i)
   data <- left_join(control_cols, BA, by = "Collar")
   
-  mods <- with(data, prox_model(Flux, T5, T20, SMoisture, BA_m2, 
+  mods <- with(data, run_model(Flux, T5, T20, SMoisture, BA_m2, 
                                 site = Dest_Salinity, model_type = MODEL_TYPE))
   model <- mods$reduced_model
   smry <- anova(model)
