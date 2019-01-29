@@ -6,7 +6,7 @@ pkgconfig::set_config("drake::strings_in_dots" = "literals")
 
 library(MASS) # 7.3-51.1 
 library(readr)
-#library(dplyr)   # needs to come after MASS above so select() isn't masked
+library(dplyr)   # needs to come after MASS above so select() isn't masked
 library(tidyr)
 library(ggplot2)
 theme_set(theme_bw())
