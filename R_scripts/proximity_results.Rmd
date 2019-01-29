@@ -33,7 +33,8 @@ basal_area_sum <- function(data, distance) {
     group_by(Collar) %>% 
     summarise(n_trees = n(), 
               BA_m2 = round(sum(BA_sqm, na.rm = TRUE), digits = 3), 
-              dist = distance)
+              dist = distance) %>% 
+    replace_na(list(n_trees = 0, BA_m2 = 0.0))  # if no trees within distance, zero
 }
 
 # Fit the main statistical model testing for effect of basal area (BA) on soil respiration
@@ -278,10 +279,12 @@ h3a <- with(m_high, run_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salin
 
 sens_output <- list()
 BA_output <- list()
+# Loop through the range of distances we measured and run 
+# our basal area/respiration test at each
 for (i in seq.int(2, max(tree_prox_data$Distance_m))) {
   BA <- basal_area_sum(tree_prox_data, i)
   data <- left_join(control_cols, BA, by = "Collar") %>%
-    select(Flux, T5, T20, SMoisture, BA_m2, Dest_Salinity)  # select just columns we want 
+    select(Collar, Flux, T5, T20, SMoisture, BA_m2, Dest_Salinity)  # select just columns we want 
   mods <- with(data, run_model(Flux, T5, T20, SMoisture, BA_m2, 
                                 site = Dest_Salinity, model_type = MODEL_TYPE))
   model <- mods$reduced_model
