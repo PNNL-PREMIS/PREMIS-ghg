@@ -200,7 +200,9 @@ MODEL_TYPE <- "linear"
 
 readd("licor_data") %>% 
   filter(Experiment == "Control", is.na(Notes)) %>% 
-  filter(SMoisture > 0, SMoisture < 1) ->
+  # Filter out bad soil moisture and flux readings
+  filter(SMoisture > 0, SMoisture < 1,
+         Flux > 0) ->
   control_cols
 
 # Calculate basal area within 5 m
