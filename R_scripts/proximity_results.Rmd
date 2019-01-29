@@ -19,6 +19,13 @@ library(lubridate)
 
 # Define functions
 
+# Calcuate basal area (m2) from tree diameter (cm)
+calc_BA <- function(DBH) {
+  DBH_m <- DBH / 100 # cm to meters
+  radius <- DBH_m /2 # we want the radius to compute the area
+  BA <- radius ^2 * pi # area calculation
+  return(BA)
+}
 # Compute the sum of per-tree basal area within a certain distance (to respiration collars)
 basal_area_sum <- function(data, distance) {
   data %>% 
@@ -83,8 +90,7 @@ prox_data %>%
   # Replace DBH with recorded value for non-tagged trees
   mutate(DBH_cm = if_else(is.na(Tag), No_tag_DBH, DBH_cm),
          Species_code = if_else(is.na(Tag), No_tag_species, Species_code),
-         # Compute basal area for each tree
-         BA_sqm = (DBH_cm / 100 / 2) ^ 2 * pi) ->  # from DBH (cm) to area (m2)
+         BA_sqm = calc_BA(DBH_cm)) -> # Compute basal area for each tree
   tree_prox_data
 
 ```
@@ -124,12 +130,12 @@ bind_rows(BA_dat) %>%
 
 ### Table 1 - site info
 ```{r, echo = FALSE, warning = FALSE, message = FALSE}
-
+##SP TO ADD COMMENTS AND CONSTANTS FOR CLARITY
 tree_data %>% 
   group_by(Site, Salinity, Elevation) %>% 
   summarise(n = n(), 
             Plot_area_m2 = mean(Plot_area_m2), 
-            `BA (m2/ha)` = sum((DBH_cm / 100 / 2) ^ 2 * pi, na.rm = TRUE) / 
+            `BA (m2/ha)` = sum(calc_BA(DBH_cm), na.rm = TRUE) / 
               mean(Plot_area_m2) * 10000) %>% 
   mutate(`Trees (/ha)` = n / Plot_area_m2 * 10000) %>% 
   summarise(tree_mean = mean(`Trees (/ha)`) %>% round(1), 
