@@ -38,10 +38,14 @@ basal_area_sum <- function(data, distance) {
 
 # Fit the main statistical model testing for effect of basal area (BA) on soil respiration
 run_model <- function(flux, T5, T20, SM, BA, site, model_type) {
+  # Ensure that there are no NAs in our dataset
+  dat <- tibble(flux, T5, T20, SM, BA, site) %>% na.omit
+  
   if(model_type == "linear") {
-    mod_full <- lm(log(flux) ~ T5 * BA + T20 * BA + SM + I(SM ^ 2) + BA)
+    mod_full <- lm(log(flux) ~ T5 * BA + T20 * BA + SM + I(SM ^ 2) + BA, data = dat)
   } else if(model_type == "lme") {
     mod_full <- nlme::lme(log(flux) ~ T5 * BA + T20 * BA + SM + I(SM ^ 2) + BA, 
+                          data = dat,
                           # allow for random variation across sites
                           random = ~ 1 | site,
                           method = "ML" # because we're doing stepAIC below
@@ -276,8 +280,8 @@ sens_output <- list()
 BA_output <- list()
 for (i in seq.int(2, max(tree_prox_data$Distance_m))) {
   BA <- basal_area_sum(tree_prox_data, i)
-  data <- left_join(control_cols, BA, by = "Collar")
-  
+  data <- left_join(control_cols, BA, by = "Collar") %>%
+    select(Flux, T5, T20, SMoisture, BA_m2, Dest_Salinity)  # select just columns we want 
   mods <- with(data, run_model(Flux, T5, T20, SMoisture, BA_m2, 
                                 site = Dest_Salinity, model_type = MODEL_TYPE))
   model <- mods$reduced_model
