@@ -135,6 +135,18 @@ bind_rows(BA_dat) %>%
 
 ### Table 1 - site info
 ```{r, echo = FALSE, warning = FALSE, message = FALSE}
+tree_data %>%
+  group_by(Site, Salinity, Species) %>%
+  summarise(n = n(),
+            BA_species = sum(calc_BA(DBH_cm), na.rm = TRUE)) ->
+  test
+
+tree_data %>%
+  group_by(Site, Salinity) %>%
+  summarise(n = n(),
+            BA_site = calc_BA(DBH_cm)) ->
+  test_site
+
 ##SP TO ADD COMMENTS AND CONSTANTS FOR CLARITY
 tree_data %>% 
   group_by(Site, Salinity, Elevation) %>% 
