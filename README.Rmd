@@ -14,6 +14,7 @@ knitr::opts_chunk$set(
   fig.width = 9
 )
 options(tibble.print_min = 5, tibble.print_max = 5)
+PATH <- "./R_scripts/"
 ```
 
 # PREMIS-ghg
@@ -45,9 +46,9 @@ theme_set(theme_bw())
 ```{r prep, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
 
 # Load the licor and weather data
-licor_data <- readd("licor_data")
-licor_daily_data <- readd("licor_daily_data")
-weather_data <- readd("weather_data")
+licor_data <- readd("licor_data", path = PATH)
+licor_daily_data <- readd("licor_daily_data", path = PATH)
+weather_data <- readd("weather_data", path = PATH)
 
 # Calculate treatments means and s.d.
 licor_daily_data %>% 
@@ -69,7 +70,7 @@ licor_daily_data %>%
 
 ```{r sample_size_table, echo = FALSE, message = FALSE}
 # Auto-generate the sample size table
-readd("collar_data") %>% 
+readd("collar_data", path = PATH) %>% 
   group_by(Site, Experiment) %>% 
   summarise(N = n()) %>% 
   knitr::kable()
@@ -171,7 +172,7 @@ weather_data %>%
 
 ### Well conductivity data
 ```{r wells, echo = FALSE}
-readd("well_data") %>% 
+readd("well_data", path = PATH) %>% 
   gather(variable, value, Low_Range, High_Range) %>% 
   ggplot(aes(x = Timestamp, y = value, color = variable)) +
   geom_line() +
@@ -182,7 +183,7 @@ readd("well_data") %>%
 
 ### Histogram of trees by DBH
 ```{r inventory, echo = FALSE}
-tree_data <- readd("tree_data")
+tree_data <- readd("tree_data", path = PATH)
 ggplot(tree_data, aes(DBH_cm, fill = Species)) + 
   geom_histogram(position = "stack", binwidth = 5) + 
   facet_grid(Salinity ~ Elevation)
