@@ -66,17 +66,17 @@ run_model <- function(flux, T5, T20, SM, BA, site, model_type) {
 model_stats <- function(mods) {
   
   m_reduced <- mods$reduced_model
-  summary(m_reduced)
   anova(m_reduced)
   plot(m_reduced)
-  data$prediction <- predict(m_reduced)
+  summary(m_reduced)
+  #data$prediction <- predict(m_reduced)
 
-  ggplot(data, aes(Timestamp, Flux)) +
-    geom_point() +
-    geom_line(aes(y = exp(prediction))) +
-    facet_wrap(~Collar) +
-    ggtitle(MODEL_TYPE)
-  
+  # ggplot(data, aes(Timestamp, Flux)) +
+  #   geom_point() +
+  #   geom_line(aes(y = exp(prediction))) +
+  #   facet_wrap(~Collar) +
+  #   ggtitle(MODEL_TYPE)
+  # 
   #whatever other plots we want to make
 }
 
@@ -217,7 +217,7 @@ control_cols %>%
 # Run the main analysis
 h1 <- with(control_cols_5m, run_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = MODEL_TYPE))
 
-# model_stats(h1)
+model_stats(h1)
 
 ```
 
@@ -243,7 +243,7 @@ growing_flux <- filter(control_cols_5m, Growing_season)
 h2g <- with(growing_flux, run_model(Flux, T5, T20, SMoisture, BA_m2, 
                                      site = Dest_Salinity, model_type = MODEL_TYPE))
 
-# model_stats(h2g)
+model_stats(h2g)
 
 # Filter true controls for dormant season
 dormant_flux <- filter(control_cols_5m, !Growing_season)
@@ -251,7 +251,7 @@ print(dormant_flux)
 h2d <- with(dormant_flux, run_model(Flux, T5, T20, SMoisture, BA_m2, 
                                      site = Dest_Salinity, model_type = MODEL_TYPE))
 
-# model_stats(h2d)
+model_stats(h2d)
 
 ```
 
@@ -261,7 +261,7 @@ h2d <- with(dormant_flux, run_model(Flux, T5, T20, SMoisture, BA_m2,
 ## replace with actual variable name once drake is working
 smoisture_median <- median(control_cols_5m$SMoisture)
 
-# Filter true controls for the bottom and top 50% soil moisture values; this will be our "limited" and "ample" moisture times
+# Filter true controls for the bottom and top 50% soil moisture values
 m_low <- filter(control_cols_5m, SMoisture < smoisture_median)
 print(m_low)
 h3l <- with(m_low, run_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = MODEL_TYPE))
@@ -272,7 +272,7 @@ m_high <- filter(control_cols_5m, SMoisture >= smoisture_median)
 print(m_high)
 h3a <- with(m_high, run_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = MODEL_TYPE))
  
-# model_stats(h3a)
+model_stats(h3a)
 
 ```
 
