@@ -63,20 +63,6 @@ plan <- drake_plan(
   con_licor_data = process_continuous_data(raw_con_licor_data),
   
   # --------------------------------------------------------------------------------------------------------
-  # Webpage README and diagnostics
-  readme = rmarkdown::render(
-    knitr_in("README.Rmd"),
-    output_file = file_out("README.md"),
-    quiet = TRUE),
-  # I couldn't get rmarkdown::render and drake to play nicely together
-  # when writing a file to parent directory (either the figure links
-  # would be wrong, or drake would get confused, or something).
-  # Hack: copy it up, changing figure links on the fly
-  readme_main = cat(gsub("figures/", "R_scripts/figures/", 
-                         readChar(file_in("README.md"), 1e6), fixed = TRUE), 
-                    file = "../README.md"),
-  
-  # --------------------------------------------------------------------------------------------------------
   # Proximity data for SP's proximity analysis manuscript
   prox_data = read_csv(file_in("../inventory_data/collar_proximity.csv"), col_types = "ccidicdc"),
   
