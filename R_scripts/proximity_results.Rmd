@@ -106,8 +106,8 @@ prox_data %>%
 
 # Calculate cumulative basal area at each distance 
 BA_dat <- list()
-for (i in 1:max(tree_prox_data$Distance_m)) {
-  tree_prox_data %>% 
+for (i in 1:max(tree_prox_data$Distance_m, na.rm = TRUE)) {
+tree_prox_data %>% 
     filter(Distance_m <= i) %>% 
     group_by(Collar) %>% 
     summarise(n_trees = n(), 
@@ -119,7 +119,7 @@ for (i in 1:max(tree_prox_data$Distance_m)) {
 
 # Combine and complete data (in particular, adding values for 0 m)
 bind_rows(BA_dat) %>% 
-  complete(Collar, dist = c(0:max(tree_prox_data$Distance_m)),
+  complete(Collar, dist = c(0:max(tree_prox_data$Distance_m, na.rm = TRUE)),
            fill = list(BA_m2 = 0, n_trees = 0)) %>% 
   # ...and plot
   ggplot(aes(x = dist, y = BA_m2, group = Collar, color = n_trees)) + 
@@ -138,14 +138,8 @@ bind_rows(BA_dat) %>%
 tree_data %>%
   group_by(Site, Salinity, Species) %>%
   summarise(n = n(),
-            BA_species = sum(calc_BA(DBH_cm), na.rm = TRUE)) ->
-  test
-
-tree_data %>%
-  group_by(Site, Salinity) %>%
-  summarise(n = n(),
-            BA_site = calc_BA(DBH_cm)) ->
-  test_site
+            BA_species = sum(calc_BA(DBH_cm), na.rm = TRUE)) %>%
+  mutate(BA_p = BA_species/sum(BA_species) * 100)
 
 ##SP TO ADD COMMENTS AND CONSTANTS FOR CLARITY
 tree_data %>% 
@@ -295,7 +289,7 @@ sens_output <- list()
 BA_output <- list()
 # Loop through the range of distances we measured and run 
 # our basal area/respiration test at each
-for (i in seq.int(2, max(tree_prox_data$Distance_m))) {
+for (i in seq.int(2, max(tree_prox_data$Distance_m, na.rm = TRUE))) {
   BA <- basal_area_sum(tree_prox_data, i)
   data <- left_join(control_cols, BA, by = "Collar") %>%
     select(Collar, Flux, T5, T20, SMoisture, BA_m2, Dest_Salinity)  # select just columns we want 
