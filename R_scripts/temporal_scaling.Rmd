@@ -104,15 +104,16 @@ This uses the _survey_ data, examining the variability in multiple Licor observa
 ```{r cv12, echo = FALSE}
 licor_data %>% 
   group_by(Date, Group, Collar) %>%
-  summarise(n = n(), meanFlux = mean(Flux), cv = sd(Flux) / mean(Flux)) %>% 
+  summarise(n = n(), meanFlux = mean(Flux), CV = sd(Flux) / mean(Flux)) %>% 
   filter(n == 2) ->
   meas_error_1
 
-median_error_minutes <- median(meas_error_1$cv)
-ggplot(meas_error_1, aes(x = cv)) + geom_histogram(bins = 20) +
+median_error_minutes <- median(meas_error_1$CV)
+ggplot(meas_error_1, aes(x = CV)) + geom_histogram(bins = 20) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
   geom_vline(xintercept = median_error_minutes, color = "red") +
-  ylab("Count") + xlab("CV between successive IRGA measurements")
+  ylab("Count") + xlab("CV between successive IRGA measurements") +
+  ggtitle(paste("N =", nrow(meas_error_1)))
 ```
 
 The median measurement error here is ~`r round(median_error_minutes * 100, 0)`% for `r nrow(meas_error_1)` observations of fluxes between `r round(min(meas_error_1$meanFlux), 2)` and `r round(max(meas_error_1$meanFlux), 2)` µmol/m2/s.
@@ -173,6 +174,8 @@ for(p in unique(cld_clean$Port)) {
                          PACF = pacf_obj$acf[,,1])
   # Compute the CV between successive measurements
   cld_p$CV <- running_cv(cld_p$Flux)
+  cld_p$T5_diff <- c(NA, diff(cld_p$T5))
+  cld_p$SMoist_diff <- c(NA, diff(cld_p$SMoist))
   cld_cv[[p]] <- cld_p
 }
 # Combine results and compute mean PACF at each lag
@@ -191,15 +194,37 @@ ggplot(pacf_df, aes(lag, PACF)) +
 In the figure above, Rs values measured in successive hours at a given collar exhibit a strong correlation (`r round(pacf_df$PACF[1], 3)`), and a moderate one at a two-hour lag (`r round(pacf_df$PACF[2], 3)`). Day-to-day (24 hour lag) observations are essentially uncorrelated (`r round(pacf_df$PACF[24], 3)`).
 
 ```{r, hours-cv, echo=FALSE}
-cld_cv <- bind_rows(cld_cv)
+cld_cv <- bind_rows(cld_cv) %>% 
+  filter(!is.na(CV))
 median_error_hours <- median(cld_cv$CV, na.rm = TRUE)
+
+# Plot CV as it relates to changes in T5 and soil moisture, and test effects
+xl <- c(-1, 1)
+yl <- c(-0.02, 0.02)
+cld_cv %>% 
+  filter(T5_diff < min(xl) | T5_diff > max(xl) | 
+           SMoist_diff < min(yl) | SMoist_diff > max(yl)) %>% 
+  nrow ->
+  excluded_count
+
+ggplot(cld_cv, aes(T5_diff, SMoist_diff, color = CV)) +
+  geom_point() + 
+  coord_cartesian(xlim = xl, ylim = yl) +
+  ggtitle(paste(excluded_count, "of", nrow(cld_cv), "observations not shown"))
+
+summary(lm(CV ~ abs(T5_diff) * abs(SMoist_diff), data = cld_cv))
+
+# Histogram of CV values
 ggplot(cld_cv, aes(x = CV)) + geom_histogram(bins = 20) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
   geom_vline(xintercept = median_error_hours, color = "red") +
-  ylab("Count") + xlab("CV between successive hourly measurements")
+  ylab("Count") + xlab("CV between successive hourly measurements") +
+  ggtitle(paste("N =", nrow(cld_cv)))
 ```
 
 The median measurement error here is ~`r round(median_error_hours * 100, 0)`% for `r nrow(cld_cv)` observations of fluxes between `r round(min(cld_cv$Flux), 2)` and `r round(max(cld_cv$Flux), 2)` µmol/m2/s.
+
+Large hour-to-hour CV was significantly associated with changes in soil moisture!
 
 
 ### Days: variability
@@ -250,7 +275,8 @@ median_error_days <- median(cld_cv$CV, na.rm = TRUE)
 ggplot(cld_cv, aes(x = CV)) + geom_histogram(bins = 20) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
   geom_vline(xintercept = median_error_hours, color = "red") +
-  ylab("Count") + xlab("CV between successive daily measurements")
+  ylab("Count") + xlab("CV between successive daily measurements") +
+  ggtitle(paste("N =", nrow(cld_cv)))
 ```
 
 The median measurement error here is ~`r round(median_error_days * 100, 0)`% for `r nrow(cld_cv)` observations of fluxes between `r round(min(cld_cv$Flux), 2)` and `r round(max(cld_cv$Flux), 2)` µmol/m2/s.
@@ -286,14 +312,16 @@ ld_monthly %>%
   mutate(CV = running_cv(Flux)) ->
   lmd_cv
 
-median_error_months <- median(lmd_cv$CV, na.rm = TRUE)
+median_cv_months <- median(lmd_cv$CV, na.rm = TRUE)
 ggplot(lmd_cv, aes(x = CV)) + geom_histogram(bins = 20) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
-  geom_vline(xintercept = median_error_months, color = "red") +
-  ylab("Count") + xlab("CV between successive monthly measurements")
+  geom_vline(xintercept = median_cv_months, color = "red") +
+  ylab("Count") + xlab("CV between successive monthly measurements") +
+  ggtitle(paste("N =", nrow(lmd_cv)))
+
 ```
 
-Median error is `r round(median_error_months * 100, 0)`%.
+Median CV is `r round(median_cv_months * 100, 0)`%.
 
 How often do we need to sample to get good monthly number? (Use hourly data.)
 
@@ -301,40 +329,56 @@ How often do we need to sample to get good monthly number? (Use hourly data.)
 ### What's the SRDB interannual variability?
 
 ```{r srdb, echo=FALSE}
-srdb <- readd("srdb")
-srdb$Rs_interann_cv <- with(srdb, Rs_interann_err / Rs_annual)
-median_cv_annual <- median(srdb$Rs_interann_cv, na.rm = TRUE)
+readd("srdb") %>% 
+  mutate(CV = Rs_interann_err / Rs_annual) %>%
+  filter(Leaf_habit == "Deciduous", Ecosystem_type == "Forest", !is.na(CV)) ->
+  srdb
+median_cv_annual <- median(srdb$CV, na.rm = TRUE)
 
-srdb %>% 
-  filter(!is.na(Rs_interann_cv)) %>% 
-  ggplot(aes(x = Rs_interann_cv)) + geom_histogram(bins = 20) +
+ggplot(srdb, aes(x = CV)) + geom_histogram(bins = 20) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
   geom_vline(xintercept = median_cv_annual, color = "red") +
-  ylab("Count") + xlab("CV between successive years")
+  ylab("Count") + xlab("CV between successive years") +
+  ggtitle(paste("N =", nrow(srdb)))
 ```
+
+Median CV here is `r round(median_cv_annual * 100, 0)`%.
 
 
 ## Summary
 
 ```{r summary-graph, echo=FALSE}
-spd = 24 * 60 * 60
-smry <- tibble(Seconds = c(60,       # 1 minute
-                           60 * 60,  # 1 hour
-                           spd,      # 1 day
-                           spd * 30, # 1 month
-                           spd * 365), # 1 year
-               Labels = c("1 minute", "1 hour", "1 day", "1 month", "1 year"),
+spd <- 24 * 60 * 60
+timescales <- c("1 minute" = 60,
+                "1 hour" = 60 * 60,
+                "1 day" = spd,
+                "1 month" = spd * 30,
+                "1 year" = spd * 365)
+smry <- tibble(Seconds = timescales,
+               Labels = names(timescales),
                CV = c(median_error_minutes, 
                       median_error_hours, 
                       median_error_days, 
-                      median_error_months, 
-                      median_cv_annual)
-)
-ggplot(smry, aes(Seconds, CV, label = Labels)) + geom_point() + 
-  #  coord_trans(x = "log10")
+                      median_cv_months, 
+                      median_cv_annual))
+
+distributions <- bind_rows(tibble(Labels = "1 minute", CV = meas_error_1$CV),
+                           tibble(Labels = "1 hour", CV = cld_cv$CV),
+                           tibble(Labels = "1 day", CV = cld_cv$CV),
+                           tibble(Labels = "1 month", CV = lmd_cv$CV),
+                           tibble(Labels = "1 year", CV = srdb$CV))
+
+distributions$Seconds <- timescales[distributions$Labels]
+
+ggplot(smry, aes(Seconds, CV, label = Labels, group = Labels)) +
+  geom_violin(data = distributions, fill = NA, 
+              draw_quantiles = c(0.9, 0.95), color = "darkgrey") +
+  geom_point() + 
+  geom_text(nudge_y = 0.05) +
   scale_x_log10(
     breaks = scales::trans_breaks("log10", function(x) 10 ^ x),
-    labels = scales::trans_format("log10", scales::math_format(10^.x))
+    labels = scales::trans_format("log10", scales::math_format(10 ^ .x))
   ) +
-  geom_text(nudge_y = 0.002)
+  coord_cartesian(ylim = c(0, 1)) +
+  xlab("Timescale (seconds)")
 ```
