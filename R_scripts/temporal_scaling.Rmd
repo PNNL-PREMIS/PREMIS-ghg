@@ -46,6 +46,17 @@ readd("con_licor_data") %>%
   filter(Timestamp >= "2018-10-01") %>% 
   arrange(Timestamp, Port) ->
   cld
+
+# Helper function - compute coefficient of variability (CV) between
+# x[1] and x[2], x[2] and x[3], etc.
+running_cv <- function(x) {
+  out <- rep(NA_real_, length(x))
+  for(i in seq_along(x)[-1]) {
+    obs <- c(x[i-1], x[i])
+    out[i] <- sd(obs) / mean(obs)
+  }
+  out
+}
 ```
 
 ```{r filtering, echo=FALSE}
@@ -161,11 +172,7 @@ for(p in unique(cld_clean$Port)) {
                          lag = pacf_obj$lag[,,1], 
                          PACF = pacf_obj$acf[,,1])
   # Compute the CV between successive measurements
-  cld_p$CV <- NA_real_
-  for(i in seq_len(nrow(cld_p))[-1]) {
-    obs <- c(cld_p$Flux[i-1], cld_p$Flux[i])
-    cld_p$CV[i] <- sd(obs) / mean(obs)
-  }
+  cld_p$CV <- running_cv(cld_p$Flux)
   cld_cv[[p]] <- cld_p
 }
 # Combine results and compute mean PACF at each lag
@@ -219,11 +226,7 @@ for(p in unique(cld_clean$Port)) {
                          lag = pacf_obj$lag[,,1], 
                          PACF = pacf_obj$acf[,,1])
   # Compute the CV between successive measurements
-  cld_p$CV <- NA_real_
-  for(i in seq_len(nrow(cld_p))[-1]) {
-    obs <- c(cld_p$Flux[i-1], cld_p$Flux[i])
-    cld_p$CV[i] <- sd(obs) / mean(obs)
-  }
+  cld_p$CV <- running_cv(cld_p$Flux)
   cld_cv[[p]] <- cld_p
 }
 # Combine results and compute mean PACF at each lag
@@ -278,18 +281,11 @@ ggplot(ld_monthly, aes(Timestamp, Flux, group = Collar)) +
 CV between successive measurements:
 
 ```{r months-cv, echo=FALSE}
-ld_monthly$CV <- NA_real_
-results <- list()
-for(collar in unique(ld_monthly$Collar)) {
-  ldmc <- filter(ld_monthly, Collar == collar)
-  for(i in seq_len(nrow(ldmc))[-1]) {
-    obs <- c(ldmc$Flux[i-1], ldmc$Flux[i])
-    ldmc$CV[i] <- sd(obs) / mean(obs)
-  }
-  results[[collar]] <- ldmc
-}
+ld_monthly %>% 
+  group_by(Collar) %>% 
+  mutate(CV = running_cv(Flux)) ->
+  lmd_cv
 
-lmd_cv <- bind_rows(results)
 median_error_months <- median(lmd_cv$CV, na.rm = TRUE)
 ggplot(lmd_cv, aes(x = CV)) + geom_histogram(bins = 20) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
