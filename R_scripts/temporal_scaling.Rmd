@@ -1,9 +1,27 @@
 ---
 title: "Seconds to decades: soil respiration variability and sensitivity across temporal scales"
 author: "Ben Bond-Lamberty"
-date: "11/17/2018"
+date: "15 February 2019"
 output: html_document
 ---
+
+## CURRENT TODO LIST
+
+* Insert NAs into continuous data for proper handling - use `complete` based on `year`, `month`, `day`
+* Remove snowstorm day
+* Investigate/remove screwy survey collar
+* Compute mean difference between survey observations (X days)
+* How often do we need to sample to get good monthly estimate? Test.
+* Distirbutions in summary plot
+
+## Introduction
+
+* point 1
+* point 2
+* point 3
+* point 4
+
+To examine variability and sampling requirements at a variety of temporal scales, we combined (i) hourly, continuous measurements made by an 8-chamber IRGA, (ii) survey measurements made every ~10 days over a year at the same site, and (iii) data on annual fluxes from the SRDB. 
 
 ```{r setup, include=FALSE}
 library(drake)
@@ -17,26 +35,82 @@ library(lubridate)
 library(kableExtra)
 library(lattice)
 
-library(mblm)  # for Theil-Sen robust trend test
-
-licor_data <- readd("licor_data")
-
-plot_dir <- "~/Desktop/agu_slides/"
-save_agu_plot <- function(fn, plot = last_plot(), ...) {
-  if(!dir.exists(plot_dir)) dir.create(plot_dir)
-  suppressMessages(ggsave(file.path(plot_dir, fn), plot, ...))
-}
-
-fuzz <- function(x, error) {
-  x * rnorm(length(x), mean = 1, sd = error)
-}
+readd("licor_data") %>% 
+  filter(Group == "Control") %>% 
+  arrange(Timestamp) %>% 
+  mutate(Dest_Elevation = factor(Dest_Elevation,
+                                 levels = c("Low", "Medium", "High"))) ->
+  licor_data
+readd("con_licor_data") %>% 
+  # Filter for when system was in SALT plot (previously was testing)
+  filter(Timestamp >= "2018-10-01") %>% 
+  arrange(Timestamp, Port) ->
+  cld
 ```
 
-## Seconds to minutes
+```{r filtering, echo=FALSE}
+cld %>% 
+  filter(Flux > 0,  # definitely a problem!
+         R2 > 0.75  # probably a chamber closing problem otherwise
+         # TODO: remove snowstorm day
+  ) ->
+  cld_clean
+removed <- nrow(cld) - nrow(cld_clean)
+```
 
-How many times do we need to sample? Uses multiple Licor observations versus 1, 2, 3...
+## Methods
 
-```{r howmanytimes, echo = FALSE}
+Continuous data: `r nrow (cld)` observations; `r removed` (`r round(removed / nrow(cld) * 100, 0)`%) removed because of chamber closure or other problems.
+
+```{r continuous-plot, echo=FALSE}
+ggplot(cld_clean, aes(Timestamp, Flux)) + geom_line() + facet_grid(Port ~ .)
+```
+
+Survey data: `r nrow (licor_data)` observations.
+
+```{r survey-plot, echo=FALSE}
+ggplot(licor_data, aes(Timestamp, Flux, group = Collar)) + 
+  geom_point() + geom_line(color = "darkgrey") +
+  facet_grid(~Dest_Elevation)
+```
+
+
+Time scales we're looking at:
+
+* **Seconds to minutes**: how many times do we need to sample? Uses survey data. 
+* **Hours**: what's correlation and CV between successive hours? Uses continuous data.
+* **Days**: what's correlation and CV between successive days? Uses continuous data.
+* **Months**: what's CV between successive months? How many times do we need to sample for a good annual estimate? Uses survey data.
+* **Years**: What's the CV between successive years in the SRDB?
+* **Years**: how much coverage is needed for robust annual estimate? This uses `Annual_coverage` field of SRDB. Not clear about this one.
+
+## Results
+
+### Seconds to minutes: variability
+
+This uses the _survey_ data, examining the variability in multiple Licor observations separated by ~1 m versus 1, 2, 3...
+
+```{r cv12, echo = FALSE}
+licor_data %>% 
+  group_by(Date, Group, Collar) %>%
+  summarise(n = n(), meanFlux = mean(Flux), cv = sd(Flux) / mean(Flux)) %>% 
+  filter(n == 2) ->
+  meas_error_1
+
+median_error_minutes <- median(meas_error_1$cv)
+ggplot(meas_error_1, aes(x = cv)) + geom_histogram(bins = 20) +
+  scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
+  geom_vline(xintercept = median_error_minutes, color = "red") +
+  ylab("Count") + xlab("CV between successive IRGA measurements")
+```
+
+The median measurement error here is ~`r round(median_error_minutes * 100, 0)`% for `r nrow(meas_error_1)` observations of fluxes between `r round(min(meas_error_1$meanFlux), 2)` and `r round(max(meas_error_1$meanFlux), 2)` µmol/m2/s.
+
+### Seconds to minutes: sampling
+
+How many times do we need to sample? Use the times Stephanie measured 2x, 3x, and 4x at collars (which we did early on to assess this question).
+
+```{r seconds-to-minutes, echo = FALSE}
 licor_data %>% 
   filter(Flux < 10) %>% 
   group_by(Date, Group, Collar) %>%
@@ -64,16 +138,168 @@ summary(m)
 TukeyHSD(aov(m))
 ```
 
+Basically, you need two samples--one is not enough--but not more.
 
-* **Minutes to hours to days**: how frequently do we need to sample? Uses GCREW continuous data. How frequently do we need to sample?
-* **Days to months**: how frequently do we need to sample for annual flux? Uses SERC survey data.
-* **Years**: how much coverage is needed for robust annual estimate? This uses `Annual_coverage` field of SRDB. Not clear about this one.
-* **Error introduced by RH versus RS**. Uses SRDB. Not sure about this. Hard.
-* - our Nature anlysis assumed no measurement error. How could this be estimated?
-* Random measurement error: "Random errors show up as different results for ostensibly the same repeated measurement. They can be estimated by comparing multiple measurements, and reduced by averaging multiple measurements." https://en.wikipedia.org/wiki/Observational_error#Random_errors_versus_systematic_errors
-* - _continuous_ data: variability between measurement 1 and measurement 2
-* - _survey_ (discontinuous) data: variability between m1 and m2 PLUS sampling error (sampling from continuous annual data)
-* **Years to decades**: how well can we detect trends? This is Nature paper SI work.
+### Hours: variability
+
+That's the correlation in the continuous time series? What's the CV between successive values?
+
+```{r hours, echo=FALSE}
+# Compute the partial autocorrelation function for each port (collar).
+# First need to convert to a timeseries object so `pacf` can 'see'
+# the gaps in the data
+results <- list()
+cld_cv <- list()
+for(p in unique(cld_clean$Port)) {
+  cld_p <- filter(cld_clean, Port == p)
+  pacf_obj <- pacf(as.ts(cld_p$Flux,
+                         start = min(cld_p$Timestamp),
+                         end = max(cld_p$Timestamp)), 
+                   na.action = na.pass,
+                   plot = FALSE)
+  results[[p]] <- tibble(Port = p,
+                         lag = pacf_obj$lag[,,1], 
+                         PACF = pacf_obj$acf[,,1])
+  # Compute the CV between successive measurements
+  cld_p$CV <- NA_real_
+  for(i in seq_len(nrow(cld_p))[-1]) {
+    obs <- c(cld_p$Flux[i-1], cld_p$Flux[i])
+    cld_p$CV[i] <- sd(obs) / mean(obs)
+  }
+  cld_cv[[p]] <- cld_p
+}
+# Combine results and compute mean PACF at each lag
+bind_rows(results) %>% 
+  group_by(lag) %>% 
+  summarise(PACF_sd = sd(PACF), PACF = mean(PACF)) ->
+  pacf_df
+ggplot(pacf_df, aes(lag, PACF)) + 
+  xlab("Lag (hours)") + geom_hline(yintercept = 0) +
+  geom_point() + 
+  geom_errorbar(aes(ymin = PACF - PACF_sd, ymax = PACF + PACF_sd)) + 
+  geom_linerange(aes(ymin = 0, ymax = PACF), 
+                 color = "darkgrey", linetype = 2)
+```
+
+In the figure above, Rs values measured in successive hours at a given collar exhibit a strong correlation (`r round(pacf_df$PACF[1], 3)`), and a moderate one at a two-hour lag (`r round(pacf_df$PACF[2], 3)`). Day-to-day (24 hour lag) observations are essentially uncorrelated (`r round(pacf_df$PACF[24], 3)`).
+
+```{r, hours-cv, echo=FALSE}
+cld_cv <- bind_rows(cld_cv)
+median_error_hours <- median(cld_cv$CV, na.rm = TRUE)
+ggplot(cld_cv, aes(x = CV)) + geom_histogram(bins = 20) +
+  scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
+  geom_vline(xintercept = median_error_hours, color = "red") +
+  ylab("Count") + xlab("CV between successive hourly measurements")
+```
+
+The median measurement error here is ~`r round(median_error_hours * 100, 0)`% for `r nrow(cld_cv)` observations of fluxes between `r round(min(cld_cv$Flux), 2)` and `r round(max(cld_cv$Flux), 2)` µmol/m2/s.
+
+
+### Days: variability
+
+```{r days, echo=FALSE}
+# Compute the partial autocorrelation function for daily mean of each
+# port (collar).
+results <- list()
+cld_cv <- list()
+for(p in unique(cld_clean$Port)) {
+  cld_clean %>% 
+    filter(Port == p) %>% 
+    mutate(julian = julian(Timestamp)) %>% 
+    group_by(day(Timestamp)) %>% 
+    summarise(julian = mean(julian),
+              Flux = mean(Flux)) ->
+    cld_p
+  pacf_obj <- pacf(as.ts(cld_p$Flux,
+                         start = min(cld_p$julian),
+                         end = max(cld_p$julian)), 
+                   na.action = na.pass,
+                   plot = FALSE)
+  results[[p]] <- tibble(Port = p,
+                         lag = pacf_obj$lag[,,1], 
+                         PACF = pacf_obj$acf[,,1])
+  # Compute the CV between successive measurements
+  cld_p$CV <- NA_real_
+  for(i in seq_len(nrow(cld_p))[-1]) {
+    obs <- c(cld_p$Flux[i-1], cld_p$Flux[i])
+    cld_p$CV[i] <- sd(obs) / mean(obs)
+  }
+  cld_cv[[p]] <- cld_p
+}
+# Combine results and compute mean PACF at each lag
+bind_rows(results) %>% 
+  group_by(lag) %>% 
+  summarise(PACF_sd = sd(PACF), PACF = mean(PACF)) ->
+  pacf_df
+ggplot(pacf_df, aes(lag, PACF)) + 
+  xlab("Lag (days)") + geom_hline(yintercept = 0) +
+  geom_point() + 
+  geom_errorbar(aes(ymin = PACF - PACF_sd, ymax = PACF + PACF_sd)) + 
+  geom_linerange(aes(ymin = 0, ymax = PACF), 
+                 color = "darkgrey", linetype = 2)
+```
+
+In the figure above, Rs values measured in successive days at a given collar exhibit a strong correlation (`r round(pacf_df$PACF[1], 3)`), but no correlation after that.
+
+```{r, days-cv, echo=FALSE}
+cld_cv <- bind_rows(cld_cv)
+median_error_days <- median(cld_cv$CV, na.rm = TRUE)
+ggplot(cld_cv, aes(x = CV)) + geom_histogram(bins = 20) +
+  scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
+  geom_vline(xintercept = median_error_hours, color = "red") +
+  ylab("Count") + xlab("CV between successive daily measurements")
+```
+
+The median measurement error here is ~`r round(median_error_days * 100, 0)`% for `r nrow(cld_cv)` observations of fluxes between `r round(min(cld_cv$Flux), 2)` and `r round(max(cld_cv$Flux), 2)` µmol/m2/s.
+
+
+### Months: variability
+
+Plot the control survey data:
+
+```{r months, echo=FALSE}
+licor_data %>% 
+  filter(Group == "Control") %>% 
+  mutate(year = year(Timestamp), month = month(Timestamp)) %>% 
+  group_by(Dest_Elevation, year, month, Collar) %>% 
+  summarise(Timestamp = mean(Timestamp),
+            Flux_sd = sd(Flux, na.rm = TRUE),
+            Flux = mean(Flux, na.rm = TRUE)) %>% 
+  ungroup %>% 
+  arrange(Timestamp) ->
+  ld_monthly
+ggplot(ld_monthly, aes(Timestamp, Flux, group = Collar)) +
+  geom_line() + 
+  geom_ribbon(aes(ymin = Flux - Flux_sd, 
+                  ymax = Flux + Flux_sd), alpha = I(0.2)) + 
+  facet_wrap(~Dest_Elevation)
+```
+
+CV between successive measurements:
+
+```{r months-cv, echo=FALSE}
+ld_monthly$CV <- NA_real_
+results <- list()
+for(collar in unique(ld_monthly$Collar)) {
+  ldmc <- filter(ld_monthly, Collar == collar)
+  for(i in seq_len(nrow(ldmc))[-1]) {
+    obs <- c(ldmc$Flux[i-1], ldmc$Flux[i])
+    ldmc$CV[i] <- sd(obs) / mean(obs)
+  }
+  results[[collar]] <- ldmc
+}
+
+lmd_cv <- bind_rows(results)
+median_error_months <- median(lmd_cv$CV, na.rm = TRUE)
+ggplot(lmd_cv, aes(x = CV)) + geom_histogram(bins = 20) +
+  scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
+  geom_vline(xintercept = median_error_months, color = "red") +
+  ylab("Count") + xlab("CV between successive monthly measurements")
+```
+
+Median error is `r round(median_error_months * 100, 0)`%.
+
+How often do we need to sample to get good monthly number? (Use hourly data.)
 
 
 ### What's the SRDB interannual variability?
@@ -81,302 +307,38 @@ TukeyHSD(aov(m))
 ```{r srdb, echo=FALSE}
 srdb <- readd("srdb")
 srdb$Rs_interann_cv <- with(srdb, Rs_interann_err / Rs_annual)
-median_interann_cv <- median(srdb$Rs_interann_cv, na.rm = TRUE)
+median_cv_annual <- median(srdb$Rs_interann_cv, na.rm = TRUE)
 
 srdb %>% 
   filter(!is.na(Rs_interann_cv)) %>% 
   ggplot(aes(x = Rs_interann_cv)) + geom_histogram(bins = 20) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
-  geom_vline(xintercept = median_interann_cv, color = "red") +
+  geom_vline(xintercept = median_cv_annual, color = "red") +
   ylab("Count") + xlab("CV between successive years")
-save_agu_plot("srdb_cv.png")
-
-# Site records
-srdb %>% 
-  filter(!is.na(Longitude), !is.na(Rs_annual), Manipulation == "None") %>% 
-  mutate(lon = round(Longitude, 2), lat = round(Latitude, 2)) ->
-  srdb
-
-srdb %>% 
-  # Compute the longest records
-  group_by(lon, lat, Leaf_habit, Ecosystem_type) %>% 
-  summarise(Years = length(unique(Study_midyear))) %>% ungroup %>% 
-  arrange(desc(Years)) %>% 
-  top_n(10) %>% 
-  left_join(select(srdb, Site_name, lon, lat, Ecosystem_type, Study_midyear, YearsOfData),
-            by = c("lon", "lat", "Ecosystem_type")) %>% 
-  mutate(Site_name = substr(Site_name, 1, 10)) ->
-  site_smry
-
-ggplot(site_smry, aes(Study_midyear, Site_name, 
-                      color = paste(Leaf_habit, Ecosystem_type))) + 
-  geom_point() + xlab("Year") + ylab("") + scale_color_discrete("")
-save_agu_plot("site_records.png", width = 8, height = 4)
 ```
 
 
-### What's the CV between survey measurements 1 and 2?
+## Summary
 
-```{r cv12, echo = FALSE}
-licor_data %>% 
-  group_by(Date, Group, Collar) %>%
-  summarise(n = n(), meanFlux = mean(Flux), cv = sd(Flux) / mean(Flux)) %>% 
-  filter(n == 2) ->
-  meas_error_1
-
-median_error <- median(meas_error_1$cv)
-ggplot(meas_error_1, aes(x = cv)) + geom_histogram(bins = 20) +
-  scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
-  geom_vline(xintercept = median_error, color = "red") +
-  ylab("Count") + xlab("CV between successive IRGA measurements")
-save_agu_plot("licor12_cv.png")
-```
-
-OK, so the median measurement error here is ~`r round(median_error * 100, 0)`% for `r nrow(meas_error_1)` observations of fluxes between `r round(min(meas_error_1$meanFlux), 2)` and `r round(max(meas_error_1$meanFlux), 2)` µmol/m2/s.
-
-### Nature paper analysis
-
-```{r hashimoto, echo=FALSE}
-library(ncdf4)
-# Downloaded August 25, 2017 from http://cse.ffpri.affrc.go.jp/shojih/data/index.html
-ncfiles <- c("~/Data/Hashimoto/RH_yr_Hashimoto2015.nc",
-             "~/Data/Hashimoto/RS_yr_Hashimoto2015.nc")
-
-nc <- nc_open(ncfiles[1])
-# These annual data start in 1901; extract 1990-2012
-co2 <- ncvar_get(nc, "co2", start = c(1, 1, 1, 90), count = c(-1, -1, 1, 23))
-nc_close(nc)
-
-
-png(file.path(plot_dir, "co2.png"))
-lattice::levelplot(co2[,,1])
-dev.off()
-
-co2 <- co2[400:600, 220:360,]  # punch a hole for testing: North America
-#co2 <- co2[500:540, 320:360,]  # punch a hole for testing: part of North America
-
-do_fitting <- function(co2) {
-  
-  f <- function(rh) { 
-    df <- data.frame(x = seq_along(rh), y = rh)
-    tryCatch(lm(y ~ x, data = df), error = function(e) NA)
-  }
-  
-  # Fit linear model to each grid cell (this is slow)
-  mods <- apply(co2, c(1, 2), FUN = f)  # slow
-  
-  # Extract slopes
-  slopes <- apply(mods, c(1, 2), FUN = function(x) 
-    if(!is.na(x)) x[[1]]$coefficients[["x"]] else NA)
-  slopes <- matrix(slopes, nrow = nrow(mods), ncol = ncol(mods))
-  
-  # Extract slope p-values
-  signif <- apply(mods, c(1, 2), FUN = function(x) 
-    if(!is.na(x)) summary(x[[1]])$coefficients["x", "Pr(>|t|)"] else NA)
-  signif <- matrix(signif, nrow = nrow(mods), ncol = ncol(mods))
-  
-  return(list(slopes = slopes, signif = signif))
-}
-
-out <- do_fitting(co2)
-summary(as.vector(out$slopes))
-
-png(file.path(plot_dir, "co2-slopes.png"))
-lattice::levelplot(out$slopes > 0)
-dev.off()
-png(file.path(plot_dir, "co2-signif.png"))
-lattice::levelplot(out$signif < 0.05)
-dev.off()
-hist(out$signif)
-
-ncells <- sum(!is.na(out$slopes))
-pos_slope <- sum(out$slopes > 0, na.rm = TRUE)
-signif_pos_slope <- sum(out$slopes > 0 & out$signif < 0.05, na.rm = TRUE)
-
-lat_weight <- abs(cos(seq(-pi/2, pi/2, length.out = nrow(out$slopes))))
-ncells_areawt <- sum(lat_weight * ncol(out$slopes))
-pos_slope_areawt <- sum(out$slopes > 0 * lat_weight, na.rm = TRUE)
-signif_pos_slope_areawt <- sum(out$slopes > 0 & out$signif < 0.05 * lat_weight, na.rm = TRUE)
-```
-
-Total cells = `r ncells`.
-
-Cells with positive slope = `r pos_slope` or `r round(pos_slope / ncells * 100, 0)`%.
-
-Cells with _significant_ positive slope = `r signif_pos_slope` or `r round(signif_pos_slope / ncells * 100, 0)`%.
-
-Area with positive slope = `r round(pos_slope_areawt / ncells_areawt * 100, 0)`%.
-
-Area with _significant_ positive slope = `r round(signif_pos_slope_areawt / ncells_areawt * 100, 0)`%.
-
-### Re-do analysis with assumed error rate
-
-```{r fuzz, echo=FALSE}
-
-co2_fuzz <- fuzz(co2, error = median_error)
-out <- do_fitting(co2_fuzz)
-
-png(file.path(plot_dir, "co2-fuzz-slopes.png"))
-lattice::levelplot(out$slopes > 0)
-dev.off()
-png(file.path(plot_dir, "co2-fuzz-signif.png"))
-lattice::levelplot(out$signif < 0.05)
-dev.off()
-hist(out$signif)
-
-ncells <- sum(!is.na(out$slopes))
-pos_slope <- sum(out$slopes > 0, na.rm = TRUE)
-signif_pos_slope <- sum(out$slopes > 0 & out$signif < 0.05, na.rm = TRUE)
-
-lat_weight <- abs(cos(seq(-pi/2, pi/2, length.out = nrow(out$slopes))))
-ncells_areawt <- sum(lat_weight * ncol(out$slopes))
-pos_slope_areawt <- sum(out$slopes > 0 * lat_weight, na.rm = TRUE)
-signif_pos_slope_areawt <- sum(out$slopes > 0 & out$signif < 0.05 * lat_weight, na.rm = TRUE)
-
-# Convert to a data frame for ggplot2 plotting
-ro = nrow(co2_fuzz)
-co = ncol(co2_fuzz)
-yr = dim(co2_fuzz)[3]
-co2_fuzz_df <- tibble(
-  flux = as.vector(co2_fuzz),
-  lat = rep(seq_len(ro), times = co * yr),
-  lon = rep(rep(seq_len(co), each = ro), times = yr),
-  year = rep(seq_len(yr), each = ro * co),
-  p = rep(as.vector(out$signif), times = yr)
+```{r summary-graph, echo=FALSE}
+spd = 24 * 60 * 60
+smry <- tibble(Seconds = c(60,       # 1 minute
+                           60 * 60,  # 1 hour
+                           spd,      # 1 day
+                           spd * 30, # 1 month
+                           spd * 365), # 1 year
+               Labels = c("1 minute", "1 hour", "1 day", "1 month", "1 year"),
+               CV = c(median_error_minutes, 
+                      median_error_hours, 
+                      median_error_days, 
+                      median_error_months, 
+                      median_cv_annual)
 )
-
-co2_fuzz_df %>% 
-  filter(!is.na(p)) %>% 
-  # pick a subset of grid cells for a readable plot
-  distinct(lon, lat) %>% 
-  sample_n(250) %>% 
-  left_join(co2_fuzz_df, by = c("lon", "lat")) ->
-  co2_fuzz_subsampled
-
-co2_fuzz_subsampled %>% 
-  ggplot(aes(year + 1990, flux, group = paste(lat, lon))) + 
-  geom_line(color = "lightgrey") +
-  xlab("Year") + ylab("Flux (gC/m2/yr)") +
-  geom_line(data = filter(co2_fuzz_subsampled, p < 0.05), color = "red", alpha = I(0.5))
-save_agu_plot("fuzz_over_time.png")
-```
-
-Total cells = `r ncells`.
-
-Cells with _significant_ positive slope (observations with `r round(median_error * 100, 0)`% measurement error) = `r signif_pos_slope` or `r round(signif_pos_slope / ncells * 100, 0)`%.
-
-Area with _significant_ positive slope = `r round(signif_pos_slope_areawt / ncells_areawt * 100, 0)`%.
-
-
-# Next steps
-
-Next: make a nice graph of change over time 
-using a subset of data for readability
-Convert array to data frame and plot rs versus time
-with a line for each grid cell
-
-# Simple: when would expect to see significance?
-
-* We'd like to do this once for perfect data
-* Once for data + interannual variability
-* Once for data + iav + observational error
-
-```{r simple, echo=FALSE}
-set.seed(1234)
-
-trend_emergence <- function(rd, theilsen = F) {
-  Year <- seq_len(length(rd))
-  trend_p <- rep(NA, length(rd))
-  for(i in seq_along(trend_p)) {
-    if(i > 2) {
-      if(theilsen) {
-        df <- tibble(Year = Year[1:i], rd = rd[1:i])
-        suppressWarnings(m <- mblm::mblm(rd ~ Year, data = df))  # mblm doesn't like form below
-      } else {
-        m <- suppressWarnings(lm(rd[1:i] ~ Year[1:i]))
-      }
-      # Extract 2nd row (Year) and 4th column (Pr>[t] or Pr>|V|)
-      trend_p[i] <- summary(m)$coefficients[2, 4]
-    }
-  }
-  trend_p
-}
-
-
-# Temperature has risen 0.9 C in 40 years, more or less
-dTdt <- round(0.9 / 40.0, 3)
-q10 <- 2
-R0 = 1.0
-respdata <- tibble(Year = 1:100,
-                   Temp = dTdt * Year,
-                   Resp = R0 * q10 ^ (Temp / 10),
-                   # This is interannual variability
-                   Resp_iav = fuzz(Resp, 0.098),  # this is SRDB Rs_interannual_err
-                   Resp_fuzz = fuzz(Resp_iav, median_error))
-
-# Make a nice plot--first with ideal curve, then IAV, then observations
-p <- ggplot(respdata, aes(Year, Resp)) + 
-  geom_point(color = "grey") + 
-  ylab("Respiration") + coord_cartesian(ylim = c(0.75, 1.5)) + 
-  annotate("text", 10, 1.4, label = paste("Q10 =", q10)) + 
-  annotate("text", 10, 1.3, label = paste("dT/dt =", dTdt))
-save_agu_plot("01.png")
-p <- p + geom_point(aes(y = Resp_iav))
-save_agu_plot("02.png")
-p <- p + geom_errorbar(aes(ymin = Resp_iav - Resp_iav * median_error,
-                           ymax = Resp_iav + Resp_iav * median_error))
-save_agu_plot("03.png")
-
-save_agu_plot("04.png",
-              p + geom_line(aes(y = Resp), color = "red", size = 2))
-
-save_agu_plot("05.png",
-              p + geom_line(aes(y = Resp), color = "pink", size = 2) +
-                geom_line(aes(y = Resp_iav), color = "red", size = 2))
-
-save_agu_plot("06.png",
-              p + geom_line(aes(y = Resp), color = "pink", size = 2) +
-                geom_line(aes(y = Resp_iav), color = "pink", size = 2) +
-                geom_line(aes(y = Resp_fuzz), color = "red", size = 2))
-
-
-do_sim <- function(i, respdata, error = 0.0) {
-  # This is observational error
-  respdata$Resp_fuzz <- fuzz(respdata$Resp_iav, error)
-  respdata$trend_p <- trend_emergence(respdata$Resp_fuzz)
-  respdata
-}
-
-results <- list()
-library(parallel)
-n_sims <- 100
-results <- mclapply(seq_len(n_sims), do_sim, respdata, error = median_error)
-
-results %>% 
-  bind_rows %>% 
-  group_by(Year) %>% 
-  summarise(n = n(), 
-            Temp = mean(Temp), 
-            Resp = mean(Resp),
-            Resp_iav_sd = sd(Resp_iav),
-            Resp_iav = mean(Resp_iav),
-            Resp_fuzz_sd = sd(Resp_fuzz),          
-            Resp_fuzz = mean(Resp_fuzz), 
-            trend_p_sd = sd(trend_p), 
-            trend_p = mean(trend_p)) %>% 
-  filter(!is.na(trend_p)) ->
-  results_summary
-
-p <- ggplot(results_summary, aes(Year, trend_p, color = trend_p < 0.05)) +
-  geom_point() +
-  geom_line(aes(y = Resp_fuzz)) +
-  geom_line(aes(y = Resp), color = "grey") +
-  geom_ribbon(aes(ymin = Resp_fuzz - Resp_fuzz_sd, 
-                  ymax = Resp_fuzz + Resp_fuzz_sd, 
-                  fill = trend_p < 0.05), color = NA, alpha = I(0.35)) +
-  guides(color = FALSE, fill = FALSE) +
-  annotate("text", 10, 1.5, label = paste("N =", n_sims)) +
-  ylab("Theil-sen p-value   ///   Respiration")
-print(p)
-save_agu_plot("simple_sim.png")
+ggplot(smry, aes(Seconds, CV, label = Labels)) + geom_point() + 
+  #  coord_trans(x = "log10")
+  scale_x_log10(
+    breaks = scales::trans_breaks("log10", function(x) 10 ^ x),
+    labels = scales::trans_format("log10", scales::math_format(10^.x))
+  ) +
+  geom_text(nudge_y = 0.002)
 ```

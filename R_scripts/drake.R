@@ -70,11 +70,11 @@ plan <- drake_plan(
   prox_report = rmarkdown::render(
     knitr_in("proximity_results.Rmd"),
     output_file = file_out("proximity_results.html"),
-    quiet = TRUE)
+    quiet = TRUE),
   
   # --------------------------------------------------------------------------------------------------------
   # SRDB data for Ben's trend emergence presentation
-  # srdb = read.csv(file_in("../ancillary_data/srdb-data.csv"), stringsAsFactors = FALSE),
+  srdb = read.csv(file_in("../ancillary_data/srdb-data.csv"), stringsAsFactors = FALSE),
   # 
   # # Trend emergence presentation
   # trend_report = rmarkdown::render(
@@ -82,11 +82,11 @@ plan <- drake_plan(
   #   output_file = file_out("trend_emergence.html"),
   #   quiet = TRUE),
   # 
-  # # Temporal scaling report
-  # ts_report = rmarkdown::render(
-  #   knitr_in("temporal_scaling.Rmd"),
-  #   output_file = file_out("temporal_scaling.html"),
-  #   quiet = TRUE)
+  # Temporal scaling report
+  ts_report = rmarkdown::render(
+    knitr_in("temporal_scaling.Rmd"),
+    output_file = file_out("temporal_scaling.html"),
+    quiet = TRUE)
   
 )
 
