@@ -1,5 +1,5 @@
 ---
-title: "Seconds to decades: soil respiration variability and sensitivity across temporal scales"
+title: "Seconds to years: soil respiration variability and sensitivity across temporal scales"
 author: "Ben Bond-Lamberty"
 date: "15 February 2019"
 output: html_document
@@ -7,10 +7,15 @@ output: html_document
 
 ## CURRENT TODO LIST
 
-* Insert NAs into continuous data for proper handling - use `complete` based on `year`, `month`, `day`
+* The what's driving hour-to-hour CV analysis needs work; maybe remove entirely, and just report what drives the flux itself. Seems clearer
 * Remove snowstorm day
 * Investigate/remove screwy survey collar
-* Compute mean difference between survey observations (X days)
+* Compute mean number of measurements by collar and month for discussion
+
+licor_data %>% 
+group_by(month(Timestamp), Collar) %>% 
+summarize(Timestamp = mean(Timestamp), n = n()) %>% 
+summarise(Timestamp = mean(Timestamp), n_sd = sd(n), n = mean(n))
 
 ## Introduction
 
@@ -39,9 +44,13 @@ readd("licor_data") %>%
   mutate(Dest_Elevation = factor(Dest_Elevation,
                                  levels = c("Low", "Medium", "High"))) ->
   licor_data
+
 readd("con_licor_data") %>% 
+#  select(-V1, -V4) %>% 
   # Filter for when system was in SALT plot (previously was testing)
   filter(Timestamp >= "2018-10-01") %>% 
+  # What the heck--it appears chamber 8 was miswired at some point; temperature data is in V1
+  mutate(T5 = if_else(T5 > 100, V1, T5)) %>% 
   arrange(Timestamp, Port) ->
   cld
 
@@ -65,6 +74,22 @@ cld %>%
   ) ->
   cld_clean
 removed <- nrow(cld) - nrow(cld_clean)
+
+# Insert missing dates
+cld_clean %>% 
+  mutate(year = year(Timestamp), month = month(Timestamp),
+         day = day(Timestamp), hour = hour(Timestamp)) %>% 
+  # complete() will fill in a few impossible dates, generating warnings below
+  complete(year, month, day, hour, Port) %>% 
+  mutate(Timestamp = if_else(is.na(Timestamp), 
+                             ymd_h(paste(year, month, day, hour)),
+                             Timestamp)) %>%
+  # complete() also adds 'missing' data before and after we measured; remove
+  select(-year, -month, -day, -hour) %>% 
+  filter(!is.na(Timestamp),
+         Timestamp >= min(cld_clean$Timestamp),
+         Timestamp <= max(cld_clean$Timestamp)) ->
+  cld_clean
 ```
 
 ## Methods
@@ -191,6 +216,8 @@ ggplot(pacf_df, aes(lag, PACF)) +
 
 In the figure above, Rs values measured in successive hours at a given collar exhibit a strong correlation (`r round(pacf_df$PACF[1], 3)`), and a moderate one at a two-hour lag (`r round(pacf_df$PACF[2], 3)`). Day-to-day (24 hour lag) observations are essentially uncorrelated (`r round(pacf_df$PACF[24], 3)`).
 
+What's driving times of high CV, i.e. when Rs changes a lot hour to hour?
+
 ```{r, hours-cv, echo=FALSE}
 cld_cv <- bind_rows(cld_cv) %>% 
   filter(!is.na(CV))
@@ -206,12 +233,17 @@ cld_cv %>%
   excluded_count
 
 ggplot(cld_cv, aes(T5_diff, SMoist_diff, color = CV)) +
-  geom_point() + 
+  geom_point(alpha = I(0.5)) + 
   coord_cartesian(xlim = xl, ylim = yl) +
+  geom_hline(yintercept = 0) + geom_vline(xintercept = 0) +
   ggtitle(paste(excluded_count, "of", nrow(cld_cv), "observations not shown"))
 
 summary(lm(CV ~ abs(T5_diff) * abs(SMoist_diff), data = cld_cv))
+```
 
+Large hour-to-hour CV was significantly associated with changes in soil moisture!
+
+```{r hourly-cv, echo=FALSE}
 # Histogram of CV values
 ggplot(cld_cv, aes(x = CV)) + geom_histogram(bins = 20) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
@@ -221,8 +253,6 @@ ggplot(cld_cv, aes(x = CV)) + geom_histogram(bins = 20) +
 ```
 
 The median measurement error here is ~`r round(median_error_hours * 100, 0)`% for `r nrow(cld_cv)` observations of fluxes between `r round(min(cld_cv$Flux), 2)` and `r round(max(cld_cv$Flux), 2)` µmol/m2/s.
-
-Large hour-to-hour CV was significantly associated with changes in soil moisture!
 
 
 ### Days: variability
@@ -235,16 +265,16 @@ cld_cv <- list()
 for(p in unique(cld_clean$Port)) {
   cld_clean %>% 
     filter(Port == p) %>% 
-    mutate(julian = julian(Timestamp)) %>% 
-    group_by(day(Timestamp)) %>% 
-    summarise(julian = mean(julian),
-              Flux = mean(Flux)) ->
+    group_by(year(Timestamp), yday(Timestamp)) %>% 
+    summarise(Timestamp = mean(Timestamp),
+              Flux = mean(Flux), n = n()) ->
     cld_p
-  pacf_obj <- pacf(as.ts(cld_p$Flux,
-                         start = min(cld_p$julian),
-                         end = max(cld_p$julian)), 
+  pacf_obj <- pacf(cld_p$Flux,
                    na.action = na.pass,
-                   plot = FALSE)
+                   plot = FALSE,
+                   # the pacf for port 5 goes crazy > 15 days 
+                   # don't know what's going on
+                   lag.max = 15)
   results[[p]] <- tibble(Port = p,
                          lag = pacf_obj$lag[,,1], 
                          PACF = pacf_obj$acf[,,1])
@@ -268,7 +298,9 @@ ggplot(pacf_df, aes(lag, PACF)) +
 In the figure above, Rs values measured in successive days at a given collar exhibit a strong correlation (`r round(pacf_df$PACF[1], 3)`), but no correlation after that.
 
 ```{r, days-cv, echo=FALSE}
-cld_cv <- bind_rows(cld_cv)
+bind_rows(cld_cv) %>% 
+  filter(!is.na(CV)) ->
+  cld_cv
 median_error_days <- median(cld_cv$CV, na.rm = TRUE)
 ggplot(cld_cv, aes(x = CV)) + geom_histogram(bins = 20) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
@@ -307,7 +339,8 @@ CV between successive measurements:
 ```{r months-cv, echo=FALSE}
 ld_monthly %>% 
   group_by(Collar) %>% 
-  mutate(CV = running_cv(Flux)) ->
+  mutate(CV = running_cv(Flux)) %>% 
+  filter(!is.na(CV)) ->
   lmd_cv
 
 median_cv_months <- median(lmd_cv$CV, na.rm = TRUE)
@@ -342,7 +375,7 @@ results_list <- list()
 for(delta in c(0.25, 0.50, 0.75, 1)) {
   for(power in seq(0.05, 0.9, by = 0.05)) {
     cld_clean %>%
-      mutate(year = year(Timestamp), month = month(Timestamp)) %>% 
+      filter(!is.na(Flux)) %>% 
       group_by(Port) %>%    # no year,month
       summarise(n = sample_n(Flux, delta, power)) %>% 
       mutate(delta = delta, power = power) ->
@@ -422,5 +455,6 @@ ggplot(smry, aes(Seconds, CV, label = Labels, group = Labels)) +
     labels = scales::trans_format("log10", scales::math_format(10 ^ .x))
   ) +
   coord_cartesian(ylim = c(0, 1)) +
-  xlab("Timescale (seconds)")
+  xlab("Timescale (seconds)") + ylab("N required")
 ```
+`
