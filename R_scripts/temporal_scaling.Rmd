@@ -46,11 +46,8 @@ readd("licor_data") %>%
   licor_data
 
 readd("con_licor_data") %>% 
-#  select(-V1, -V4) %>% 
   # Filter for when system was in SALT plot (previously was testing)
   filter(Timestamp >= "2018-10-01") %>% 
-  # What the heck--it appears chamber 8 was miswired at some point; temperature data is in V1
-  mutate(T5 = if_else(T5 > 100, V1, T5)) %>% 
   arrange(Timestamp, Port) ->
   cld
 

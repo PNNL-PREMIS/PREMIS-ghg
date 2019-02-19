@@ -73,7 +73,7 @@ plan <- drake_plan(
     quiet = TRUE),
   
   # --------------------------------------------------------------------------------------------------------
-  # SRDB data for Ben's trend emergence presentation
+  # Global soil respiration database
   srdb = read.csv(file_in("../ancillary_data/srdb-data.csv"), stringsAsFactors = FALSE),
   # 
   # # Trend emergence presentation
