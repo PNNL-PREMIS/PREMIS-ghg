@@ -173,7 +173,7 @@ tabledata %>%
   unite(col = 'Trees (/ha)', tree_mean, tree_sd, sep = " ± ") %>%
   unite(col = 'BA (m2/ha)', BA_mean, BA_sd, sep = " ± ") %>%
   knitr::kable(digits = 1, format = "html", 
-               col.names = c("Site", "Trees (/ha)", expression(BA~(m^2~ha^-1)))) %>%
+               col.names = c("Site", "Trees (/ha)", "BA (m2/ha)")) %>%
   kableExtra::kable_styling(c("striped", "bordered"), full_width = FALSE)
 
 ```
