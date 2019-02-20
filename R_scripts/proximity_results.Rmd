@@ -66,17 +66,17 @@ run_model <- function(flux, T5, T20, SM, BA, site, model_type) {
 model_stats <- function(mods) {
   
   m_reduced <- mods$reduced_model
+
+  summary(m_reduced)
   anova(m_reduced)
   plot(m_reduced)
-  summary(m_reduced)
-  #data$prediction <- predict(m_reduced)
+  data$prediction <- predict(m_reduced)
 
-  # ggplot(data, aes(Timestamp, Flux)) +
-  #   geom_point() +
-  #   geom_line(aes(y = exp(prediction))) +
-  #   facet_wrap(~Collar) +
-  #   ggtitle(MODEL_TYPE)
-  # 
+  ggplot(data, aes(Timestamp, Flux)) +
+    geom_point() +
+    geom_line(aes(y = exp(prediction))) +
+    facet_wrap(~Collar) +
+    ggtitle(MODEL_TYPE)
   #whatever other plots we want to make
 }
 
@@ -106,8 +106,8 @@ prox_data %>%
 
 # Calculate cumulative basal area at each distance 
 BA_dat <- list()
-for (i in 1:max(tree_prox_data$Distance_m)) {
-  tree_prox_data %>% 
+for (i in 1:max(tree_prox_data$Distance_m, na.rm = TRUE)) {
+tree_prox_data %>% 
     filter(Distance_m <= i) %>% 
     group_by(Collar) %>% 
     summarise(n_trees = n(), 
@@ -119,7 +119,7 @@ for (i in 1:max(tree_prox_data$Distance_m)) {
 
 # Combine and complete data (in particular, adding values for 0 m)
 bind_rows(BA_dat) %>% 
-  complete(Collar, dist = c(0:max(tree_prox_data$Distance_m)),
+  complete(Collar, dist = c(0:max(tree_prox_data$Distance_m, na.rm = TRUE)),
            fill = list(BA_m2 = 0, n_trees = 0)) %>% 
   # ...and plot
   ggplot(aes(x = dist, y = BA_m2, group = Collar, color = n_trees)) + 
@@ -135,9 +135,17 @@ bind_rows(BA_dat) %>%
 
 ### Table 1 - site info
 ```{r, echo = FALSE, warning = FALSE, message = FALSE}
+# BA by percentage
+tree_data %>%
+  group_by(Site, Salinity, Species) %>%
+  summarise(n = n(),
+            BA_species = sum(calc_BA(DBH_cm), na.rm = TRUE)) %>%
+  mutate(BA_p = BA_species/sum(BA_species) * 100) ->
+  BA_p
+
 ##SP TO ADD COMMENTS AND CONSTANTS FOR CLARITY
 tree_data %>% 
-  group_by(Site, Salinity, Elevation) %>% 
+  group_by(Salinity, Elevation) %>% 
   summarise(n = n(), 
             Plot_area_m2 = mean(Plot_area_m2), 
             `BA (m2/ha)` = sum(calc_BA(DBH_cm), na.rm = TRUE) / 
@@ -154,9 +162,9 @@ tabledata$tree_mean <- round(tabledata$tree_mean, digits = 1)
 tabledata$tree_sd <- round(tabledata$tree_sd, digits = 1)
 tabledata$BA_mean <- round(tabledata$BA_mean, digits = 1)
 tabledata$BA_sd <- round(tabledata$BA_sd, digits = 1)
-tabledata$Salinity <- sub("Salinity H", "High", tabledata$Salinity)
-tabledata$Salinity <- sub("Salinity M", "Medium", tabledata$Salinity)
-tabledata$Salinity <- sub("Salinity L", "Low", tabledata$Salinity)
+tabledata$Salinity <- sub("Salinity H", "GCREW", tabledata$Salinity)
+tabledata$Salinity <- sub("Salinity M", "Canoe Shed", tabledata$Salinity)
+tabledata$Salinity <- sub("Salinity L", "North Branch", tabledata$Salinity)
 # tabledata$Soil_Type[1] <- "Collington-Wist complex; Collington and Annapolis soils"
 # tabledata$Soil_Type[2] <- "Annapolis fine sandy loam"
 # tabledata$Soil_Type[3] <- "Collington and Annapolis soils; Collington, Wist, and Westphalia soils"
@@ -165,7 +173,7 @@ tabledata %>%
   unite(col = 'Trees (/ha)', tree_mean, tree_sd, sep = " ± ") %>%
   unite(col = 'BA (m2/ha)', BA_mean, BA_sd, sep = " ± ") %>%
   knitr::kable(digits = 1, format = "html", 
-               col.names = c("Site", "Salinity", "Trees (/ha)", expression(BA~(m^2~ha^-1)))) %>%
+               col.names = c("Site", "Trees (/ha)", "BA (m2/ha)")) %>%
   kableExtra::kable_styling(c("striped", "bordered"), full_width = FALSE)
 
 ```
@@ -179,12 +187,10 @@ licor_daily_data <- readd("licor_daily_data")
 licor_daily_data %>% 
   filter(!is.na(meanFlux), !is.na(sdFlux)) %>% 
   filter(Group == "Control") %>%
-  ggplot(aes(x = Timestamp, y = meanFlux, group = Collar, color = Collar)) +
-  geom_errorbar(aes(ymin = meanFlux - sdFlux, ymax = meanFlux + sdFlux), color = "tomato3") +
-  geom_line(size = 1, color = "tomato3") +
-  geom_point(color = "tomato3") +
-  #scale_colour_gradientn(colours = rainbow(4)) +
-  facet_grid(Dest_Elevation ~ Dest_Salinity) +
+  ggplot(aes(x = Timestamp, y = meanFlux, group = Collar)) +
+  geom_errorbar(aes(ymin = meanFlux - sdFlux, ymax = meanFlux + sdFlux)) +
+  geom_point() +
+  facet_grid(~ factor(Dest_Salinity, levels = c("High", "Medium", "Low"))) + #need to rename to site names
   ggtitle("Flux over time") +
   labs(x = "Date", 
        y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
@@ -217,7 +223,8 @@ control_cols %>%
 # Run the main analysis
 h1 <- with(control_cols_5m, run_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = MODEL_TYPE))
 
-model_stats(h1)
+
+# model_stats(h1)
 
 ```
 
@@ -243,7 +250,8 @@ growing_flux <- filter(control_cols_5m, Growing_season)
 h2g <- with(growing_flux, run_model(Flux, T5, T20, SMoisture, BA_m2, 
                                      site = Dest_Salinity, model_type = MODEL_TYPE))
 
-model_stats(h2g)
+# model_stats(h2g)
+
 
 # Filter true controls for dormant season
 dormant_flux <- filter(control_cols_5m, !Growing_season)
@@ -251,7 +259,8 @@ print(dormant_flux)
 h2d <- with(dormant_flux, run_model(Flux, T5, T20, SMoisture, BA_m2, 
                                      site = Dest_Salinity, model_type = MODEL_TYPE))
 
-model_stats(h2d)
+# model_stats(h2d)
+
 
 ```
 
@@ -271,8 +280,8 @@ h3l <- with(m_low, run_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salini
 m_high <- filter(control_cols_5m, SMoisture >= smoisture_median)
 print(m_high)
 h3a <- with(m_high, run_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = MODEL_TYPE))
- 
-model_stats(h3a)
+
+# model_stats(h3a)
 
 ```
 
@@ -283,7 +292,7 @@ sens_output <- list()
 BA_output <- list()
 # Loop through the range of distances we measured and run 
 # our basal area/respiration test at each
-for (i in seq.int(2, max(tree_prox_data$Distance_m))) {
+for (i in seq.int(2, max(tree_prox_data$Distance_m, na.rm = TRUE))) {
   BA <- basal_area_sum(tree_prox_data, i)
   data <- left_join(control_cols, BA, by = "Collar") %>%
     select(Collar, Flux, T5, T20, SMoisture, BA_m2, Dest_Salinity)  # select just columns we want 
