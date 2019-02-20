@@ -185,12 +185,10 @@ licor_daily_data <- readd("licor_daily_data")
 licor_daily_data %>% 
   filter(!is.na(meanFlux), !is.na(sdFlux)) %>% 
   filter(Group == "Control") %>%
-  ggplot(aes(x = Timestamp, y = meanFlux, group = Collar, color = Collar)) +
-  geom_errorbar(aes(ymin = meanFlux - sdFlux, ymax = meanFlux + sdFlux), color = "tomato3") +
-  geom_line(size = 1, color = "tomato3") +
-  geom_point(color = "tomato3") +
-  #scale_colour_gradientn(colours = rainbow(4)) +
-  facet_grid(Dest_Elevation ~ Dest_Salinity) +
+  ggplot(aes(x = Timestamp, y = meanFlux, group = Collar)) +
+  geom_errorbar(aes(ymin = meanFlux - sdFlux, ymax = meanFlux + sdFlux)) +
+  geom_point() +
+  facet_grid(~ factor(Dest_Salinity, levels = c("High", "Medium", "Low"))) + #need to rename to site names
   ggtitle("Flux over time") +
   labs(x = "Date", 
        y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
