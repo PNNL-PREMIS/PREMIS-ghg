@@ -3,6 +3,10 @@
 # Function to process one licor file
 
 process_licor_data <- function(raw_data, collar_data, plot_data, temp_data) {
+  stopifnot(is.data.frame(raw_data))
+  stopifnot(is.data.frame(collar_data))
+  stopifnot(is.data.frame(plot_data))
+  stopifnot(is.data.frame(temp_data))
   
   raw_data %>%
     rename(T5 = V4, 
@@ -47,7 +51,7 @@ process_licor_data <- function(raw_data, collar_data, plot_data, temp_data) {
     left_join(plot_data, by = c("Destination_Plot" = "Plot")) %>%
     rename(Dest_Salinity = Salinity, Dest_Elevation = Elevation)
   
-  # The Licor temperature was broken for several months in fall-winter 2018
+  # The Licor temperature sensor was broken for several months in fall-winter 2018
   # For those times, we took T5 by hand and entered it into a dedicated file
   # Here we merge licor data with these 5cm temperatures
   licorDat %>% 
@@ -102,5 +106,8 @@ process_continuous_data <- function(raw_data) {
     filter(Port > 0) %>% 
     rename(T5 = V3, SMoist = V2) %>% 
     mutate(T5 = if_else(Port %in% c(6, 8) & Timestamp < DATE_SENSORS_INSTALLED, NA_real_, T5), 
-           SMoist = if_else(Port %in% c(6, 8) & Timestamp < DATE_SENSORS_INSTALLED, NA_real_, SMoist))
+           SMoist = if_else(Port %in% c(6, 8) & Timestamp < DATE_SENSORS_INSTALLED, NA_real_, SMoist),
+           # Chamber 8 was miswired at some point; temperature data is in V1 (see issue #82)
+           T5 = if_else(T5 > 100 & Port == 8, V1, T5)
+    )
 }

@@ -109,7 +109,7 @@ read_licor_dir <- function(path) {
 # Here we read in the T5 data directory
 read_temp_dir <- function(path) {
   files <- list.files(path, pattern = ".csv", full.names = TRUE)
-  lapply(files, read_csv) %>% 
+  lapply(files, read_csv, col_types = "cdd") %>% 
     bind_rows %>%
     # Occasionally we measured a collar's temperature twice, so average
     group_by(Date, Collar) %>%
