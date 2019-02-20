@@ -5,18 +5,6 @@ date: "15 February 2019"
 output: html_document
 ---
 
-## CURRENT TODO LIST
-
-* The what's driving hour-to-hour CV analysis needs work; maybe remove entirely, and just report what drives the flux itself. Seems clearer
-* Remove snowstorm day
-* Investigate/remove screwy survey collar
-* Compute mean number of measurements by collar and month for discussion
-
-licor_data %>% 
-group_by(month(Timestamp), Collar) %>% 
-summarize(Timestamp = mean(Timestamp), n = n()) %>% 
-summarise(Timestamp = mean(Timestamp), n_sd = sd(n), n = mean(n))
-
 ## Introduction
 
 * point 1
@@ -62,6 +50,8 @@ running_cv <- function(x) {
   out
 }
 ```
+
+Do some filtering of the data.
 
 ```{r filtering, echo=FALSE}
 cld %>% 
@@ -309,6 +299,46 @@ ggplot(cld_cv, aes(x = CV)) + geom_histogram(bins = 20) +
 The median measurement error here is ~`r round(median_error_days * 100, 0)`% for `r nrow(cld_cv)` observations of fluxes between `r round(min(cld_cv$Flux), 2)` and `r round(max(cld_cv$Flux), 2)` µmol/m2/s.
 
 
+### Days: sampling
+
+What's the best (most representative) time of day to sample?
+
+```{r time-of-day, echo=FALSE}
+cld_clean %>% 
+  filter(!is.na(Flux)) %>% 
+  select(Port, Timestamp, Flux, T5, Tcham, SMoist) %>% 
+  mutate(Year = year(Timestamp), Yday = yday(Timestamp)) %>% 
+  group_by(Port, Year, Yday) %>% 
+  mutate(n = n()) %>% 
+  ungroup %>% 
+  filter(n == 24) %>%   # remove incomplete days
+  # for each day and port, compute difference from daily mean
+  group_by(Port, Year, Yday) %>% 
+  mutate(Hour = hour(Timestamp),
+         Flux_mean = mean(Flux),
+         Diff_24hr = Flux - Flux_mean,
+         Diff_24hr_rel = Diff_24hr / Flux_mean,
+         Rank = min_rank(abs(Diff_24hr_rel))) %>% 
+  ungroup ->
+  cld_24hr
+
+cld_24hr %>% 
+  mutate(Month = month(Timestamp)) %>% 
+  group_by(Year, Month, Hour) %>% 
+  summarise(Timestamp = mean(Timestamp),
+            Rank = mean(Rank),
+            Diff_24hr_rel = mean(Diff_24hr_rel)) ->
+  cld_24hr_errors
+
+ggplot(cld_24hr_errors, aes(Hour, Diff_24hr_rel, group = Month, color = Month)) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  geom_line() +
+  ylab("Difference from 24-hour mean flux") + 
+  scale_y_continuous(labels = scales::percent)
+```
+
+
+
 ### Months: variability
 
 Plot the control survey data:
@@ -454,4 +484,17 @@ ggplot(smry, aes(Seconds, CV, label = Labels, group = Labels)) +
   coord_cartesian(ylim = c(0, 1)) +
   xlab("Timescale (seconds)") + ylab("N required")
 ```
-`
+
+## TODO LIST
+
+* The what's driving hour-to-hour CV analysis needs work; maybe remove entirely, and just report what drives the flux itself. Seems clearer
+* Remove snowstorm day
+* Investigate/remove screwy survey collar
+* Compute mean number of measurements by collar and month for discussion
+
+```{r msmt-gaps, echo=FALSE}
+licor_data %>% 
+  group_by(month(Timestamp), Collar) %>% 
+  summarize(Timestamp = mean(Timestamp), n = n()) %>% 
+  summarise(Timestamp = mean(Timestamp), n_sd = sd(n), n = mean(n))
+```
