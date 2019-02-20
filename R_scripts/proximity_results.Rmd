@@ -135,15 +135,17 @@ bind_rows(BA_dat) %>%
 
 ### Table 1 - site info
 ```{r, echo = FALSE, warning = FALSE, message = FALSE}
+# BA by percentage
 tree_data %>%
   group_by(Site, Salinity, Species) %>%
   summarise(n = n(),
             BA_species = sum(calc_BA(DBH_cm), na.rm = TRUE)) %>%
-  mutate(BA_p = BA_species/sum(BA_species) * 100)
+  mutate(BA_p = BA_species/sum(BA_species) * 100) ->
+  BA_p
 
 ##SP TO ADD COMMENTS AND CONSTANTS FOR CLARITY
 tree_data %>% 
-  group_by(Site, Salinity, Elevation) %>% 
+  group_by(Salinity, Elevation) %>% 
   summarise(n = n(), 
             Plot_area_m2 = mean(Plot_area_m2), 
             `BA (m2/ha)` = sum(calc_BA(DBH_cm), na.rm = TRUE) / 
@@ -160,9 +162,9 @@ tabledata$tree_mean <- round(tabledata$tree_mean, digits = 1)
 tabledata$tree_sd <- round(tabledata$tree_sd, digits = 1)
 tabledata$BA_mean <- round(tabledata$BA_mean, digits = 1)
 tabledata$BA_sd <- round(tabledata$BA_sd, digits = 1)
-tabledata$Salinity <- sub("Salinity H", "High", tabledata$Salinity)
-tabledata$Salinity <- sub("Salinity M", "Medium", tabledata$Salinity)
-tabledata$Salinity <- sub("Salinity L", "Low", tabledata$Salinity)
+tabledata$Salinity <- sub("Salinity H", "GCREW", tabledata$Salinity)
+tabledata$Salinity <- sub("Salinity M", "Canoe Shed", tabledata$Salinity)
+tabledata$Salinity <- sub("Salinity L", "North Branch", tabledata$Salinity)
 # tabledata$Soil_Type[1] <- "Collington-Wist complex; Collington and Annapolis soils"
 # tabledata$Soil_Type[2] <- "Annapolis fine sandy loam"
 # tabledata$Soil_Type[3] <- "Collington and Annapolis soils; Collington, Wist, and Westphalia soils"
@@ -171,7 +173,7 @@ tabledata %>%
   unite(col = 'Trees (/ha)', tree_mean, tree_sd, sep = " ± ") %>%
   unite(col = 'BA (m2/ha)', BA_mean, BA_sd, sep = " ± ") %>%
   knitr::kable(digits = 1, format = "html", 
-               col.names = c("Site", "Salinity", "Trees (/ha)", expression(BA~(m^2~ha^-1)))) %>%
+               col.names = c("Site", "Trees (/ha)", expression(BA~(m^2~ha^-1)))) %>%
   kableExtra::kable_styling(c("striped", "bordered"), full_width = FALSE)
 
 ```
