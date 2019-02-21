@@ -66,12 +66,12 @@ run_model <- function(flux, T5, T20, SM, BA, site, model_type) {
 model_stats <- function(mods) {
   
   m_reduced <- mods$reduced_model
-
+  
   summary(m_reduced)
   anova(m_reduced)
   plot(m_reduced)
   data$prediction <- predict(m_reduced)
-
+  
   ggplot(data, aes(Timestamp, Flux)) +
     geom_point() +
     geom_line(aes(y = exp(prediction))) +
@@ -90,7 +90,6 @@ prox_data <- readd("prox_data")
 
 prox_data %>%
   select(-Date) %>% 
-  mutate(Tag = as.character(Tag)) %>%
   left_join(tree_data, by = c("Site", "Plot", "Tag"), na_matches = "never") %>%
   # Replace DBH with recorded value for non-tagged trees
   mutate(DBH_cm = if_else(is.na(Tag), No_tag_DBH, DBH_cm),
@@ -107,7 +106,7 @@ prox_data %>%
 # Calculate cumulative basal area at each distance 
 BA_dat <- list()
 for (i in 1:max(tree_prox_data$Distance_m, na.rm = TRUE)) {
-tree_prox_data %>% 
+  tree_prox_data %>% 
     filter(Distance_m <= i) %>% 
     group_by(Collar) %>% 
     summarise(n_trees = n(), 
@@ -120,8 +119,11 @@ tree_prox_data %>%
 # Combine and complete data (in particular, adding values for 0 m)
 bind_rows(BA_dat) %>% 
   complete(Collar, dist = c(0:max(tree_prox_data$Distance_m, na.rm = TRUE)),
-           fill = list(BA_m2 = 0, n_trees = 0)) %>% 
-  # ...and plot
+           fill = list(BA_m2 = 0, n_trees = 0)) ->
+  BA_dat_complete
+
+# ...and plot
+BA_dat_complete %>% 
   ggplot(aes(x = dist, y = BA_m2, group = Collar, color = n_trees)) + 
   geom_line(size = 1) +
   scale_colour_gradientn(colours = topo.colors(9)) +
@@ -188,7 +190,7 @@ licor_daily_data %>%
   filter(!is.na(meanFlux), !is.na(sdFlux)) %>% 
   filter(Group == "Control") %>%
   ggplot(aes(x = Timestamp, y = meanFlux, group = Collar)) +
-  geom_errorbar(aes(ymin = meanFlux - sdFlux, ymax = meanFlux + sdFlux)) +
+  #geom_errorbar(aes(ymin = meanFlux - sdFlux, ymax = meanFlux + sdFlux)) +
   geom_point() +
   facet_grid(~ factor(Dest_Salinity, levels = c("High", "Medium", "Low"))) + #need to rename to site names
   ggtitle("Flux over time") +
@@ -248,7 +250,7 @@ control_cols_5m$Growing_season <- month(control_cols_5m$Timestamp) %in% GS_MONTH
 
 growing_flux <- filter(control_cols_5m, Growing_season)
 h2g <- with(growing_flux, run_model(Flux, T5, T20, SMoisture, BA_m2, 
-                                     site = Dest_Salinity, model_type = MODEL_TYPE))
+                                    site = Dest_Salinity, model_type = MODEL_TYPE))
 
 # model_stats(h2g)
 
@@ -257,7 +259,7 @@ h2g <- with(growing_flux, run_model(Flux, T5, T20, SMoisture, BA_m2,
 dormant_flux <- filter(control_cols_5m, !Growing_season)
 print(dormant_flux)
 h2d <- with(dormant_flux, run_model(Flux, T5, T20, SMoisture, BA_m2, 
-                                     site = Dest_Salinity, model_type = MODEL_TYPE))
+                                    site = Dest_Salinity, model_type = MODEL_TYPE))
 
 # model_stats(h2d)
 
@@ -297,7 +299,7 @@ for (i in seq.int(2, max(tree_prox_data$Distance_m, na.rm = TRUE))) {
   data <- left_join(control_cols, BA, by = "Collar") %>%
     select(Collar, Flux, T5, T20, SMoisture, BA_m2, Dest_Salinity)  # select just columns we want 
   mods <- with(data, run_model(Flux, T5, T20, SMoisture, BA_m2, 
-                                site = Dest_Salinity, model_type = MODEL_TYPE))
+                               site = Dest_Salinity, model_type = MODEL_TYPE))
   model <- mods$reduced_model
   smry <- anova(model)
   smry$term = rownames(smry)

@@ -64,7 +64,7 @@ plan <- drake_plan(
   
   # --------------------------------------------------------------------------------------------------------
   # Proximity data for SP's proximity analysis manuscript
-  prox_data = read_csv(file_in("../inventory_data/collar_proximity.csv"), col_types = "ccidicdc"),
+  prox_data = read_csv(file_in("../inventory_data/collar_proximity.csv"), col_types = "ccidccdcc"),
   
   # Proximity analysis report
   prox_report = rmarkdown::render(
