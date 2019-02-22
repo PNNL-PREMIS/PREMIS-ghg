@@ -405,18 +405,16 @@ sample_n <- function(flux, delta, power) {
                             sig.level = 0.05, type = "one.sample",
                             alternative = "two.sided"), silent = TRUE)
   })
-  if(class(out) == "try-error") {
-    NA
-  } else {
-    out$n
-  }
+  if(class(out) == "try-error") { NA } else { out$n }
 }
 
 results_list <- list()
 for(delta in c(0.25, 0.50, 0.75, 1)) {
   for(power in seq(0.05, 0.9, by = 0.05)) {
     cld_clean %>%
-      filter(!is.na(Flux)) %>% 
+      # pick the only continuous month we have currently
+      filter(Timestamp >= "2018-12-15", Timestamp < "2019-01-15",
+             !is.na(Flux)) %>% 
       group_by(Port) %>%    # no year,month
       summarise(n = sample_n(Flux, delta, power)) %>% 
       mutate(delta = delta, power = power) ->
@@ -440,6 +438,32 @@ ggplot(results, aes(power, n, color = factor(delta), group = delta)) +
   guides(fill = FALSE) +
   ggtitle("M. Power analysis")
 
+table_power <- 0.75
+```
+
+A table of required sample sizes to estimate monthly means for various delta (tolerance) values, assuming beta = `r table_power`:
+
+```{r power-table, echo=FALSE}
+
+# A small table
+results_list <- list()
+for(delta in c(0.25, 0.50, 0.75, 1)) {
+  for(m in unique(month(cld_clean$Timestamp))) {
+    cld_clean %>%
+      filter(month(Timestamp) == m,
+             !is.na(Flux)) %>% 
+      group_by(Port) %>%    # no year,month
+      summarise(n = sample_n(Flux, delta, power = table_power)) %>% 
+      mutate(delta = delta, Month = m) ->
+      results_list[[paste(m, delta)]]
+  }
+}
+bind_rows(results_list) %>% 
+  group_by(Month, delta) %>% 
+  summarise(entry = paste(round(mean(n), 1), "±", round(sd(n), 1))) %>% 
+  ungroup %>% 
+  spread(delta, entry) %>% 
+  kableExtra::kable(format = "markdown")
 ```
 
 
