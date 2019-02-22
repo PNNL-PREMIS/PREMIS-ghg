@@ -40,18 +40,23 @@ basal_area_sum <- function(data, distance) {
 
 # Fit the main statistical model testing for effect of basal area (BA) on soil respiration
 run_model <- function(flux, T5, T20, SM, BA, site, model_type) {
-  # Ensure that there are no NAs in our dataset
-  dat <- tibble(flux, T5, T20, SM, BA, site) %>% na.omit
+  
+  dat <- tibble(flux, T5, T20, SM, BA, site)
+  if(any(is.na(dat))) {
+    stop("Can't have any NAs in run_model data")
+  }
+  f <- formula(log(flux) ~ T5 * BA + T20 * BA + SM + I(SM ^ 2) + BA)
+  f_no_BA <- formula(log(flux) ~ T5 + T20 + SM + I(SM ^ 2))
   
   if(model_type == "linear") {
-    mod_full <- lm(log(flux) ~ T5 * BA + T20 * BA + SM + I(SM ^ 2) + BA, data = dat)
+    mod_full <- lm(formula = f, data = dat)
+    mod_no_BA <- lm(formula = f_no_BA, data=dat)
   } else if(model_type == "lme") {
-    mod_full <- nlme::lme(log(flux) ~ T5 * BA + T20 * BA + SM + I(SM ^ 2) + BA, 
-                          data = dat,
+    mod_full <- nlme::lme(f, data = dat,
                           # allow for random variation across sites
                           random = ~ 1 | site,
-                          method = "ML" # because we're doing stepAIC below
-    )
+                          method = "ML") # because we're doing stepAIC below
+    mod_no_BA <- nlme::lme(f_no_BA, data = dat, random = ~ 1 | site, method = "ML")
   } else {
     stop("Unknown model type ", model_type)
   }
@@ -60,11 +65,18 @@ run_model <- function(flux, T5, T20, SM, BA, site, model_type) {
   mod_reduced <- stepAIC(mod_full, direction = "both", trace = 0)
   
   # Return models
-  list(full_model = mod_full, reduced_model = mod_reduced)
+  list(full_model = mod_full, reduced_model = mod_reduced, mod_no_BA = mod_no_BA)
 }
 
 # This function takes run_model() objects and produces summaries and plots
-model_stats <- function(mods) {
+model_stats <- function(mods, dat) {
+  
+  # Plot correlation between BA and the residuals of the model
+  # WITHOUT basal area included
+  dat$no_BA_residuals <- residuals(mods$mod_no_BA)
+  p <- ggplot(dat, aes(no_BA_residuals, BA_m2)) + 
+    geom_point(aes(color = Dest_Salinity)) + geom_smooth(method = "lm")
+  print(p)
   
   m_reduced <- mods$reduced_model
   
@@ -122,7 +134,7 @@ BA_dat_complete %>%
   ggplot(aes(x = dist, y = BA_m2, group = Collar, color = n_trees)) + 
   geom_line(size = 1) +
   scale_colour_gradientn(colours = topo.colors(9)) +
-  ggtitle("Cumulative Basal Area") +
+  ggtitle("Figure 2") +
   labs(x = "Radial distance from collar (m)", 
        y = expression(Basal~Area~(m^2)), 
        color = "Number \nof Trees")
@@ -192,7 +204,7 @@ licor_daily_data %>%
   #geom_errorbar(aes(ymin = meanFlux - sdFlux, ymax = meanFlux + sdFlux)) +
   geom_point() +
   facet_grid(~nicename) + #need to rename to site names
-  ggtitle("Flux over time") +
+  ggtitle("Figure 3") +
   labs(x = "Date", 
        y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
@@ -204,7 +216,7 @@ licor_daily_data %>%
 ### Hypothesis I - BA strong effect within 5 meters 
 ```{r, echo = FALSE, warning = FALSE}
 # Filter Licor data for only true control collars and screen out bad SM data
-MODEL_TYPE <- "linear"
+MODEL_TYPE <- "lme"
 
 readd("licor_data") %>% 
   filter(Experiment == "Control", is.na(Notes)) %>% 
@@ -216,16 +228,21 @@ readd("licor_data") %>%
 # Calculate basal area within 5 m
 BA5 <- basal_area_sum(tree_prox_data, distance = 5)
 
+filter_NAs <- function(x) {
+  x %>% filter(!is.na(Flux), !is.na(T5), !is.na(T20), !is.na(SMoisture), !is.na(BA_m2))
+}
+
 # Join the respiration data with the BA proximity data; this is main analysis dataset
 control_cols %>% 
   left_join(BA5, by = "Collar") %>% 
-  mutate(Timestamp = ymd_hms(Timestamp)) -> 
+  mutate(Timestamp = ymd_hms(Timestamp)) %>% 
+  filter_NAs -> 
   control_cols_5m
 
 # Run the main analysis
 h1 <- with(control_cols_5m, run_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = MODEL_TYPE))
 
-model_stats(h1)
+model_stats(h1, control_cols_5m)
 
 ```
 
@@ -236,20 +253,20 @@ model_stats(h1)
 GS_MONTHS <- 4:10  # growing season months, i.e. April-October
 control_cols_5m$Growing_season <- month(control_cols_5m$Timestamp) %in% GS_MONTHS
 
-growing_flux <- filter(control_cols_5m, Growing_season)
+growing_flux <- filter(control_cols_5m, Growing_season) %>% filter_NAs
 h2g <- with(growing_flux, run_model(Flux, T5, T20, SMoisture, BA_m2, 
                                     site = Dest_Salinity, model_type = MODEL_TYPE))
 print("Growing Season")
-model_stats(h2g)
+model_stats(h2g, growing_flux)
 
 
 # Filter true controls for dormant season
-dormant_flux <- filter(control_cols_5m, !Growing_season)
+dormant_flux <- filter(control_cols_5m, !Growing_season) %>% filter_NAs
 #print(dormant_flux)
 h2d <- with(dormant_flux, run_model(Flux, T5, T20, SMoisture, BA_m2, 
                                     site = Dest_Salinity, model_type = MODEL_TYPE))
 print("Dormant Season")
-model_stats(h2d)
+model_stats(h2d, dormant_flux)
 
 
 ```
@@ -263,20 +280,20 @@ control_cols_5m$SM_bin <- cut(control_cols_5m$SMoisture, breaks = 3, label = FAL
 low_i <- which(control_cols_5m$SM_bin == 1)
 
 ## Filter true controls for the bottom and top 50% soil moisture values
-m_low <- control_cols_5m[low_i, ]
+m_low <- control_cols_5m[low_i, ] %>% filter_NAs
 #print(m_low)
 h3l <- with(m_low, run_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = MODEL_TYPE))
 
 print("Low Moisture")
-model_stats(h3l)
+model_stats(h3l, m_low)
 
 high_i <- which(control_cols_5m$SM_bin == 3)
-m_high <- control_cols_5m[high_i, ]
+m_high <- control_cols_5m[high_i, ] %>% filter_NAs
 #print(m_high)
 h3h <- with(m_high, run_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = MODEL_TYPE))
 
 print("High Moisture")
-model_stats(h3h)
+model_stats(h3h, m_high)
 
 ```
 
@@ -290,7 +307,8 @@ BA_output <- list()
 for (i in seq.int(2, max(tree_prox_data$Distance_m, na.rm = TRUE))) {
   BA <- basal_area_sum(tree_prox_data, i)
   data <- left_join(control_cols, BA, by = "Collar") %>%
-    select(Collar, Flux, T5, T20, SMoisture, BA_m2, Dest_Salinity)  # select just columns we want 
+    select(Collar, Flux, T5, T20, SMoisture, BA_m2, Dest_Salinity) %>%
+    filter_NAs
   mods <- with(data, run_model(Flux, T5, T20, SMoisture, BA_m2, 
                                site = Dest_Salinity, model_type = MODEL_TYPE))
   model <- mods$reduced_model
