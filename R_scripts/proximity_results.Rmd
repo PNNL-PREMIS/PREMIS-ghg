@@ -85,6 +85,20 @@ model_stats <- function(mods, dat) {
   print(anova(m_reduced))
   plot(m_reduced)
 }
+
+# Power calculation
+sample_n <- function(flux, delta, power) {
+  suppressWarnings({
+    out <- try(power.t.test(delta = delta, sd = sd(flux), power = power,
+                            sig.level = 0.05, type = "one.sample",
+                            alternative = "two.sided"), silent = TRUE)
+  })
+  if(class(out) == "try-error") {
+    NA
+  } else {
+    out$n
+  }
+}
 ```
 
 
@@ -208,6 +222,49 @@ licor_daily_data %>%
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 ```
+
+## Power calculation
+
+Use the R's `power.t.test()` function to calculate sampling requirements based on the standard deviation of Rs, the desired power of the test, and the allowable delta (difference from the true mean value):
+
+```{r power, echo=FALSE}
+results_list <- list()
+for(delta in c(0.50, 0.75, 1)) {
+  for(power in seq(0.05, 0.9, by = 0.05)) {
+    licor_daily_data %>%
+      filter(!is.na(meanFlux)) %>% 
+      group_by(Dest_Salinity, Dest_Elevation) %>%
+      summarise(n = sample_n(meanFlux, delta, power)) %>% 
+      mutate(delta = delta, power = power) ->
+      results_list[[paste(delta, power)]]
+  }
+}
+bind_rows(results_list) %>% 
+  group_by(delta, power) %>% 
+  summarise(n_sd = sd(n), n = mean(n)) %>% 
+  ungroup %>% 
+  mutate(delta_fac = as.factor(delta)) %>% 
+  filter(!is.na(n)) -> 
+  results
+
+ggplot(results, aes(power, n, color = factor(delta), group = delta)) +
+  geom_line() + 
+  geom_ribbon(aes(ymin = n - n_sd, ymax = n + n_sd, fill = factor(delta)),
+              alpha = 0.25, color = NA) +
+  scale_color_discrete("Delta") +
+  xlab(expression(Power~(beta))) + ylab("N required") +
+  guides(fill = FALSE) +
+  ggtitle("Power analysis")
+
+# Make a nice table
+results %>% 
+  filter(power %in% c(0.25, 0.5, 0.75)) %>% 
+  mutate(N = paste(floor(n), floor(n_sd), sep = " ± ")) %>% 
+  select(delta, power, N) %>% 
+  spread(power, N) %>% 
+  kableExtra::kable()
+```
+
 
 ## Model Results {.tabset .tabset-fade .tabset-pills}
 
