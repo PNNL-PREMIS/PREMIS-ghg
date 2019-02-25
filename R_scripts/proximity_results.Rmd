@@ -262,7 +262,8 @@ results %>%
   mutate(N = paste(floor(n), floor(n_sd), sep = " ± ")) %>% 
   select(delta, power, N) %>% 
   spread(power, N) %>% 
-  kableExtra::kable()
+  kableExtra::kable() %>%
+  kableExtra::kable_styling(c("striped", "bordered"), full_width = FALSE)
 ```
 
 
