@@ -5,7 +5,7 @@ date: "October 24, 2018"
 output: html_document
 ---
 
-```{r, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
+```{r helper-functions, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
 
 library(MASS)
 library(nlme) # 3.1.137
@@ -17,16 +17,17 @@ library(ggplot2)
 theme_set(theme_bw())
 library(broom)
 library(lubridate)
+library(piecewiseSEM)
 
 # Define functions
 
 # Calcuate basal area (m2) from tree diameter (cm)
 calc_BA <- function(DBH) {
   DBH_m <- DBH / 100 # cm to meters
-  radius <- DBH_m /2 # we want the radius to compute the area
-  BA <- radius ^2 * pi # area calculation
-  return(BA)
+  radius <- DBH_m / 2 # we want the radius to compute the area
+  radius ^ 2 * pi # basal area area calculation
 }
+
 # Compute the sum of per-tree basal area within a certain distance (to respiration collars)
 basal_area_sum <- function(data, distance) {
   data %>% 
@@ -39,43 +40,43 @@ basal_area_sum <- function(data, distance) {
 }
 
 # Fit the main statistical model testing for effect of basal area (BA) on soil respiration
-run_model <- function(flux, T5, T20, SM, BA, site, model_type) {
+run_model <- function(dat, model_type) {
   
-  dat <- tibble(flux, T5, T20, SM, BA, site)
   if(any(is.na(dat))) {
     stop("Can't have any NAs in run_model data")
   }
-  f <- formula(log(flux) ~ T5 * BA + T20 * BA + SM + I(SM ^ 2) + BA)
-  f_no_BA <- formula(log(flux) ~ T5 + T20 + SM + I(SM ^ 2))
-  
+
   if(model_type == "linear") {
-    mod_full <- lm(formula = f, data = dat)
-    mod_no_BA <- lm(formula = f_no_BA, data=dat)
+    mod_full <- lm(log(Flux) ~ T5 * BA_m2 + T20 * BA_m2 + SMoisture + I(SMoisture ^ 2),
+                   data = dat)
+    mod_no_BA <- lm(formula = log(Flux) ~ T5 + T20 + SMoisture + I(SMoisture ^ 2), data = dat)
   } else if(model_type == "lme") {
-    mod_full <- nlme::lme(f, data = dat,
+    mod_full <- nlme::lme(log(Flux) ~ T5 * BA_m2 + T20 * BA_m2 + SMoisture + I(SMoisture ^ 2),
+                          data = dat,
                           # allow for random variation across sites
-                          random = ~ 1 | site,
+                          random = ~ 1 | Site,
                           method = "ML") # because we're doing stepAIC below
-    mod_no_BA <- nlme::lme(f_no_BA, data = dat, random = ~ 1 | site, method = "ML")
+    mod_no_BA <- nlme::lme(log(Flux) ~ T5 + T20 + SMoisture + I(SMoisture ^ 2),
+                           data = dat, random = ~ 1 | Site, method = "ML")
   } else {
     stop("Unknown model type ", model_type)
   }
   
-  # Remove non-significant variables
+  # Remove non-significant variables and return
   mod_reduced <- stepAIC(mod_full, direction = "both", trace = 0)
-  
-  # Return models
   list(full_model = mod_full, reduced_model = mod_reduced, mod_no_BA = mod_no_BA)
 }
 
-# This function takes run_model() objects and produces summaries and plots
+# Produce summaries and plots for the run_model() objects
 model_stats <- function(mods, dat) {
+  
+  print(piecewiseSEM::rsquared(mods$full_model))
   
   # Plot correlation between BA and the residuals of the model
   # WITHOUT basal area included
   dat$no_BA_residuals <- residuals(mods$mod_no_BA)
   p <- ggplot(dat, aes(no_BA_residuals, BA_m2)) + 
-    geom_point(aes(color = Dest_Salinity)) + geom_smooth(method = "lm")
+    geom_point(aes(color = Site)) + geom_smooth(method = "lm")
   print(p)
   
   m_reduced <- mods$reduced_model
@@ -83,14 +84,25 @@ model_stats <- function(mods, dat) {
   print(summary(m_reduced))
   print(anova(m_reduced))
   plot(m_reduced)
-
-  #whatever other plots we want to make
 }
 
+# Power calculation
+sample_n <- function(flux, delta, power) {
+  suppressWarnings({
+    out <- try(power.t.test(delta = delta, sd = sd(flux), power = power,
+                            sig.level = 0.05, type = "one.sample",
+                            alternative = "two.sided"), silent = TRUE)
+  })
+  if(class(out) == "try-error") {
+    NA
+  } else {
+    out$n
+  }
+}
 ```
 
 
-```{r joindata, echo = FALSE}
+```{r setup, echo = FALSE}
 
 tree_data <- readd("tree_data")
 prox_data <- readd("prox_data")
@@ -108,7 +120,7 @@ prox_data %>%
 
 
 ### Prep work: compute cumulative basal area for each collar
-```{r, fig.width = 9, echo = FALSE}
+```{r basal-area-fig, fig.width = 9, echo = FALSE}
 
 # Calculate cumulative basal area at each distance 
 BA_dat <- list()
@@ -143,7 +155,7 @@ BA_dat_complete %>%
 
 
 ## Table 1 - site info
-```{r, echo = FALSE, warning = FALSE, message = FALSE}
+```{r site-info, echo = FALSE, warning = FALSE, message = FALSE}
 # BA by percentage
 tree_data %>%
   group_by(Site, Salinity, Species) %>%
@@ -211,10 +223,54 @@ licor_daily_data %>%
 
 ```
 
+## Power calculation
+
+Use the R's `power.t.test()` function to calculate sampling requirements based on the standard deviation of Rs, the desired power of the test, and the allowable delta (difference from the true mean value):
+
+```{r power, echo=FALSE}
+results_list <- list()
+for(delta in c(0.50, 0.75, 1)) {
+  for(power in seq(0.05, 0.9, by = 0.05)) {
+    licor_daily_data %>%
+      filter(!is.na(meanFlux)) %>% 
+      group_by(Dest_Salinity, Dest_Elevation) %>%
+      summarise(n = sample_n(meanFlux, delta, power)) %>% 
+      mutate(delta = delta, power = power) ->
+      results_list[[paste(delta, power)]]
+  }
+}
+bind_rows(results_list) %>% 
+  group_by(delta, power) %>% 
+  summarise(n_sd = sd(n), n = mean(n)) %>% 
+  ungroup %>% 
+  mutate(delta_fac = as.factor(delta)) %>% 
+  filter(!is.na(n)) -> 
+  results
+
+ggplot(results, aes(power, n, color = factor(delta), group = delta)) +
+  geom_line() + 
+  geom_ribbon(aes(ymin = n - n_sd, ymax = n + n_sd, fill = factor(delta)),
+              alpha = 0.25, color = NA) +
+  scale_color_discrete("Delta") +
+  xlab(expression(Power~(beta))) + ylab("N required") +
+  guides(fill = FALSE) +
+  ggtitle("Power analysis")
+
+# Make a nice table
+results %>% 
+  filter(power %in% c(0.25, 0.5, 0.75)) %>% 
+  mutate(N = paste(floor(n), floor(n_sd), sep = " ± ")) %>% 
+  select(delta, power, N) %>% 
+  spread(power, N) %>% 
+  kableExtra::kable() %>%
+  kableExtra::kable_styling(c("striped", "bordered"), full_width = FALSE)
+```
+
+
 ## Model Results {.tabset .tabset-fade .tabset-pills}
 
 ### Hypothesis I - BA strong effect within 5 meters 
-```{r, echo = FALSE, warning = FALSE}
+```{r test-h1, echo = FALSE, warning = FALSE}
 # Filter Licor data for only true control collars and screen out bad SM data
 MODEL_TYPE <- "lme"
 
@@ -236,69 +292,62 @@ filter_NAs <- function(x) {
 control_cols %>% 
   left_join(BA5, by = "Collar") %>% 
   mutate(Timestamp = ymd_hms(Timestamp)) %>% 
-  filter_NAs -> 
+  select(Timestamp, Flux, T5, T20, SMoisture, BA_m2, Site = Dest_Salinity) %>% 
+  na.omit -> 
   control_cols_5m
 
 # Run the main analysis
-h1 <- with(control_cols_5m, run_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = MODEL_TYPE))
+h1 <- run_model(control_cols_5m, model_type = MODEL_TYPE)
 
 model_stats(h1, control_cols_5m)
 
 ```
 
 ### Hypothesis II - growing vs. dormant season
-```{r, echo = FALSE, warning = FALSE}
+```{r test-h2, echo = FALSE, warning = FALSE}
 # Filter true controls for growing season
-#print(summary(control_cols_5m$Timestamp))
 GS_MONTHS <- 4:10  # growing season months, i.e. April-October
 control_cols_5m$Growing_season <- month(control_cols_5m$Timestamp) %in% GS_MONTHS
 
-growing_flux <- filter(control_cols_5m, Growing_season) %>% filter_NAs
-h2g <- with(growing_flux, run_model(Flux, T5, T20, SMoisture, BA_m2, 
-                                    site = Dest_Salinity, model_type = MODEL_TYPE))
+growing_flux <- filter(control_cols_5m, Growing_season)
+h2g <- run_model(growing_flux, model_type = MODEL_TYPE)
 print("Growing Season")
 model_stats(h2g, growing_flux)
 
-
 # Filter true controls for dormant season
-dormant_flux <- filter(control_cols_5m, !Growing_season) %>% filter_NAs
-#print(dormant_flux)
-h2d <- with(dormant_flux, run_model(Flux, T5, T20, SMoisture, BA_m2, 
-                                    site = Dest_Salinity, model_type = MODEL_TYPE))
+dormant_flux <- filter(control_cols_5m, !Growing_season)
+h2d <- run_model(dormant_flux, model_type = MODEL_TYPE)
+
 print("Dormant Season")
 model_stats(h2d, dormant_flux)
-
 
 ```
 
 ### Hypothesis III - moisture-limited times
-```{r, echo = FALSE, warning = FALSE}
+```{r test-h3, echo = FALSE, warning = FALSE}
 
 ## replace with actual variable name once drake is working
 control_cols_5m$SM_bin <- cut(control_cols_5m$SMoisture, breaks = 3, label = FALSE)
 
 low_i <- which(control_cols_5m$SM_bin == 1)
 
-## Filter true controls for the bottom and top 50% soil moisture values
+## Filter true controls for the bottom and top 33% soil moisture values
 m_low <- control_cols_5m[low_i, ] %>% filter_NAs
-#print(m_low)
-h3l <- with(m_low, run_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = MODEL_TYPE))
+h3l <- run_model(m_low, model_type = MODEL_TYPE)
 
 print("Low Moisture")
 model_stats(h3l, m_low)
 
 high_i <- which(control_cols_5m$SM_bin == 3)
 m_high <- control_cols_5m[high_i, ] %>% filter_NAs
-#print(m_high)
-h3h <- with(m_high, run_model(Flux, T5, T20, SMoisture, BA_m2, site = Dest_Salinity, model_type = MODEL_TYPE))
+h3h <- run_model(m_high, model_type = MODEL_TYPE)
 
 print("High Moisture")
 model_stats(h3h, m_high)
-
 ```
 
 ### Sensitivity test - BA significance with distance
-```{r, echo = FALSE, warning = FALSE, fig.width = 9}
+```{r sensitivity, echo = FALSE, warning = FALSE, fig.width = 9}
 
 sens_output <- list()
 BA_output <- list()
@@ -306,11 +355,12 @@ BA_output <- list()
 # our basal area/respiration test at each
 for (i in seq.int(2, max(tree_prox_data$Distance_m, na.rm = TRUE))) {
   BA <- basal_area_sum(tree_prox_data, i)
-  data <- left_join(control_cols, BA, by = "Collar") %>%
-    select(Collar, Flux, T5, T20, SMoisture, BA_m2, Dest_Salinity) %>%
-    filter_NAs
-  mods <- with(data, run_model(Flux, T5, T20, SMoisture, BA_m2, 
-                               site = Dest_Salinity, model_type = MODEL_TYPE))
+  control_cols %>% 
+    left_join(BA, by = "Collar") %>%
+    select(Timestamp, Flux, T5, T20, SMoisture, BA_m2, Site = Dest_Salinity) %>% 
+    na.omit ->
+    dat
+  mods <- run_model(dat, model_type = MODEL_TYPE)
   model <- mods$reduced_model
   smry <- anova(model)
   smry$term = rownames(smry)
@@ -320,12 +370,11 @@ for (i in seq.int(2, max(tree_prox_data$Distance_m, na.rm = TRUE))) {
     smry <- rename(smry, `p-value` = `Pr(>F)`)
   }
   
-  ichar <- as.character(i)
-  sens_output[[ichar]] <- as_tibble(smry)
+  sens_output[[as.character(i)]] <- as_tibble(smry)
 }
 
 bind_rows(sens_output, .id = "Distance") %>%
-  filter(term == "BA") %>%
+  filter(term == "BA_m2") %>%
   mutate(Distance = as.integer(Distance)) %>%
   print %>%
   ggplot(aes(Distance, `p-value`)) + 
@@ -335,5 +384,4 @@ bind_rows(sens_output, .id = "Distance") %>%
   ggtitle(paste("Basal Area Significance -", MODEL_TYPE)) +
   xlab("Radial distance from collar (in meters)") + 
   ylab("P-value for test of BA significance to flux")
-
 ```
