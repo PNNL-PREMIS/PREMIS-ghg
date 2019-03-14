@@ -45,7 +45,7 @@ run_model <- function(dat, model_type) {
   if(any(is.na(dat))) {
     stop("Can't have any NAs in run_model data")
   }
-
+  
   if(model_type == "linear") {
     mod_full <- lm(log(Flux) ~ T5 * BA_m2 + T20 * BA_m2 + SMoisture + I(SMoisture ^ 2),
                    data = dat)
@@ -87,7 +87,7 @@ model_stats <- function(mods, dat) {
   m_reduced <- mods$reduced_model
   
   print(summary(m_reduced))
-  print(car::Anova(m_reduced, type = "III"))
+  print(car::Anova(m_reduced, type = "III"))   # NOT stats::anova()!
   plot(m_reduced)
 }
 
@@ -278,6 +278,7 @@ results %>%
 ```{r test-h1, echo = FALSE, warning = FALSE}
 # Filter Licor data for only true control collars and screen out bad SM data
 MODEL_TYPE <- "lme"
+TEST_DISTANCE <- 5
 
 readd("licor_data") %>% 
   filter(Experiment == "Control", is.na(Notes)) %>% 
@@ -287,7 +288,7 @@ readd("licor_data") %>%
   control_cols
 
 # Calculate basal area within 5 m
-BA5 <- basal_area_sum(tree_prox_data, distance = 5)
+BA5 <- basal_area_sum(tree_prox_data, distance = TEST_DISTANCE)
 
 filter_NAs <- function(x) {
   x %>% filter(!is.na(Flux), !is.na(T5), !is.na(T20), !is.na(SMoisture), !is.na(BA_m2))
@@ -351,7 +352,7 @@ print("High Moisture")
 model_stats(h3h, m_high)
 ```
 
-### Sensitivity test - BA significance with distance
+## Sensitivity test - BA significance with distance
 ```{r sensitivity, echo = FALSE, warning = FALSE, fig.width = 9}
 
 sens_output <- list()
@@ -366,27 +367,27 @@ for (i in seq.int(2, max(tree_prox_data$Distance_m, na.rm = TRUE))) {
     na.omit ->
     dat
   mods <- run_model(dat, model_type = MODEL_TYPE)
-  model <- mods$reduced_model
-  smry <- anova(model)
-  smry$term = rownames(smry)
+  smry <- car::Anova(mods$reduced_model, type = "III")
   
-  # linear and lme models return differently-named p-value columns, which isn't handy
-  if("Pr(>F)" %in% colnames(smry)) {
-    smry <- rename(smry, `p-value` = `Pr(>F)`)
-  }
-  
+  # linear and lme models and car::Anova return differently-named p-value columns;
+  # rename for consistency
+  names(smry)[ncol(smry)] <- "p-value"
+  smry$Term = rownames(smry)
   sens_output[[as.character(i)]] <- as_tibble(smry)
 }
 
 bind_rows(sens_output, .id = "Distance") %>%
-  filter(term == "BA_m2") %>%
+  filter(grepl("BA_m2", Term)) %>%
   mutate(Distance = as.integer(Distance)) %>%
   print %>%
-  ggplot(aes(Distance, `p-value`)) + 
-  geom_line(size = 1, color = "grey") + 
-  geom_point(size = 2.5, color = "tomato3") +
+  ggplot(aes(Distance, `p-value`, color = Term)) + 
+  geom_line(size = 1) + 
+  geom_point(size = 2.5) +
+  geom_vline(xintercept = TEST_DISTANCE, linetype = 2) +
   geom_hline(yintercept = 0.05, linetype = 2) +
-  ggtitle(paste("Basal Area Significance -", MODEL_TYPE)) +
-  xlab("Radial distance from collar (in meters)") + 
-  ylab("P-value for test of BA significance to flux")
+#  ggtitle(paste("Basal Area Significance -", MODEL_TYPE)) +
+  xlab("Radial distance from collar (m)") + 
+  ylab("P-value") +
+  scale_color_discrete(labels = c("BA", "BA:T20", "BA:T5")) +
+  scale_y_log10()
 ```
