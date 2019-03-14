@@ -75,14 +75,19 @@ model_stats <- function(mods, dat) {
   # Plot correlation between BA and the residuals of the model
   # WITHOUT basal area included
   dat$no_BA_residuals <- residuals(mods$mod_no_BA)
-  p <- ggplot(dat, aes(no_BA_residuals, BA_m2)) + 
-    geom_point(aes(color = Site)) + geom_smooth(method = "lm")
+  p <- ggplot(dat, aes(no_BA_residuals, BA_m2, color = Site)) + 
+    geom_point(alpha = 0.75) + 
+    geom_smooth(method = "lm", se = FALSE) +
+    geom_smooth(method = "lm", group = 1, color = "black") +
+    xlab(expression(Residual~(µmol~m^-2~s^-1))) +
+    ylab(expression(Basal~area~(m^2))) +
+    scale_color_discrete(labels = c("GCREW", "Canoe Shed", "North Branch"))
   print(p)
   
   m_reduced <- mods$reduced_model
   
   print(summary(m_reduced))
-  print(anova(m_reduced))
+  print(car::Anova(m_reduced, type = "III"))
   plot(m_reduced)
 }
 
