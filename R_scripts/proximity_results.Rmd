@@ -229,8 +229,8 @@ Use the R's `power.t.test()` function to calculate sampling requirements based o
 
 ```{r power, echo=FALSE}
 results_list <- list()
-for(delta in c(0.50, 0.75, 1)) {
-  for(power in seq(0.05, 0.9, by = 0.05)) {
+for(delta in c(0.25, 0.50, 0.75, 1)) {
+  for(power in seq(0.1, 0.9, by = 0.1)) {
     licor_daily_data %>%
       filter(!is.na(meanFlux)) %>% 
       group_by(Dest_Salinity, Dest_Elevation) %>%
@@ -252,13 +252,13 @@ ggplot(results, aes(power, n, color = factor(delta), group = delta)) +
   geom_ribbon(aes(ymin = n - n_sd, ymax = n + n_sd, fill = factor(delta)),
               alpha = 0.25, color = NA) +
   scale_color_discrete("Delta") +
-  xlab(expression(Power~(beta))) + ylab("N required") +
+  xlab(expression(Power~(1-beta))) + ylab("N required") +
   guides(fill = FALSE) +
   ggtitle("Power analysis")
 
 # Make a nice table
 results %>% 
-  filter(power %in% c(0.25, 0.5, 0.75)) %>% 
+  filter(power >= 0.5) %>% 
   mutate(N = paste(floor(n), floor(n_sd), sep = " ± ")) %>% 
   select(delta, power, N) %>% 
   spread(power, N) %>% 
