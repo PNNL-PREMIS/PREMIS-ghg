@@ -45,7 +45,7 @@ run_model <- function(dat, model_type) {
   if(any(is.na(dat))) {
     stop("Can't have any NAs in run_model data")
   }
-
+  
   if(model_type == "linear") {
     mod_full <- lm(log(Flux) ~ T5 * BA_m2 + T20 * BA_m2 + SMoisture + I(SMoisture ^ 2),
                    data = dat)
@@ -75,14 +75,19 @@ model_stats <- function(mods, dat) {
   # Plot correlation between BA and the residuals of the model
   # WITHOUT basal area included
   dat$no_BA_residuals <- residuals(mods$mod_no_BA)
-  p <- ggplot(dat, aes(no_BA_residuals, BA_m2)) + 
-    geom_point(aes(color = Site)) + geom_smooth(method = "lm")
+  p <- ggplot(dat, aes(no_BA_residuals, BA_m2, color = Site)) + 
+    geom_point(alpha = 0.75) + 
+    geom_smooth(method = "lm", se = FALSE) +
+    geom_smooth(method = "lm", group = 1, color = "black") +
+    xlab(expression(Residual~(µmol~m^-2~s^-1))) +
+    ylab(expression(Basal~area~(m^2))) +
+    scale_color_discrete(labels = c("GCREW", "Canoe Shed", "North Branch"))
   print(p)
   
   m_reduced <- mods$reduced_model
   
   print(summary(m_reduced))
-  print(anova(m_reduced))
+  print(car::Anova(m_reduced, type = "III"))   # NOT stats::anova()!
   plot(m_reduced)
 }
 
@@ -229,8 +234,8 @@ Use the R's `power.t.test()` function to calculate sampling requirements based o
 
 ```{r power, echo=FALSE}
 results_list <- list()
-for(delta in c(0.50, 0.75, 1)) {
-  for(power in seq(0.05, 0.9, by = 0.05)) {
+for(delta in c(0.25, 0.50, 0.75, 1)) {
+  for(power in seq(0.1, 0.9, by = 0.1)) {
     licor_daily_data %>%
       filter(!is.na(meanFlux)) %>% 
       group_by(Dest_Salinity, Dest_Elevation) %>%
@@ -252,13 +257,13 @@ ggplot(results, aes(power, n, color = factor(delta), group = delta)) +
   geom_ribbon(aes(ymin = n - n_sd, ymax = n + n_sd, fill = factor(delta)),
               alpha = 0.25, color = NA) +
   scale_color_discrete("Delta") +
-  xlab(expression(Power~(beta))) + ylab("N required") +
+  xlab(expression(Power~(1-beta))) + ylab("N required") +
   guides(fill = FALSE) +
   ggtitle("Power analysis")
 
 # Make a nice table
 results %>% 
-  filter(power %in% c(0.25, 0.5, 0.75)) %>% 
+  filter(power >= 0.5) %>% 
   mutate(N = paste(floor(n), floor(n_sd), sep = " ± ")) %>% 
   select(delta, power, N) %>% 
   spread(power, N) %>% 
@@ -273,6 +278,7 @@ results %>%
 ```{r test-h1, echo = FALSE, warning = FALSE}
 # Filter Licor data for only true control collars and screen out bad SM data
 MODEL_TYPE <- "lme"
+TEST_DISTANCE <- 5
 
 readd("licor_data") %>% 
   filter(Experiment == "Control", is.na(Notes)) %>% 
@@ -282,7 +288,7 @@ readd("licor_data") %>%
   control_cols
 
 # Calculate basal area within 5 m
-BA5 <- basal_area_sum(tree_prox_data, distance = 5)
+BA5 <- basal_area_sum(tree_prox_data, distance = TEST_DISTANCE)
 
 filter_NAs <- function(x) {
   x %>% filter(!is.na(Flux), !is.na(T5), !is.na(T20), !is.na(SMoisture), !is.na(BA_m2))
@@ -346,7 +352,7 @@ print("High Moisture")
 model_stats(h3h, m_high)
 ```
 
-### Sensitivity test - BA significance with distance
+## Sensitivity test - BA significance with distance
 ```{r sensitivity, echo = FALSE, warning = FALSE, fig.width = 9}
 
 sens_output <- list()
@@ -361,27 +367,27 @@ for (i in seq.int(2, max(tree_prox_data$Distance_m, na.rm = TRUE))) {
     na.omit ->
     dat
   mods <- run_model(dat, model_type = MODEL_TYPE)
-  model <- mods$reduced_model
-  smry <- anova(model)
-  smry$term = rownames(smry)
+  smry <- car::Anova(mods$reduced_model, type = "III")
   
-  # linear and lme models return differently-named p-value columns, which isn't handy
-  if("Pr(>F)" %in% colnames(smry)) {
-    smry <- rename(smry, `p-value` = `Pr(>F)`)
-  }
-  
+  # linear and lme models and car::Anova return differently-named p-value columns;
+  # rename for consistency
+  names(smry)[ncol(smry)] <- "p-value"
+  smry$Term = rownames(smry)
   sens_output[[as.character(i)]] <- as_tibble(smry)
 }
 
 bind_rows(sens_output, .id = "Distance") %>%
-  filter(term == "BA_m2") %>%
+  filter(grepl("BA_m2", Term)) %>%
   mutate(Distance = as.integer(Distance)) %>%
   print %>%
-  ggplot(aes(Distance, `p-value`)) + 
-  geom_line(size = 1, color = "grey") + 
-  geom_point(size = 2.5, color = "tomato3") +
+  ggplot(aes(Distance, `p-value`, color = Term)) + 
+  geom_line(size = 1) + 
+  geom_point(size = 2.5) +
+  geom_vline(xintercept = TEST_DISTANCE, linetype = 2) +
   geom_hline(yintercept = 0.05, linetype = 2) +
-  ggtitle(paste("Basal Area Significance -", MODEL_TYPE)) +
-  xlab("Radial distance from collar (in meters)") + 
-  ylab("P-value for test of BA significance to flux")
+#  ggtitle(paste("Basal Area Significance -", MODEL_TYPE)) +
+  xlab("Radial distance from collar (m)") + 
+  ylab("P-value") +
+  scale_color_discrete(labels = c("BA", "BA:T20", "BA:T5")) +
+  scale_y_log10()
 ```
