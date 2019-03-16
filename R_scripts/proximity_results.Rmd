@@ -1,15 +1,15 @@
 ---
 title: "proximity_results"
 author: "SP"
-date: "October 24, 2018"
 output: html_document
 ---
+
+### `r Sys.Date()`
 
 ```{r helper-functions, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
 
 library(MASS)
 library(nlme) # 3.1.137
-#library(lme4) # 1.1-19
 library(drake)
 library(dplyr)
 library(tidyr)
@@ -119,7 +119,6 @@ prox_data %>%
          Species_code = if_else(is.na(Tag), No_tag_species, Species_code),
          BA_sqm = calc_BA(DBH_cm)) -> # Compute basal area for each tree
   tree_prox_data
-
 ```
 
 
@@ -200,7 +199,6 @@ tabledata %>%
   knitr::kable(digits = 1, format = "html", 
                col.names = c("Site", "Trees (/ha)", "BA (m2/ha)")) %>%
   kableExtra::kable_styling(c("striped", "bordered"), full_width = FALSE)
-
 ```
 
 
@@ -219,7 +217,6 @@ licor_daily_data %>%
   labs(x = "Date", 
        y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
-
 ```
 
 ## Power calculation
@@ -298,9 +295,7 @@ control_cols %>%
 
 # Run the main analysis
 h1 <- run_model(control_cols_5m, model_type = MODEL_TYPE)
-
 model_stats(h1, control_cols_5m)
-
 ```
 
 ### Hypothesis II - growing vs. dormant season
@@ -320,7 +315,6 @@ h2d <- run_model(dormant_flux, model_type = MODEL_TYPE)
 
 print("Dormant Season")
 model_stats(h2d, dormant_flux)
-
 ```
 
 ### Hypothesis III - moisture-limited times
