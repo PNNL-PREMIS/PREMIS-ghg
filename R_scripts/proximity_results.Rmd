@@ -80,8 +80,7 @@ model_stats <- function(mods, dat) {
     geom_smooth(method = "lm", se = FALSE) +
     geom_smooth(method = "lm", group = 1, color = "black") +
     xlab(expression(Residual~(µmol~m^-2~s^-1))) +
-    ylab(expression(Basal~area~(m^2))) +
-    scale_color_discrete(labels = c("GCREW", "Canoe Shed", "North Branch"))
+    ylab(expression(Basal~area~(m^2)))
   print(p)
   
   m_reduced <- mods$reduced_model
@@ -209,18 +208,13 @@ tabledata %>%
 ```{r co2_time, echo = FALSE, warning = FALSE}
 licor_daily_data <- readd("licor_daily_data")
 
-# Mapping for 
-nicenames <- c("High" = "GCREW", "Medium" = "Canoe Shed", "Low" = "North Branch")
-
 # s.d. is based on successive measurements at same collar
 licor_daily_data %>% 
-  mutate(nicename = factor(nicenames[Dest_Salinity], levels = nicenames)) %>% 
   filter(!is.na(meanFlux), !is.na(sdFlux)) %>% 
   filter(Group == "Control") %>%
   ggplot(aes(x = Timestamp, y = meanFlux, group = Collar)) +
-  #geom_errorbar(aes(ymin = meanFlux - sdFlux, ymax = meanFlux + sdFlux)) +
   geom_point() +
-  facet_grid(~nicename) + #need to rename to site names
+  facet_grid(~Dest_Site) +
   ggtitle("Figure 3") +
   labs(x = "Date", 
        y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
@@ -298,7 +292,7 @@ filter_NAs <- function(x) {
 control_cols %>% 
   left_join(BA5, by = "Collar") %>% 
   mutate(Timestamp = ymd_hms(Timestamp)) %>% 
-  select(Timestamp, Flux, T5, T20, SMoisture, BA_m2, Site = Dest_Salinity) %>% 
+  select(Timestamp, Flux, T5, T20, SMoisture, BA_m2, Site = Dest_Site) %>% 
   na.omit -> 
   control_cols_5m
 
@@ -385,7 +379,6 @@ bind_rows(sens_output, .id = "Distance") %>%
   geom_point(size = 2.5) +
   geom_vline(xintercept = TEST_DISTANCE, linetype = 2) +
   geom_hline(yintercept = 0.05, linetype = 2) +
-#  ggtitle(paste("Basal Area Significance -", MODEL_TYPE)) +
   xlab("Radial distance from collar (m)") + 
   ylab("P-value") +
   scale_color_discrete(labels = c("BA", "BA:T20", "BA:T5")) +
