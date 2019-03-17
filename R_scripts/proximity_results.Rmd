@@ -1,15 +1,15 @@
 ---
 title: "proximity_results"
 author: "SP"
-date: "October 24, 2018"
 output: html_document
 ---
+
+### `r Sys.Date()`
 
 ```{r helper-functions, echo = FALSE, warning = FALSE, message = FALSE, results = 'hide'}
 
 library(MASS)
 library(nlme) # 3.1.137
-#library(lme4) # 1.1-19
 library(drake)
 library(dplyr)
 library(tidyr)
@@ -80,8 +80,7 @@ model_stats <- function(mods, dat) {
     geom_smooth(method = "lm", se = FALSE) +
     geom_smooth(method = "lm", group = 1, color = "black") +
     xlab(expression(Residual~(µmol~m^-2~s^-1))) +
-    ylab(expression(Basal~area~(m^2))) +
-    scale_color_discrete(labels = c("GCREW", "Canoe Shed", "North Branch"))
+    ylab(expression(Basal~area~(m^2)))
   print(p)
   
   m_reduced <- mods$reduced_model
@@ -120,7 +119,6 @@ prox_data %>%
          Species_code = if_else(is.na(Tag), No_tag_species, Species_code),
          BA_sqm = calc_BA(DBH_cm)) -> # Compute basal area for each tree
   tree_prox_data
-
 ```
 
 
@@ -201,7 +199,6 @@ tabledata %>%
   knitr::kable(digits = 1, format = "html", 
                col.names = c("Site", "Trees (/ha)", "BA (m2/ha)")) %>%
   kableExtra::kable_styling(c("striped", "bordered"), full_width = FALSE)
-
 ```
 
 
@@ -209,23 +206,17 @@ tabledata %>%
 ```{r co2_time, echo = FALSE, warning = FALSE}
 licor_daily_data <- readd("licor_daily_data")
 
-# Mapping for 
-nicenames <- c("High" = "GCREW", "Medium" = "Canoe Shed", "Low" = "North Branch")
-
 # s.d. is based on successive measurements at same collar
 licor_daily_data %>% 
-  mutate(nicename = factor(nicenames[Dest_Salinity], levels = nicenames)) %>% 
   filter(!is.na(meanFlux), !is.na(sdFlux)) %>% 
   filter(Group == "Control") %>%
   ggplot(aes(x = Timestamp, y = meanFlux, group = Collar)) +
-  #geom_errorbar(aes(ymin = meanFlux - sdFlux, ymax = meanFlux + sdFlux)) +
   geom_point() +
-  facet_grid(~nicename) + #need to rename to site names
+  facet_grid(~Dest_Site) +
   ggtitle("Figure 3") +
   labs(x = "Date", 
        y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
-
 ```
 
 ## Power calculation
@@ -298,15 +289,13 @@ filter_NAs <- function(x) {
 control_cols %>% 
   left_join(BA5, by = "Collar") %>% 
   mutate(Timestamp = ymd_hms(Timestamp)) %>% 
-  select(Timestamp, Flux, T5, T20, SMoisture, BA_m2, Site = Dest_Salinity) %>% 
+  select(Timestamp, Flux, T5, T20, SMoisture, BA_m2, Site = Dest_Site) %>% 
   na.omit -> 
   control_cols_5m
 
 # Run the main analysis
 h1 <- run_model(control_cols_5m, model_type = MODEL_TYPE)
-
 model_stats(h1, control_cols_5m)
-
 ```
 
 ### Hypothesis II - growing vs. dormant season
@@ -326,7 +315,6 @@ h2d <- run_model(dormant_flux, model_type = MODEL_TYPE)
 
 print("Dormant Season")
 model_stats(h2d, dormant_flux)
-
 ```
 
 ### Hypothesis III - moisture-limited times
@@ -385,7 +373,6 @@ bind_rows(sens_output, .id = "Distance") %>%
   geom_point(size = 2.5) +
   geom_vline(xintercept = TEST_DISTANCE, linetype = 2) +
   geom_hline(yintercept = 0.05, linetype = 2) +
-#  ggtitle(paste("Basal Area Significance -", MODEL_TYPE)) +
   xlab("Radial distance from collar (m)") + 
   ylab("P-value") +
   scale_color_discrete(labels = c("BA", "BA:T20", "BA:T5")) +

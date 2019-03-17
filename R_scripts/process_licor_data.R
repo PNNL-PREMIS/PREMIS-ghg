@@ -51,6 +51,10 @@ process_licor_data <- function(raw_data, collar_data, plot_data, temp_data) {
     left_join(plot_data, by = c("Destination_Plot" = "Plot")) %>%
     rename(Dest_Salinity = Salinity, Dest_Elevation = Elevation)
   
+  # Add a factor column that's the site name for pretty printing/plotting
+  sitenames <- c("High" = "GCREW", "Medium" = "Canoe Shed", "Low" = "North Branch")
+  licorDat$Dest_Site <- factor(sitenames[licorDat$Dest_Salinity], levels = sitenames) 
+    
   # The Licor temperature sensor was broken for several months in fall-winter 2018
   # For those times, we took T5 by hand and entered it into a dedicated file
   # Here we merge licor data with these 5cm temperatures
@@ -73,10 +77,10 @@ process_licor_data <- function(raw_data, collar_data, plot_data, temp_data) {
   # Reorder labels by making them into factors and return
   HML <- c("High", "Medium", "Low")
   licorDat %>% 
-    mutate(Origin_Salinity <- factor(Origin_Salinity, levels = HML),
-           Origin_Elevation <- factor(Origin_Elevation, levels = HML),
-           Dest_Salinity <- factor(Dest_Salinity, levels = HML),
-           Dest_Elevation <- factor(Dest_Elevation, levels = HML),
+    mutate(Origin_Salinity = factor(Origin_Salinity, levels = HML),
+           Origin_Elevation = factor(Origin_Elevation, levels = HML),
+           Dest_Salinity = factor(Dest_Salinity, levels = HML),
+           Dest_Elevation = factor(Dest_Elevation, levels = HML),
            Date = paste(month(Timestamp), "/", day(Timestamp)),
            Group = paste(Origin_Plot, "->", Destination_Plot),
            Group = if_else(Experiment == "Control", "Control", Group))
@@ -87,8 +91,8 @@ process_licor_data <- function(raw_data, collar_data, plot_data, temp_data) {
 calculate_licor_daily_data <- function(licor_data) {
   cat("Calculating daily averages, CVs, etc...\n")
   licor_data %>% 
-    group_by(Date, Experiment, Group, Destination_Plot, Dest_Salinity, Dest_Elevation,
-             Origin_Plot, Origin_Salinity, Origin_Elevation, Collar) %>%
+    group_by(Date, Experiment, Group, Destination_Plot, Dest_Salinity, Dest_Site,
+             Dest_Elevation, Origin_Plot, Origin_Salinity, Origin_Elevation, Collar) %>%
     summarise(n = n(), 
               Timestamp = mean(Timestamp),
               meanFlux = mean(Flux), 
