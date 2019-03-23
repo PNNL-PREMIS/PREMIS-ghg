@@ -211,6 +211,7 @@ ggplot(pacf_df, aes(lag, PACF)) +
   geom_linerange(aes(ymin = 0, ymax = PACF), 
                  color = "darkgrey", linetype = 2) +
   ggtitle("E. Hourly PACF")
+save_plot("temporal_figures/Figure2-hourly_pacf.png", plot = last_plot())
 ```
 
 In the figure above, Rs values measured in successive hours at a given collar exhibit a strong correlation (`r round(pacf_df$PACF[1], 3)`), and a moderate one at a two-hour lag (`r round(pacf_df$PACF[2], 3)`). Day-to-day (24 hour lag) observations are essentially uncorrelated (`r round(pacf_df$PACF[24], 3)`).
@@ -294,6 +295,7 @@ ggplot(pacf_df, aes(lag, PACF)) +
   geom_linerange(aes(ymin = 0, ymax = PACF), 
                  color = "darkgrey", linetype = 2) +
   ggtitle("H. Daily PACF")
+save_plot("temporal_figures/Figure4-daily_pacf.png", plot = last_plot())
 ```
 
 In the figure above, Rs values measured in successive days at a given collar exhibit a strong correlation (`r round(pacf_df$PACF[1], 3)`), but no correlation after that.
@@ -350,6 +352,7 @@ ggplot(cld_24hr_errors, aes(Hour, Diff_24hr_rel, group = Month, color = Month)) 
   ylab("Difference from 24-hour mean flux") + 
   ggtitle("J. Best time of day") +
   scale_y_continuous(labels = scales::percent_format(accuracy = 1))
+save_plot("temporal_figures/Figure3-time_of_day.png", plot = last_plot())
 ```
 
 
@@ -492,10 +495,14 @@ p2 <- ggplot(srdb3, aes(AC_category, CV)) +
   geom_violin() + geom_jitter() +
   xlab("Annual coverage (fraction)") + ylab("Interannual CV")
 
-cowplot::plot_grid(p1, p2, nrow=2)
+p <- cowplot::plot_grid(p1, p2, nrow = 2)
+print(p)
+save_plot("temporal_figures/Figure5-annual_effect.png", plot = p)
 
 fligner.test(srdb$CV, srdb$MI_category)
 fligner.test(srdb$CV, srdb$AC_category)
+
+summary(srdb$CV)
 ```
 
 Median CV here is `r round(median_cv_annual * 100, 0)`%.
@@ -539,6 +546,7 @@ ggplot(smry, aes(Seconds, CV, label = Labels, group = Labels)) +
   scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
   xlab("Timescale (seconds)") + ylab("CV") +
   ggtitle("P. Summary")
+save_plot("temporal_figures/Figure6-summary.png", plot = last_plot())
 ```
 
 ## TODO LIST
