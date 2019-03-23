@@ -156,15 +156,19 @@ lds %>%
 
 ggplot(lds_plot, aes(x = mean_gt_2, y = value, color = variable)) + 
   geom_abline(slope = 1, intercept = 0) +
-  geom_smooth(method = "lm", linetype = 2) +
-  geom_point() + 
-  labs(x = "Mean flux of all (>=3) measurements", 
-       y = "Mean flux of first 1 or 2 measurements") +
+  geom_smooth(method = "lm", linetype = 2, se = FALSE) +
+  geom_point() +
+  scale_color_discrete("Samples", labels = c("1x", "2x")) +
+  labs(x = expression(Mean~flux~of~all~("">=3)~measurements~(µmol~m^-2~s^-1)), 
+       y = expression(Mean~flux~(µmol~m^-2~s^-1))) +
   ggtitle("D. Minute sampling")
+save_plot("temporal_figures/Figure1-sampling.png", plot = last_plot())
 
+# Run Tukey HSD test
 lds %>% 
   gather(variable, value, mean_gt_2, mean_1, mean_2) %>% 
-  mutate(variable = factor(variable, levels = c("mean_gt_2", "mean_2", "mean_1"))) ->
+  mutate(variable = factor(variable, 
+                           levels = c("mean_gt_2", "mean_2", "mean_1"))) ->
   lds_stats
 m <- lm(value ~ variable, data = lds_stats)
 summary(m)
@@ -547,6 +551,8 @@ ggplot(smry, aes(Seconds, CV, label = Labels, group = Labels)) +
   xlab("Timescale (seconds)") + ylab("CV") +
   ggtitle("P. Summary")
 save_plot("temporal_figures/Figure6-summary.png", plot = last_plot())
+
+fligner.test(distributions$CV, factor(distributions$Labels))
 ```
 
 ## TODO LIST
