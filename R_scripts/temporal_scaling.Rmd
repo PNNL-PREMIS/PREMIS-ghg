@@ -17,6 +17,7 @@ output: html_document
 * "First, understanding how Rs temperature and moisture sensitivities vary in time and space (Hursh et al., 2017; Liu et al., 2016; T. Zhou et al., 2009), and the degree to which “hot spots” and “hot moments” in space and time (Leon et al., 2014) might affect our sampling priorities at scales from the collar to international network (Bond-Lamberty et al., 2016)." from my 2018 commentary
 * Interannual variation Savage and Davidson (2001)
 * Carbon fluxes more generally: Dennis new paper https://www.sciencedirect.com/science/article/pii/S0168192317301806. Also Markus paper on extremes in Nature 2013; Borken 2002
+* Jinshi's paper
 
 To examine variability and sampling requirements at a variety of temporal scales, we combined (i) hourly, continuous measurements made by an 8-chamber IRGA over six months, (ii) survey measurements made every ~10 days over a year at the same site, and (iii) data on annual fluxes from the SRDB. 
 
@@ -28,10 +29,11 @@ library(readr)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
-theme_set(theme_bw())
 library(lubridate)
 library(kableExtra)
 library(lattice)
+library(cowplot)  # 0.9.4
+theme_set(theme_bw())
 
 readd("licor_data") %>% 
   filter(Group == "Control") %>% 
@@ -347,7 +349,7 @@ ggplot(cld_24hr_errors, aes(Hour, Diff_24hr_rel, group = Month, color = Month)) 
   geom_line() +
   ylab("Difference from 24-hour mean flux") + 
   ggtitle("J. Best time of day") +
-  scale_y_continuous(labels = scales::percent)
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1))
 ```
 
 
@@ -471,8 +473,12 @@ bind_rows(results_list) %>%
 
 ```{r srdb, echo=FALSE}
 readd("srdb") %>% 
-  mutate(CV = Rs_interann_err / Rs_annual) %>%
-  filter(Leaf_habit == "Deciduous", Ecosystem_type == "Forest", !is.na(CV)) ->
+  mutate(CV = Rs_interann_err / Rs_annual) %>% 
+  filter(Leaf_habit == "Deciduous", Ecosystem_type == "Forest", Manipulation == "None", !is.na(CV)) %>% 
+  select(Record_number, Study_number, Rs_annual, Rs_interann_err, CV, 
+         Annual_coverage, Meas_interval) %>% 
+  mutate(AC_category = cut(Annual_coverage, breaks = c(0, 0.9, 1)),
+         MI_category = cut(Meas_interval, breaks = c(0, 1, 10, 30, 60))) ->
   srdb
 median_cv_annual <- median(srdb$CV, na.rm = TRUE)
 
@@ -481,6 +487,22 @@ ggplot(srdb, aes(x = CV)) + geom_histogram(bins = 20) +
   geom_vline(xintercept = median_cv_annual, color = "red") +
   ylab("Count") + xlab("CV between successive years") +
   ggtitle(paste("N. Interannual CV, N =", nrow(srdb)))
+
+p1 <- ggplot(filter(srdb, !is.na(MI_category)), aes(MI_category, CV)) + 
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  geom_violin() + geom_jitter() +
+  xlab("Measurement interval (days)") + ylab("Interannual CV") +
+  ggtitle("O. Effect of measurement interval and annual coverage")
+
+p2 <- ggplot(filter(srdb, !is.na(AC_category)), aes(AC_category, CV)) + 
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  geom_violin() + geom_jitter() +
+  xlab("Annual coverage (fraction)") + ylab("Interannual CV")
+
+cowplot::plot_grid(p1, p2, nrow=2)
+
+fligner.test(srdb$CV, srdb$MI_category)
+fligner.test(srdb$CV, srdb$AC_category)
 ```
 
 Median CV here is `r round(median_cv_annual * 100, 0)`%.
@@ -490,8 +512,8 @@ Median CV here is `r round(median_cv_annual * 100, 0)`%.
 
 ```{r summary-graph, echo=FALSE}
 spd <- 24 * 60 * 60
-timescales <- c("1 minute" = 60,
-                "1 hour" = 60 * 60,
+timescales <- c("1 minute" = spd / 24/ 60,
+                "1 hour" = spd / 24,
                 "1 day" = spd,
                 "1 month" = spd * 30,
                 "1 year" = spd * 365)
@@ -521,16 +543,15 @@ ggplot(smry, aes(Seconds, CV, label = Labels, group = Labels)) +
     labels = scales::trans_format("log10", scales::math_format(10 ^ .x))
   ) +
   coord_cartesian(ylim = c(0, 1)) +
-  xlab("Timescale (seconds)") + ylab("N required") +
-  ggtitle("O. Summary")
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  xlab("Timescale (seconds)") + ylab("CV") +
+  ggtitle("P. Summary")
 ```
 
 ## TODO LIST
 
 * The what's driving hour-to-hour CV analysis needs work; maybe remove entirely, and just report what drives the flux itself. Seems clearer
-* Remove snowstorm day
 * Investigate/remove screwy survey collar
-* Include? - How much coverage is needed for robust annual estimate? Use `Annual_coverage` field of SRDB
 * Could do a real Monte Carlo sampling exercise...i.e. looking for most effective ways to reduce error. Not sure there's enough data for this though.
 
 ```{r msmt-gaps, echo=FALSE}
@@ -539,3 +560,8 @@ licor_data %>%
   summarize(Timestamp = mean(Timestamp), n = n()) %>% 
   summarise(Timestamp = mean(Timestamp), n_sd = sd(n), n = mean(n))
 ```
+
+```{r, echo=FALSE}
+sessionInfo()
+```
+
