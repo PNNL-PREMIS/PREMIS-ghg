@@ -482,19 +482,22 @@ readd("srdb") %>%
   srdb
 median_cv_annual <- median(srdb$CV, na.rm = TRUE)
 
-ggplot(srdb, aes(x = CV)) + geom_histogram(bins = 20) +
+srdb1 <- filter(srdb, !is.na(CV))
+ggplot(srdb1, aes(x = CV)) + geom_histogram(bins = 20) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
   geom_vline(xintercept = median_cv_annual, color = "red") +
   ylab("Count") + xlab("CV between successive years") +
-  ggtitle(paste("N. Interannual CV, N =", nrow(srdb)))
+  ggtitle(paste("N. Interannual CV, N =", nrow(srdb1)))
 
-p1 <- ggplot(filter(srdb, !is.na(MI_category)), aes(MI_category, CV)) + 
+srdb2 <- filter(srdb, !is.na(MI_category))
+srdb3 <- filter(srdb, !is.na(AC_category))
+p1 <- ggplot(srdb2, aes(MI_category, CV)) + 
   scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
   geom_violin() + geom_jitter() +
   xlab("Measurement interval (days)") + ylab("Interannual CV") +
-  ggtitle("O. Effect of measurement interval and annual coverage")
+  ggtitle(paste("O. Effect of m. interval and annual coverage, N =", nrow(srdb2), nrow(srdb3)))
 
-p2 <- ggplot(filter(srdb, !is.na(AC_category)), aes(AC_category, CV)) + 
+p2 <- ggplot(srdb3, aes(AC_category, CV)) + 
   scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
   geom_violin() + geom_jitter() +
   xlab("Annual coverage (fraction)") + ylab("Interannual CV")
