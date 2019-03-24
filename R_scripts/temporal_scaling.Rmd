@@ -103,7 +103,7 @@ Survey data: `r nrow (licor_data)` observations.
 ggplot(licor_data, aes(Timestamp, Flux, group = Collar)) + 
   geom_point() + geom_line(color = "darkgrey") +
   facet_grid(~Dest_Elevation) +
-    ggtitle("B. Survey data")
+  ggtitle("B. Survey data")
 ```
 
 
@@ -116,6 +116,56 @@ Time scales we're looking at:
 * **Years**: What's the CV between successive years in the SRDB?
 
 ## Results
+
+### Drivers
+
+What drives changes in the flux at different timescales? Hourly:
+
+```{r, drivers-hourly, echo=FALSE}
+drivers <- function(df) {
+  m <- lme4::lmer(log(Flux) ~ T5 * SMoist + I(SMoist ^ 2) + (1 | Port), data = df)
+  print(summary(m))
+  print(plot(m))
+  print(piecewiseSEM::rsquared(m))
+  print(AIC(m))
+  car::Anova(m, type = "III")
+}
+
+drivers(cld_clean)
+```
+
+Daily:
+
+```{r, drivers-daily, echo=FALSE}
+cld_clean %>% 
+  group_by(year(Timestamp), yday(Timestamp), Port) %>% 
+  summarise(Flux = mean(Flux), T5 = mean(T5), SMoist = mean(SMoist), n = n()) %>% 
+  filter(n == 24) %>% 
+  drivers()
+```
+
+Weekly:
+
+```{r, drivers-weekly, echo=FALSE}
+cld_clean %>% 
+  group_by(year(Timestamp), week(Timestamp), Port) %>% 
+  summarise(Flux = mean(Flux, na.rm = TRUE), T5 = mean(T5, na.rm = TRUE), 
+            SMoist = mean(SMoist, na.rm = TRUE), n = n()) %>% 
+  filter(n > 7 * 24 / 2) %>% 
+  drivers()
+```
+
+Monthly:
+
+```{r, drivers-monthly, echo=FALSE}
+cld_clean %>% 
+  group_by(year(Timestamp), month(Timestamp), Port) %>% 
+  summarise(Flux = mean(Flux, na.rm = TRUE), T5 = mean(T5, na.rm = TRUE), 
+            SMoist = mean(SMoist, na.rm = TRUE), n = n()) %>% 
+  filter(n > 30 * 24 / 2)  %>% 
+  drivers()
+```
+
 
 ### Seconds to minutes: variability
 
@@ -220,36 +270,12 @@ save_plot("temporal_figures/Figure2-hourly_pacf.png", plot = last_plot())
 
 In the figure above, Rs values measured in successive hours at a given collar exhibit a strong correlation (`r round(pacf_df$PACF[1], 3)`), and a moderate one at a two-hour lag (`r round(pacf_df$PACF[2], 3)`). Day-to-day (24 hour lag) observations are essentially uncorrelated (`r round(pacf_df$PACF[24], 3)`).
 
-What's driving times of high CV, i.e. when Rs changes a lot hour to hour?
-
-```{r, hours-cv, echo=FALSE}
+```{r hourly-cv, echo=FALSE}
+# Histogram of CV values
 cld_cv <- bind_rows(cld_cv) %>% 
   filter(!is.na(CV))
 median_error_hours <- median(cld_cv$CV, na.rm = TRUE)
 
-# Plot CV as it relates to changes in T5 and soil moisture, and test effects
-xl <- c(-0.5, 1)
-yl <- c(-0.02, 0.02)
-cld_cv %>% 
-  filter(T5_diff < min(xl) | T5_diff > max(xl) | 
-           SMoist_diff < min(yl) | SMoist_diff > max(yl)) %>% 
-  nrow ->
-  excluded_count
-
-ggplot(cld_cv, aes(T5_diff, SMoist_diff, color = CV)) +
-  geom_point(alpha = I(0.5)) + 
-  coord_cartesian(xlim = xl, ylim = yl) +
-  geom_hline(yintercept = 0) + geom_vline(xintercept = 0) +
-  ggtitle(paste("F. Drivers of hourly CV, ", 
-                excluded_count, "of", nrow(cld_cv), "observations not shown"))
-
-summary(lm(CV ~ abs(T5_diff) * abs(SMoist_diff), data = cld_cv))
-```
-
-Large hour-to-hour CV was significantly associated with changes in soil moisture!
-
-```{r hourly-cv, echo=FALSE}
-# Histogram of CV values
 ggplot(cld_cv, aes(x = CV)) + geom_histogram(bins = 20) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
   geom_vline(xintercept = median_error_hours, color = "red") +
