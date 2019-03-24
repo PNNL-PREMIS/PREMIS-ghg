@@ -166,6 +166,15 @@ cld_clean %>%
   drivers()
 ```
 
+Survey:
+
+```{r, drivers-survey, echo=FALSE}
+licor_data %>%
+  select(Timestamp, Port = Destination_Plot, Flux, T5, SMoist = SMoisture) %>% 
+  drivers()
+```
+
+
 
 ### Seconds to minutes: variability
 
