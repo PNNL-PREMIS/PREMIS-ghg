@@ -193,6 +193,7 @@ ggplot(meas_error_1, aes(x = CV)) + geom_histogram(bins = 20) +
   geom_vline(xintercept = median_error_minutes, color = "red") +
   ylab("Count") + xlab("CV between successive IRGA measurements") +
   ggtitle(paste("C. Minute-scale CV, N =", nrow(meas_error_1)))
+summary(meas_error_1$CV)
 ```
 
 The median measurement error here is ~`r round(median_error_minutes * 100, 0)`% for `r nrow(meas_error_1)` observations of fluxes between `r round(min(meas_error_1$meanFlux), 2)` and `r round(max(meas_error_1$meanFlux), 2)` µmol/m2/s.
@@ -290,6 +291,7 @@ ggplot(cld_cv, aes(x = CV)) + geom_histogram(bins = 20) +
   geom_vline(xintercept = median_error_hours, color = "red") +
   ylab("Count") + xlab("CV between successive hourly measurements") +
   ggtitle(paste("G. Hourly CV, N =", nrow(cld_cv)))
+summary(cld_cv$CV)
 ```
 
 The median measurement error here is ~`r round(median_error_hours * 100, 0)`% for `r nrow(cld_cv)` observations of fluxes between `r round(min(cld_cv$Flux), 2)` and `r round(max(cld_cv$Flux), 2)` µmol/m2/s.
@@ -349,6 +351,7 @@ ggplot(cld_cv_daily, aes(x = CV)) + geom_histogram(bins = 20) +
   geom_vline(xintercept = median_error_hours, color = "red") +
   ylab("Count") + xlab("CV between successive daily measurements") +
   ggtitle(paste("I. Daily CV, N =", nrow(cld_cv_daily)))
+summary(cld_cv_daily$CV)
 ```
 
 The median measurement error here is ~`r round(median_error_days * 100, 0)`% for `r nrow(cld_cv_daily)` observations of fluxes between `r round(min(cld_cv_daily$Flux), 2)` and `r round(max(cld_cv_daily$Flux), 2)` µmol/m2/s.
@@ -434,7 +437,7 @@ ggplot(lmd_cv, aes(x = CV)) + geom_histogram(bins = 20) +
   geom_vline(xintercept = median_cv_months, color = "red") +
   ylab("Count") + xlab("CV between successive monthly measurements") +
   ggtitle(paste("L. Months CV, N =", nrow(lmd_cv)))
-
+summary(lmd_cv$CV)
 ```
 
 Median CV is `r round(median_cv_months * 100, 0)`%.
@@ -467,7 +470,10 @@ for(delta_fraction in c(0.05, 0.1, 0.25, 0.50)) {
       results_list[[paste(delta_fraction, power)]]
   }
 }
-bind_rows(results_list) %>% 
+results <- bind_rows(results_list)
+filter(results, power == 0.95, delta_percent == 50) %>% print
+
+results %>% 
   group_by(delta_percent, power) %>% 
   summarise(n_sd = sd(n), n = mean(n)) %>% 
   ungroup %>% 
@@ -520,6 +526,7 @@ ggplot(srdb1, aes(x = CV)) + geom_histogram(bins = 20) +
   geom_vline(xintercept = median_cv_annual, color = "red") +
   ylab("Count") + xlab("CV between successive years") +
   ggtitle(paste("N. Interannual CV, N =", nrow(srdb1)))
+summary(srdb1$CV)
 
 srdb2 <- filter(srdb, !is.na(MI_category))
 srdb3 <- filter(srdb, !is.na(AC_category))
