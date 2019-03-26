@@ -214,15 +214,15 @@ lds %>%
   gather(variable, value, mean_1, mean_2) ->
   lds_plot
 
-ggplot(lds_plot, aes(x = mean_gt_2, y = value, color = variable)) + 
+p <- ggplot(lds_plot, aes(x = mean_gt_2, y = value, color = variable)) + 
   geom_abline(slope = 1, intercept = 0) +
   geom_smooth(method = "lm", linetype = 2, se = FALSE) +
   geom_point() +
   scale_color_discrete("Samples", labels = c("1x", "2x")) +
   labs(x = expression(Mean~flux~of~all~("">=3)~measurements~(µmol~m^-2~s^-1)), 
-       y = expression(Mean~flux~(µmol~m^-2~s^-1))) +
-  ggtitle("D. Minute sampling")
-save_plot("temporal_figures/Figure1-sampling.png", plot = last_plot())
+       y = expression(Mean~flux~(µmol~m^-2~s^-1)))
+print(p + ggtitle("D. Minute sampling"))
+save_plot("temporal_figures/Figure1-sampling.png", plot = p)
 
 # Run Tukey HSD test
 lds %>% 
@@ -268,14 +268,14 @@ bind_rows(results) %>%
   group_by(lag) %>% 
   summarise(PACF_sd = sd(PACF), PACF = mean(PACF)) ->
   pacf_df
-ggplot(pacf_df, aes(lag, PACF)) + 
+p <- ggplot(pacf_df, aes(lag, PACF)) + 
   xlab("Lag (hours)") + geom_hline(yintercept = 0) +
   geom_point() + 
   geom_errorbar(aes(ymin = PACF - PACF_sd, ymax = PACF + PACF_sd)) + 
   geom_linerange(aes(ymin = 0, ymax = PACF), 
-                 color = "darkgrey", linetype = 2) +
-  ggtitle("E. Hourly PACF")
-save_plot("temporal_figures/Figure2-hourly_pacf.png", plot = last_plot())
+                 color = "darkgrey", linetype = 2)
+print(p + ggtitle("E. Hourly PACF"))
+save_plot("temporal_figures/Figure2-hourly_pacf.png", plot = p)
 ```
 
 In the figure above, Rs values measured in successive hours at a given collar exhibit a strong correlation (`r round(pacf_df$PACF[1], 3)`), and a moderate one at a two-hour lag (`r round(pacf_df$PACF[2], 3)`). Day-to-day (24 hour lag) observations are essentially uncorrelated (`r round(pacf_df$PACF[24], 3)`).
@@ -329,14 +329,14 @@ bind_rows(results) %>%
   group_by(lag) %>% 
   summarise(PACF_sd = sd(PACF), PACF = mean(PACF)) ->
   pacf_df
-ggplot(pacf_df, aes(lag, PACF)) + 
+p <- ggplot(pacf_df, aes(lag, PACF)) + 
   xlab("Lag (days)") + geom_hline(yintercept = 0) +
   geom_point() + 
   geom_errorbar(aes(ymin = PACF - PACF_sd, ymax = PACF + PACF_sd)) + 
   geom_linerange(aes(ymin = 0, ymax = PACF), 
-                 color = "darkgrey", linetype = 2) +
-  ggtitle("H. Daily PACF")
-save_plot("temporal_figures/Figure4-daily_pacf.png", plot = last_plot())
+                 color = "darkgrey", linetype = 2)
+print(p + ggtitle("H. Daily PACF"))
+save_plot("temporal_figures/Figure4-daily_pacf.png", plot = p)
 ```
 
 In the figure above, Rs values measured in successive days at a given collar exhibit a strong correlation (`r round(pacf_df$PACF[1], 3)`), but no correlation after that.
@@ -380,6 +380,8 @@ cld_clean %>%
   ungroup ->
   cld_24hr
 
+seasons <- c("DJF", "DJF", "MAM", "MAM", "MAM", "JJA", "JJA", "JJA", "SON", "SON", "SON", "DJF")
+
 cld_24hr %>% 
   mutate(Month = month(Timestamp)) %>% 
   group_by(Year, Month, Hour) %>% 
@@ -388,13 +390,16 @@ cld_24hr %>%
             Diff_24hr_rel = mean(Diff_24hr_rel)) ->
   cld_24hr_errors
 
-ggplot(cld_24hr_errors, aes(Hour, Diff_24hr_rel, group = Month, color = Month)) +
+cld_24hr_errors$Season <- seasons[cld_24hr_errors$Month]
+
+p <- ggplot(cld_24hr_errors, 
+            aes(Hour, Diff_24hr_rel, group = Month, color = Season)) +
   geom_hline(yintercept = 0, linetype = 2) +
   geom_line() +
   ylab("Difference from 24-hour mean flux") + 
-  ggtitle("J. Best time of day") +
   scale_y_continuous(labels = scales::percent_format(accuracy = 1))
-save_plot("temporal_figures/Figure3-time_of_day.png", plot = last_plot())
+print(p + ggtitle("J. Best time of day"))
+save_plot("temporal_figures/Figure3-time_of_day.png", plot = p)
 ```
 
 
@@ -533,17 +538,19 @@ srdb3 <- filter(srdb, !is.na(AC_category))
 p1 <- ggplot(srdb2, aes(MI_category, CV)) + 
   scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
   geom_violin() + geom_jitter() +
-  xlab("Measurement interval (days)") + ylab("Interannual CV") +
-  ggtitle(paste("O. Effect of m. interval and annual coverage, N =", nrow(srdb2), nrow(srdb3)))
+  xlab("Measurement interval (days)") + ylab("Interannual CV")
+p1title <- paste("O. Effect of m. interval and annual coverage, N =",
+                        nrow(srdb2), nrow(srdb3))
 
 p2 <- ggplot(srdb3, aes(AC_category, CV)) + 
   scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
   geom_violin() + geom_jitter() +
   xlab("Annual coverage (fraction)") + ylab("Interannual CV")
 
-p <- cowplot::plot_grid(p1, p2, nrow = 2)
-print(p)
-save_plot("temporal_figures/Figure5-annual_effect.png", plot = p)
+print(cowplot::plot_grid(p1 + ggtitle(p1title), p2, nrow = 2))
+
+save_plot("temporal_figures/Figure5-annual_effect.png", 
+          plot = cowplot::plot_grid(p1, p2, nrow = 2))
 
 fligner.test(srdb$CV, srdb$MI_category)
 fligner.test(srdb$CV, srdb$AC_category)
@@ -579,7 +586,7 @@ distributions <- bind_rows(tibble(Labels = "1 minute", CV = meas_error_1$CV),
 
 distributions$Seconds <- timescales[distributions$Labels]
 
-ggplot(smry, aes(Seconds, CV, label = Labels, group = Labels)) +
+p <- ggplot(smry, aes(Seconds, CV, label = Labels, group = Labels)) +
   geom_violin(data = distributions, fill = NA, 
               draw_quantiles = c(0.9, 0.95), color = "darkgrey") +
   geom_point() + 
@@ -590,9 +597,9 @@ ggplot(smry, aes(Seconds, CV, label = Labels, group = Labels)) +
   ) +
   coord_cartesian(ylim = c(0, 1)) +
   scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-  xlab("Timescale (seconds)") + ylab("CV") +
-  ggtitle("P. Summary")
-save_plot("temporal_figures/Figure6-summary.png", plot = last_plot())
+  xlab("Timescale (seconds)") + ylab("CV")
+print(p + ggtitle("P. Summary"))
+save_plot("temporal_figures/Figure6-summary.png", plot = p)
 
 fligner.test(distributions$CV, factor(distributions$Labels))
 ```
