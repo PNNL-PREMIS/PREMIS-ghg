@@ -17,6 +17,7 @@ output: html_document
 * "First, understanding how Rs temperature and moisture sensitivities vary in time and space (Hursh et al., 2017; Liu et al., 2016; T. Zhou et al., 2009), and the degree to which “hot spots” and “hot moments” in space and time (Leon et al., 2014) might affect our sampling priorities at scales from the collar to international network (Bond-Lamberty et al., 2016)." from my 2018 commentary
 * Interannual variation Savage and Davidson (2001)
 * Carbon fluxes more generally: Dennis new paper https://www.sciencedirect.com/science/article/pii/S0168192317301806. Also Markus paper on extremes in Nature 2013; Borken 2002
+* Jinshi's paper
 
 To examine variability and sampling requirements at a variety of temporal scales, we combined (i) hourly, continuous measurements made by an 8-chamber IRGA over six months, (ii) survey measurements made every ~10 days over a year at the same site, and (iii) data on annual fluxes from the SRDB. 
 
@@ -28,10 +29,11 @@ library(readr)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
-theme_set(theme_bw())
 library(lubridate)
 library(kableExtra)
 library(lattice)
+library(cowplot)  # 0.9.4
+theme_set(theme_bw())
 
 readd("licor_data") %>% 
   filter(Group == "Control") %>% 
@@ -101,7 +103,7 @@ Survey data: `r nrow (licor_data)` observations.
 ggplot(licor_data, aes(Timestamp, Flux, group = Collar)) + 
   geom_point() + geom_line(color = "darkgrey") +
   facet_grid(~Dest_Elevation) +
-    ggtitle("B. Survey data")
+  ggtitle("B. Survey data")
 ```
 
 
@@ -114,6 +116,65 @@ Time scales we're looking at:
 * **Years**: What's the CV between successive years in the SRDB?
 
 ## Results
+
+### Drivers
+
+What drives changes in the flux at different timescales? Hourly:
+
+```{r, drivers-hourly, echo=FALSE}
+drivers <- function(df) {
+  m <- lme4::lmer(log(Flux) ~ T5 * SMoist + I(SMoist ^ 2) + (1 | Port), data = df)
+  print(summary(m))
+  print(plot(m))
+  print(piecewiseSEM::rsquared(m))
+  print(AIC(m))
+  car::Anova(m, type = "III")
+}
+
+drivers(cld_clean)
+```
+
+Daily:
+
+```{r, drivers-daily, echo=FALSE}
+cld_clean %>% 
+  group_by(year(Timestamp), yday(Timestamp), Port) %>% 
+  summarise(Flux = mean(Flux), T5 = mean(T5), SMoist = mean(SMoist), n = n()) %>% 
+  filter(n == 24) %>% 
+  drivers()
+```
+
+Weekly:
+
+```{r, drivers-weekly, echo=FALSE}
+cld_clean %>% 
+  group_by(year(Timestamp), week(Timestamp), Port) %>% 
+  summarise(Flux = mean(Flux, na.rm = TRUE), T5 = mean(T5, na.rm = TRUE), 
+            SMoist = mean(SMoist, na.rm = TRUE), n = n()) %>% 
+  filter(n > 7 * 24 / 2) %>% 
+  drivers()
+```
+
+Monthly:
+
+```{r, drivers-monthly, echo=FALSE}
+cld_clean %>% 
+  group_by(year(Timestamp), month(Timestamp), Port) %>% 
+  summarise(Flux = mean(Flux, na.rm = TRUE), T5 = mean(T5, na.rm = TRUE), 
+            SMoist = mean(SMoist, na.rm = TRUE), n = n()) %>% 
+  filter(n > 30 * 24 / 2)  %>% 
+  drivers()
+```
+
+Survey:
+
+```{r, drivers-survey, echo=FALSE}
+licor_data %>%
+  select(Timestamp, Port = Destination_Plot, Flux, T5, SMoist = SMoisture) %>% 
+  drivers()
+```
+
+
 
 ### Seconds to minutes: variability
 
@@ -132,6 +193,7 @@ ggplot(meas_error_1, aes(x = CV)) + geom_histogram(bins = 20) +
   geom_vline(xintercept = median_error_minutes, color = "red") +
   ylab("Count") + xlab("CV between successive IRGA measurements") +
   ggtitle(paste("C. Minute-scale CV, N =", nrow(meas_error_1)))
+summary(meas_error_1$CV)
 ```
 
 The median measurement error here is ~`r round(median_error_minutes * 100, 0)`% for `r nrow(meas_error_1)` observations of fluxes between `r round(min(meas_error_1$meanFlux), 2)` and `r round(max(meas_error_1$meanFlux), 2)` µmol/m2/s.
@@ -152,17 +214,21 @@ lds %>%
   gather(variable, value, mean_1, mean_2) ->
   lds_plot
 
-ggplot(lds_plot, aes(x = mean_gt_2, y = value, color = variable)) + 
+p <- ggplot(lds_plot, aes(x = mean_gt_2, y = value, color = variable)) + 
   geom_abline(slope = 1, intercept = 0) +
-  geom_smooth(method = "lm", linetype = 2) +
-  geom_point() + 
-  labs(x = "Mean flux of all (>=3) measurements", 
-       y = "Mean flux of first 1 or 2 measurements") +
-  ggtitle("D. Minute sampling")
+  geom_smooth(method = "lm", linetype = 2, se = FALSE) +
+  geom_point() +
+  scale_color_discrete("Samples", labels = c("1x", "2x")) +
+  labs(x = expression(Mean~flux~of~all~("">=3)~measurements~(µmol~m^-2~s^-1)), 
+       y = expression(Mean~flux~(µmol~m^-2~s^-1)))
+print(p + ggtitle("D. Minute sampling"))
+save_plot("temporal_figures/Figure1-sampling.png", plot = p)
 
+# Run Tukey HSD test
 lds %>% 
   gather(variable, value, mean_gt_2, mean_1, mean_2) %>% 
-  mutate(variable = factor(variable, levels = c("mean_gt_2", "mean_2", "mean_1"))) ->
+  mutate(variable = factor(variable, 
+                           levels = c("mean_gt_2", "mean_2", "mean_1"))) ->
   lds_stats
 m <- lm(value ~ variable, data = lds_stats)
 summary(m)
@@ -202,52 +268,30 @@ bind_rows(results) %>%
   group_by(lag) %>% 
   summarise(PACF_sd = sd(PACF), PACF = mean(PACF)) ->
   pacf_df
-ggplot(pacf_df, aes(lag, PACF)) + 
+p <- ggplot(pacf_df, aes(lag, PACF)) + 
   xlab("Lag (hours)") + geom_hline(yintercept = 0) +
   geom_point() + 
   geom_errorbar(aes(ymin = PACF - PACF_sd, ymax = PACF + PACF_sd)) + 
   geom_linerange(aes(ymin = 0, ymax = PACF), 
-                 color = "darkgrey", linetype = 2) +
-  ggtitle("E. Hourly PACF")
+                 color = "darkgrey", linetype = 2)
+print(p + ggtitle("E. Hourly PACF"))
+save_plot("temporal_figures/Figure2-hourly_pacf.png", plot = p)
 ```
 
 In the figure above, Rs values measured in successive hours at a given collar exhibit a strong correlation (`r round(pacf_df$PACF[1], 3)`), and a moderate one at a two-hour lag (`r round(pacf_df$PACF[2], 3)`). Day-to-day (24 hour lag) observations are essentially uncorrelated (`r round(pacf_df$PACF[24], 3)`).
 
-What's driving times of high CV, i.e. when Rs changes a lot hour to hour?
-
-```{r, hours-cv, echo=FALSE}
+```{r hourly-cv, echo=FALSE}
+# Histogram of CV values
 cld_cv <- bind_rows(cld_cv) %>% 
   filter(!is.na(CV))
 median_error_hours <- median(cld_cv$CV, na.rm = TRUE)
 
-# Plot CV as it relates to changes in T5 and soil moisture, and test effects
-xl <- c(-0.5, 1)
-yl <- c(-0.02, 0.02)
-cld_cv %>% 
-  filter(T5_diff < min(xl) | T5_diff > max(xl) | 
-           SMoist_diff < min(yl) | SMoist_diff > max(yl)) %>% 
-  nrow ->
-  excluded_count
-
-ggplot(cld_cv, aes(T5_diff, SMoist_diff, color = CV)) +
-  geom_point(alpha = I(0.5)) + 
-  coord_cartesian(xlim = xl, ylim = yl) +
-  geom_hline(yintercept = 0) + geom_vline(xintercept = 0) +
-  ggtitle(paste("F. Drivers of hourly CV, ", 
-                excluded_count, "of", nrow(cld_cv), "observations not shown"))
-
-summary(lm(CV ~ abs(T5_diff) * abs(SMoist_diff), data = cld_cv))
-```
-
-Large hour-to-hour CV was significantly associated with changes in soil moisture!
-
-```{r hourly-cv, echo=FALSE}
-# Histogram of CV values
 ggplot(cld_cv, aes(x = CV)) + geom_histogram(bins = 20) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
   geom_vline(xintercept = median_error_hours, color = "red") +
   ylab("Count") + xlab("CV between successive hourly measurements") +
   ggtitle(paste("G. Hourly CV, N =", nrow(cld_cv)))
+summary(cld_cv$CV)
 ```
 
 The median measurement error here is ~`r round(median_error_hours * 100, 0)`% for `r nrow(cld_cv)` observations of fluxes between `r round(min(cld_cv$Flux), 2)` and `r round(max(cld_cv$Flux), 2)` µmol/m2/s.
@@ -285,13 +329,14 @@ bind_rows(results) %>%
   group_by(lag) %>% 
   summarise(PACF_sd = sd(PACF), PACF = mean(PACF)) ->
   pacf_df
-ggplot(pacf_df, aes(lag, PACF)) + 
+p <- ggplot(pacf_df, aes(lag, PACF)) + 
   xlab("Lag (days)") + geom_hline(yintercept = 0) +
   geom_point() + 
   geom_errorbar(aes(ymin = PACF - PACF_sd, ymax = PACF + PACF_sd)) + 
   geom_linerange(aes(ymin = 0, ymax = PACF), 
-                 color = "darkgrey", linetype = 2) +
-  ggtitle("H. Daily PACF")
+                 color = "darkgrey", linetype = 2)
+print(p + ggtitle("H. Daily PACF"))
+save_plot("temporal_figures/Figure4-daily_pacf.png", plot = p)
 ```
 
 In the figure above, Rs values measured in successive days at a given collar exhibit a strong correlation (`r round(pacf_df$PACF[1], 3)`), but no correlation after that.
@@ -306,6 +351,7 @@ ggplot(cld_cv_daily, aes(x = CV)) + geom_histogram(bins = 20) +
   geom_vline(xintercept = median_error_hours, color = "red") +
   ylab("Count") + xlab("CV between successive daily measurements") +
   ggtitle(paste("I. Daily CV, N =", nrow(cld_cv_daily)))
+summary(cld_cv_daily$CV)
 ```
 
 The median measurement error here is ~`r round(median_error_days * 100, 0)`% for `r nrow(cld_cv_daily)` observations of fluxes between `r round(min(cld_cv_daily$Flux), 2)` and `r round(max(cld_cv_daily$Flux), 2)` µmol/m2/s.
@@ -334,6 +380,8 @@ cld_clean %>%
   ungroup ->
   cld_24hr
 
+seasons <- c("DJF", "DJF", "MAM", "MAM", "MAM", "JJA", "JJA", "JJA", "SON", "SON", "SON", "DJF")
+
 cld_24hr %>% 
   mutate(Month = month(Timestamp)) %>% 
   group_by(Year, Month, Hour) %>% 
@@ -342,12 +390,16 @@ cld_24hr %>%
             Diff_24hr_rel = mean(Diff_24hr_rel)) ->
   cld_24hr_errors
 
-ggplot(cld_24hr_errors, aes(Hour, Diff_24hr_rel, group = Month, color = Month)) +
+cld_24hr_errors$Season <- seasons[cld_24hr_errors$Month]
+
+p <- ggplot(cld_24hr_errors, 
+            aes(Hour, Diff_24hr_rel, group = Month, color = Season)) +
   geom_hline(yintercept = 0, linetype = 2) +
   geom_line() +
   ylab("Difference from 24-hour mean flux") + 
-  ggtitle("J. Best time of day") +
-  scale_y_continuous(labels = scales::percent)
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1))
+print(p + ggtitle("J. Best time of day"))
+save_plot("temporal_figures/Figure3-time_of_day.png", plot = p)
 ```
 
 
@@ -390,7 +442,7 @@ ggplot(lmd_cv, aes(x = CV)) + geom_histogram(bins = 20) +
   geom_vline(xintercept = median_cv_months, color = "red") +
   ylab("Count") + xlab("CV between successive monthly measurements") +
   ggtitle(paste("L. Months CV, N =", nrow(lmd_cv)))
-
+summary(lmd_cv$CV)
 ```
 
 Median CV is `r round(median_cv_months * 100, 0)`%.
@@ -409,60 +461,53 @@ sample_n <- function(flux, delta, power) {
 }
 
 results_list <- list()
-for(delta in c(0.25, 0.50, 0.75, 1)) {
-  for(power in seq(0.05, 0.9, by = 0.05)) {
+for(delta_fraction in c(0.05, 0.1, 0.25, 0.50)) {
+  for(power in seq(0.05, 0.95, by = 0.05)) {
     cld_clean %>%
       # pick the only continuous month we have currently
       filter(Timestamp >= "2018-12-15", Timestamp < "2019-01-15",
              !is.na(Flux)) %>% 
       group_by(Port) %>%    # no year,month
-      summarise(n = sample_n(Flux, delta, power)) %>% 
-      mutate(delta = delta, power = power) ->
-      results_list[[paste(delta, power)]]
+      summarise(n = sample_n(Flux, 
+                             delta = delta_fraction * mean(Flux), 
+                             power)) %>% 
+      mutate(delta_percent = delta_fraction * 100, power = power) ->
+      results_list[[paste(delta_fraction, power)]]
   }
 }
-bind_rows(results_list) %>% 
-  group_by(delta, power) %>% 
+results <- bind_rows(results_list)
+filter(results, power == 0.95, delta_percent == 50) %>% print
+
+results %>% 
+  group_by(delta_percent, power) %>% 
   summarise(n_sd = sd(n), n = mean(n)) %>% 
   ungroup %>% 
-  mutate(delta_fac = as.factor(delta)) %>% 
+  mutate(delta_percent = factor(paste0(delta_percent, "%"),
+                                levels = c("5%", "10%", "25%", "50%"))) %>% 
   filter(!is.na(n)) -> 
   results
 
-ggplot(results, aes(power, n, color = factor(delta), group = delta)) +
+ggplot(results, aes(power, n, color = delta_percent, group = delta_percent)) +
   geom_line() + 
-  geom_ribbon(aes(ymin = n - n_sd, ymax = n + n_sd, fill = factor(delta)),
+  geom_ribbon(aes(ymin = n - n_sd, ymax = n + n_sd, fill = delta_percent),
               alpha = 0.25, color = NA) +
   scale_color_discrete("Delta") +
+  coord_cartesian(ylim = c(0, 500)) +
   xlab(expression(Power~(beta))) + ylab("N required") +
   guides(fill = FALSE) +
   ggtitle("M. Power analysis")
-
-table_power <- 0.75
 ```
 
-A table of required sample sizes to estimate monthly means for various delta (tolerance) values, assuming beta = `r table_power`:
+In table form:
 
 ```{r power-table, echo=FALSE}
-
 # A small table
-results_list <- list()
-for(delta in c(0.25, 0.50, 0.75, 1)) {
-  for(m in unique(month(cld_clean$Timestamp))) {
-    cld_clean %>%
-      filter(month(Timestamp) == m,
-             !is.na(Flux)) %>% 
-      group_by(Port) %>%    # no year,month
-      summarise(n = sample_n(Flux, delta, power = table_power)) %>% 
-      mutate(delta = delta, Month = m) ->
-      results_list[[paste(m, delta)]]
-  }
-}
-bind_rows(results_list) %>% 
-  group_by(Month, delta) %>% 
-  summarise(entry = paste(round(mean(n), 1), "±", round(sd(n), 1))) %>% 
+results %>%
+  filter(power >= 0.5) %>% 
+  group_by(power, delta_percent) %>% 
+  summarise(entry = paste(round(n, 1), "±", round(n_sd, 1))) %>% 
   ungroup %>% 
-  spread(delta, entry) %>% 
+  spread(delta_percent, entry) %>% 
   kableExtra::kable(format = "markdown")
 ```
 
@@ -471,16 +516,46 @@ bind_rows(results_list) %>%
 
 ```{r srdb, echo=FALSE}
 readd("srdb") %>% 
-  mutate(CV = Rs_interann_err / Rs_annual) %>%
-  filter(Leaf_habit == "Deciduous", Ecosystem_type == "Forest", !is.na(CV)) ->
+  mutate(CV = Rs_interann_err / Rs_annual) %>% 
+  filter(Leaf_habit == "Deciduous", Ecosystem_type == "Forest", Manipulation == "None", !is.na(CV)) %>% 
+  select(Record_number, Study_number, Rs_annual, Rs_interann_err, CV, 
+         Annual_coverage, Meas_interval) %>% 
+  mutate(AC_category = cut(Annual_coverage, breaks = c(0, 0.9, 1)),
+         MI_category = cut(Meas_interval, breaks = c(0, 1, 10, 30, 60))) ->
   srdb
 median_cv_annual <- median(srdb$CV, na.rm = TRUE)
 
-ggplot(srdb, aes(x = CV)) + geom_histogram(bins = 20) +
+srdb1 <- filter(srdb, !is.na(CV))
+ggplot(srdb1, aes(x = CV)) + geom_histogram(bins = 20) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
   geom_vline(xintercept = median_cv_annual, color = "red") +
   ylab("Count") + xlab("CV between successive years") +
-  ggtitle(paste("N. Interannual CV, N =", nrow(srdb)))
+  ggtitle(paste("N. Interannual CV, N =", nrow(srdb1)))
+summary(srdb1$CV)
+
+srdb2 <- filter(srdb, !is.na(MI_category))
+srdb3 <- filter(srdb, !is.na(AC_category))
+p1 <- ggplot(srdb2, aes(MI_category, CV)) + 
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  geom_violin() + geom_jitter() +
+  xlab("Measurement interval (days)") + ylab("Interannual CV")
+p1title <- paste("O. Effect of m. interval and annual coverage, N =",
+                        nrow(srdb2), nrow(srdb3))
+
+p2 <- ggplot(srdb3, aes(AC_category, CV)) + 
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  geom_violin() + geom_jitter() +
+  xlab("Annual coverage (fraction)") + ylab("Interannual CV")
+
+print(cowplot::plot_grid(p1 + ggtitle(p1title), p2, nrow = 2))
+
+save_plot("temporal_figures/Figure5-annual_effect.png", 
+          plot = cowplot::plot_grid(p1, p2, nrow = 2))
+
+fligner.test(srdb$CV, srdb$MI_category)
+fligner.test(srdb$CV, srdb$AC_category)
+
+summary(srdb$CV)
 ```
 
 Median CV here is `r round(median_cv_annual * 100, 0)`%.
@@ -490,8 +565,8 @@ Median CV here is `r round(median_cv_annual * 100, 0)`%.
 
 ```{r summary-graph, echo=FALSE}
 spd <- 24 * 60 * 60
-timescales <- c("1 minute" = 60,
-                "1 hour" = 60 * 60,
+timescales <- c("1 minute" = spd / 24/ 60,
+                "1 hour" = spd / 24,
                 "1 day" = spd,
                 "1 month" = spd * 30,
                 "1 year" = spd * 365)
@@ -511,7 +586,7 @@ distributions <- bind_rows(tibble(Labels = "1 minute", CV = meas_error_1$CV),
 
 distributions$Seconds <- timescales[distributions$Labels]
 
-ggplot(smry, aes(Seconds, CV, label = Labels, group = Labels)) +
+p <- ggplot(smry, aes(Seconds, CV, label = Labels, group = Labels)) +
   geom_violin(data = distributions, fill = NA, 
               draw_quantiles = c(0.9, 0.95), color = "darkgrey") +
   geom_point() + 
@@ -521,16 +596,18 @@ ggplot(smry, aes(Seconds, CV, label = Labels, group = Labels)) +
     labels = scales::trans_format("log10", scales::math_format(10 ^ .x))
   ) +
   coord_cartesian(ylim = c(0, 1)) +
-  xlab("Timescale (seconds)") + ylab("N required") +
-  ggtitle("O. Summary")
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  xlab("Timescale (seconds)") + ylab("CV")
+print(p + ggtitle("P. Summary"))
+save_plot("temporal_figures/Figure6-summary.png", plot = p)
+
+fligner.test(distributions$CV, factor(distributions$Labels))
 ```
 
 ## TODO LIST
 
 * The what's driving hour-to-hour CV analysis needs work; maybe remove entirely, and just report what drives the flux itself. Seems clearer
-* Remove snowstorm day
 * Investigate/remove screwy survey collar
-* Include? - How much coverage is needed for robust annual estimate? Use `Annual_coverage` field of SRDB
 * Could do a real Monte Carlo sampling exercise...i.e. looking for most effective ways to reduce error. Not sure there's enough data for this though.
 
 ```{r msmt-gaps, echo=FALSE}
@@ -539,3 +616,8 @@ licor_data %>%
   summarize(Timestamp = mean(Timestamp), n = n()) %>% 
   summarise(Timestamp = mean(Timestamp), n_sd = sd(n), n = mean(n))
 ```
+
+```{r, echo=FALSE}
+sessionInfo()
+```
+
