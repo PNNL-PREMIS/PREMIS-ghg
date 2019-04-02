@@ -219,7 +219,7 @@ power of the test, and the allowable delta (fraction difference from the true me
 ```{r power, echo=FALSE}
 results_list <- list()
 for(delta_fraction in c(0.05, 0.10, 0.25, 0.5)) {
-  for(power in seq(0.1, 0.9, by = 0.1)) {
+  for(power in c(seq(0.1, 0.9, by = 0.1), 0.95)) {
     licor_daily_data %>%
       filter(!is.na(meanFlux)) %>% 
       group_by(Dest_Salinity, Dest_Elevation) %>%
