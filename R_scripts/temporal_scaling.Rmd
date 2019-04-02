@@ -447,17 +447,14 @@ summary(lmd_cv$CV)
 
 Median CV is `r round(median_cv_months * 100, 0)`%.
 
-How often do we need to sample to get good monthly number? (Use hourly data.) We use the Student's t statistics and R's `power.t.test()` function to calculate this based on the standard deviation of hourly Rs, the desired power of the test, and the allowable delta (difference from the true mean value).
+How often do we need to sample to get good monthly number? (Use hourly data.) We use the Student's t statistic to calculate this based on the standard deviation of hourly Rs, the desired power of the test, and the allowable delta (difference from the true mean value).
 
 ```{r sample-size, echo=FALSE}
-# Helper function
+# Helper function to calculate sample size
+# flux is a vector of fluxes; delta a fraction 0-1; power = 1-beta, also 0-1
+# This follows Davidson et al. (2002)
 sample_n <- function(flux, delta, power) {
-  suppressWarnings({
-    out <- try(power.t.test(delta = delta, sd = sd(flux), power = power,
-                            sig.level = 0.05, type = "one.sample",
-                            alternative = "two.sided"), silent = TRUE)
-  })
-  if(class(out) == "try-error") { NA } else { out$n }
+  (qt(1 - (1 - power) / 2, df = length(flux) - 1) * sd(flux) / (mean(flux) * delta)) ^ 2
 }
 
 results_list <- list()
@@ -468,9 +465,7 @@ for(delta_fraction in c(0.05, 0.1, 0.25, 0.50)) {
       filter(Timestamp >= "2018-12-15", Timestamp < "2019-01-15",
              !is.na(Flux)) %>% 
       group_by(Port) %>%    # no year,month
-      summarise(n = sample_n(Flux, 
-                             delta = delta_fraction * mean(Flux), 
-                             power)) %>% 
+      summarise(n = sample_n(na.omit(Flux), delta = delta_fraction, power)) %>% 
       mutate(delta_percent = delta_fraction * 100, power = power) ->
       results_list[[paste(delta_fraction, power)]]
   }
@@ -480,7 +475,7 @@ filter(results, power == 0.95, delta_percent == 50) %>% print
 
 results %>% 
   group_by(delta_percent, power) %>% 
-  summarise(n_sd = sd(n), n = mean(n)) %>% 
+  summarise(n_sd = ceiling(sd(n)), n = ceiling(mean(n))) %>% 
   ungroup %>% 
   mutate(delta_percent = factor(paste0(delta_percent, "%"),
                                 levels = c("5%", "10%", "25%", "50%"))) %>% 
