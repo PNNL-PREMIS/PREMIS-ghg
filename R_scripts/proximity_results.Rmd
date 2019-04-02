@@ -90,29 +90,21 @@ model_stats <- function(mods, dat) {
   plot(m_reduced)
 }
 
-# Power calculation
+# Helper function to calculate sample size
+# flux is a vector of fluxes; delta a fraction 0-1; power = 1-beta, also 0-1
+# This follows Davidson et al. (2002)
 sample_n <- function(flux, delta, power) {
-  suppressWarnings({
-    out <- try(power.t.test(delta = delta, sd = sd(flux), power = power,
-                            sig.level = 0.05, type = "one.sample",
-                            alternative = "two.sided"), silent = TRUE)
-  })
-  if(class(out) == "try-error") {
-    NA
-  } else {
-    out$n
-  }
+  (qt(1 - (1 - power) / 2, df = length(flux) - 1) * sd(flux) / (mean(flux) * delta)) ^ 2
 }
 ```
 
 
 ```{r setup, echo = FALSE}
-
 tree_data <- readd("tree_data")
 prox_data <- readd("prox_data")
 
 prox_data %>%
-  select(-Date) %>% 
+  select(-Date) %>%
   left_join(tree_data, by = c("Site", "Plot", "Tag"), na_matches = "never") %>%
   # Replace DBH with recorded value for non-tagged trees
   mutate(DBH_cm = if_else(is.na(Tag), No_tag_DBH, DBH_cm),
@@ -221,23 +213,24 @@ licor_daily_data %>%
 
 ## Power calculation
 
-Use the R's `power.t.test()` function to calculate sampling requirements based on the standard deviation of Rs, the desired power of the test, and the allowable delta (difference from the true mean value):
+Calculate sampling requirements based on the standard deviation of Rs, the desired 
+power of the test, and the allowable delta (fraction difference from the true mean value):
 
 ```{r power, echo=FALSE}
 results_list <- list()
-for(delta in c(0.25, 0.50, 0.75, 1)) {
+for(delta_fraction in c(0.05, 0.10, 0.25, 0.5)) {
   for(power in seq(0.1, 0.9, by = 0.1)) {
     licor_daily_data %>%
       filter(!is.na(meanFlux)) %>% 
       group_by(Dest_Salinity, Dest_Elevation) %>%
-      summarise(n = sample_n(meanFlux, delta, power)) %>% 
-      mutate(delta = delta, power = power) ->
-      results_list[[paste(delta, power)]]
+      summarise(n = sample_n(meanFlux, delta = delta_fraction, power = power)) %>% 
+      mutate(delta = delta_fraction, power = power) ->
+      results_list[[paste(delta_fraction, power)]]
   }
 }
 bind_rows(results_list) %>% 
   group_by(delta, power) %>% 
-  summarise(n_sd = sd(n), n = mean(n)) %>% 
+  summarise(n_sd = ceiling(sd(n)), n = ceiling(mean(n))) %>% 
   ungroup %>% 
   mutate(delta_fac = as.factor(delta)) %>% 
   filter(!is.na(n)) -> 
