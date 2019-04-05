@@ -1,0 +1,129 @@
+---
+title: "q10"
+author: "BBL"
+date: "4/5/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(drake)
+knitr::opts_chunk$set(echo = FALSE)
+library(broom)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(lubridate)
+library(kableExtra)
+library(lattice)
+library(cowplot)  # 0.9.4
+theme_set(theme_bw())
+
+readd("con_licor_data") %>% 
+  # Filter for when system was in SALT plot (previously was testing)
+  filter(Timestamp >= "2018-10-01") %>% 
+  arrange(Timestamp, Port) ->
+  cld
+```
+
+## Methods
+
+```{r filtering}
+cld %>% 
+  filter(Flux > 0,  # definitely a problem!
+         R2 > 0.75  # probably a chamber closing problem otherwise
+         # TODO: remove snowstorm day
+  ) ->
+  cld_clean
+removed <- nrow(cld) - nrow(cld_clean)
+
+calculate_q10 <- function(temp, flux, r10_default = 1.0, q10_default = 2.0) {
+  # R = a exp(bT)
+  #m <- try(nls(flux ~ a * exp(b * temp), start = list(a = 1, b = 0.5)))
+  # R = R10 + Q10 ^ (T - 10)/10
+  m <- try(nls(flux ~ r10 + q10 ^ (temp - 10) / 10, 
+               start = list(r10 = r10_default, q10 = q10_default)), silent = TRUE)
+  if(class(m) == "try-error") {
+    NULL   
+  } else {
+    m
+  }
+}
+```
+
+Continuous data: `r nrow (cld)` observations; `r removed` (`r round(removed / nrow(cld) * 100, 0)`%) removed because of chamber closure or other problems.
+
+## Daily Q10 and R10
+
+```{r daily-fit}
+cld_clean %>% 
+  group_by(Year = year(Timestamp), Yday = yday(Timestamp), Port) %>% 
+  mutate(Timestamp = mean(Timestamp)) %>% 
+  ungroup %>% 
+  group_by(Timestamp, Year, Yday, Port) %>% 
+  do(tidy(calculate_q10(.$Tcham, .$Flux))) ->
+  q10_results
+
+cld_clean %>% 
+  group_by(Year = year(Timestamp), Yday = yday(Timestamp), Port) %>% 
+  summarise(SMoist = mean(SMoist),
+            T5 = mean(T5)) %>% 
+  left_join(q10_results, by = c("Year", "Yday", "Port")) %>% 
+  filter(estimate < 10) ->
+  q10_results_clean_daily
+
+mainplots <- function(q10_results_clean, timescale) {
+  p1 <- ggplot(q10_results_clean, aes(Timestamp, estimate, color = Port)) + 
+    geom_point() + 
+    facet_wrap(~term) +
+    ggtitle(timescale)
+  print(p1)
+  
+  p3 <- ggplot(q10_results_clean, aes(x = estimate, group = Port)) + 
+    geom_density() + 
+    facet_wrap(~term) +
+    ggtitle(timescale)
+  print(p3)
+  
+  p4 <- ggplot(q10_results_clean, aes(SMoist, estimate)) +
+    geom_point() + facet_wrap(~term) +
+    ggtitle(timescale)
+  print(p4)
+  
+  p5 <- ggplot(q10_results_clean, aes(T5, estimate)) +
+    geom_point() + facet_wrap(~term) +
+    ggtitle(timescale)
+  print(p5)
+}
+mainplots(q10_results_clean_daily, "daily")
+```
+
+## Monthly Q10 and R10
+
+```{r monthly-fit}
+cld_clean %>% 
+  group_by(Year = year(Timestamp), Month = month(Timestamp), Port) %>% 
+  mutate(Timestamp = mean(Timestamp)) %>% 
+  ungroup %>% 
+  group_by(Timestamp, Year, Month, Port) %>% 
+  do(tidy(calculate_q10(.$Tcham, .$Flux))) ->
+  q10_results
+
+cld_clean %>% 
+  group_by(Year = year(Timestamp), Month = month(Timestamp), Port) %>% 
+  summarise(SMoist = mean(SMoist),
+            T5 = mean(T5)) %>% 
+  left_join(q10_results, by = c("Year", "Month", "Port")) %>% 
+  filter(estimate < 10) ->
+  q10_results_clean_monthly
+
+mainplots(q10_results_clean_monthly, "monthly")
+```
+
+
+## Overall
+
+```{r overall}
+m <- calculate_q10(cld_clean$T5, cld_clean$Flux)
+summary(m)
+```
+

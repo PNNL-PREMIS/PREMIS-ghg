@@ -86,8 +86,13 @@ plan <- drake_plan(
   ts_report = rmarkdown::render(
     knitr_in("temporal_scaling.Rmd"),
     output_file = file_out("temporal_scaling.html"),
-    quiet = TRUE)
+    quiet = TRUE),
   
+  # Q10 report
+  q10_report = rmarkdown::render(
+    knitr_in("q10.Rmd"),
+    output_file = file_out("q10.html"),
+    quiet = TRUE)
 )
 
 # Now type `make(plan)` at command line
