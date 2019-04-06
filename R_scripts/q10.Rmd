@@ -49,8 +49,17 @@ calculate_q10 <- function(temp, flux, r10_default = 1.0, q10_default = 2.0) {
   }
 }
 
-do_summary <- function(dat) {
-  dat %>% 
+do_summary <- function(dat, q10_results, join_cols) {
+  dat %>%  # already grouped
+    summarise(min_SMoist = min(SMoist),
+              max_SMoist = max(SMoist),
+              SMoist = mean(SMoist),
+              T5_min = min(T5),
+              T5_max = max(T5),
+              T5 = mean(T5),
+              In_10C = T5_min < 10 & T5_max > 10) %>% 
+    left_join(q10_results, by = join_cols) %>% 
+    filter(estimate < 10) 
 }
 ```
 
@@ -69,19 +78,11 @@ cld_clean %>%
 
 cld_clean %>% 
   group_by(Year = year(Timestamp), Yday = yday(Timestamp), Port) %>% 
-  summarise(min_SMoist = min(SMoist),
-            max_SMoist = max(SMoist),
-            SMoist = mean(SMoist),
-            T5_min = min(T5),
-            T5_max = max(T5),
-            T5 = mean(T5),
-            In_10C = T5_min < 10 & T5_max > 10) %>% 
-  left_join(q10_results, by = c("Year", "Yday", "Port")) %>% 
-  filter(estimate < 10) ->
+  do_summary(q10_results, join_cols = c("Year", "Yday", "Port")) ->
   q10_results_clean_daily
 
 mainplots <- function(q10_results_clean, timescale) {
-
+  
   p1 <- ggplot(q10_results_clean, aes(Timestamp, estimate, color = Port)) + 
     geom_point() + 
     facet_wrap(~term) +
@@ -120,15 +121,7 @@ cld_clean %>%
 
 cld_clean %>% 
   group_by(Year = year(Timestamp), Month = month(Timestamp), Port) %>% 
-  summarise(min_SMoist = min(SMoist),
-            max_SMoist = max(SMoist),
-            SMoist = mean(SMoist),
-            T5_min = min(T5),
-            T5_max = max(T5),
-            T5 = mean(T5),
-            In_10C = T5_min < 10 & T5_max > 10) %>% 
-  left_join(q10_results, by = c("Year", "Month", "Port")) %>% 
-  filter(estimate < 10) ->
+  do_summary(q10_results, join_cols = c("Year", "Month", "Port")) ->
   q10_results_clean_monthly
 
 mainplots(q10_results_clean_monthly, "monthly")
