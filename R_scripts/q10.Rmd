@@ -48,6 +48,10 @@ calculate_q10 <- function(temp, flux, r10_default = 1.0, q10_default = 2.0) {
     m
   }
 }
+
+do_summary <- function(dat) {
+  dat %>% 
+}
 ```
 
 Continuous data: `r nrow (cld)` observations; `r removed` (`r round(removed / nrow(cld) * 100, 0)`%) removed because of chamber closure or other problems.
@@ -65,13 +69,19 @@ cld_clean %>%
 
 cld_clean %>% 
   group_by(Year = year(Timestamp), Yday = yday(Timestamp), Port) %>% 
-  summarise(SMoist = mean(SMoist),
-            T5 = mean(T5)) %>% 
+  summarise(min_SMoist = min(SMoist),
+            max_SMoist = max(SMoist),
+            SMoist = mean(SMoist),
+            T5_min = min(T5),
+            T5_max = max(T5),
+            T5 = mean(T5),
+            In_10C = T5_min < 10 & T5_max > 10) %>% 
   left_join(q10_results, by = c("Year", "Yday", "Port")) %>% 
   filter(estimate < 10) ->
   q10_results_clean_daily
 
 mainplots <- function(q10_results_clean, timescale) {
+
   p1 <- ggplot(q10_results_clean, aes(Timestamp, estimate, color = Port)) + 
     geom_point() + 
     facet_wrap(~term) +
@@ -84,12 +94,12 @@ mainplots <- function(q10_results_clean, timescale) {
     ggtitle(timescale)
   print(p3)
   
-  p4 <- ggplot(q10_results_clean, aes(SMoist, estimate)) +
+  p4 <- ggplot(q10_results_clean, aes(SMoist, estimate, color = In_10C)) +
     geom_point() + facet_wrap(~term) +
     ggtitle(timescale)
   print(p4)
   
-  p5 <- ggplot(q10_results_clean, aes(T5, estimate)) +
+  p5 <- ggplot(q10_results_clean, aes(T5, estimate, color = In_10C)) +
     geom_point() + facet_wrap(~term) +
     ggtitle(timescale)
   print(p5)
@@ -110,8 +120,13 @@ cld_clean %>%
 
 cld_clean %>% 
   group_by(Year = year(Timestamp), Month = month(Timestamp), Port) %>% 
-  summarise(SMoist = mean(SMoist),
-            T5 = mean(T5)) %>% 
+  summarise(min_SMoist = min(SMoist),
+            max_SMoist = max(SMoist),
+            SMoist = mean(SMoist),
+            T5_min = min(T5),
+            T5_max = max(T5),
+            T5 = mean(T5),
+            In_10C = T5_min < 10 & T5_max > 10) %>% 
   left_join(q10_results, by = c("Year", "Month", "Port")) %>% 
   filter(estimate < 10) ->
   q10_results_clean_monthly
