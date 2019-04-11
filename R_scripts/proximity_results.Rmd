@@ -178,7 +178,7 @@ tabledata$tree_mean <- round(tabledata$tree_mean, digits = 1)
 tabledata$tree_sd <- round(tabledata$tree_sd, digits = 1)
 tabledata$BA_mean <- round(tabledata$BA_mean, digits = 1)
 tabledata$BA_sd <- round(tabledata$BA_sd, digits = 1)
-tabledata$Salinity <- sub("Salinity H", "GCREW", tabledata$Salinity)
+tabledata$Salinity <- sub("Salinity H", "GCReW", tabledata$Salinity)
 tabledata$Salinity <- sub("Salinity M", "Canoe Shed", tabledata$Salinity)
 tabledata$Salinity <- sub("Salinity L", "North Branch", tabledata$Salinity)
 # tabledata$Soil_Type[1] <- "Collington-Wist complex; Collington and Annapolis soils"
@@ -195,7 +195,7 @@ tabledata %>%
 
 
 ## Flux over time figure for control collars
-```{r co2_time, echo = FALSE, warning = FALSE}
+```{r co2_time, echo = FALSE, warning = FALSE, fig.width = 8}
 licor_daily_data <- readd("licor_daily_data")
 
 # s.d. is based on successive measurements at same collar
@@ -204,6 +204,7 @@ licor_daily_data %>%
   filter(Group == "Control") %>%
   ggplot(aes(x = Timestamp, y = meanFlux, group = Collar)) +
   geom_point() +
+  geom_smooth(aes(group = Dest_Site), color = "dodgerblue", se = FALSE) +
   facet_grid(~Dest_Site) +
   ggtitle("Figure 3") +
   labs(x = "Date", 

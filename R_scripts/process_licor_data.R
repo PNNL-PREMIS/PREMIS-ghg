@@ -52,7 +52,7 @@ process_licor_data <- function(raw_data, collar_data, plot_data, temp_data) {
     rename(Dest_Salinity = Salinity, Dest_Elevation = Elevation)
   
   # Add a factor column that's the site name for pretty printing/plotting
-  sitenames <- c("High" = "GCREW", "Medium" = "Canoe Shed", "Low" = "North Branch")
+  sitenames <- c("High" = "GCReW", "Medium" = "Canoe Shed", "Low" = "North Branch")
   licorDat$Dest_Site <- factor(sitenames[licorDat$Dest_Salinity], levels = sitenames) 
     
   # The Licor temperature sensor was broken for several months in fall-winter 2018
