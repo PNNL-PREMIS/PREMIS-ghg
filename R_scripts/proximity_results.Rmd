@@ -372,3 +372,28 @@ bind_rows(sens_output, .id = "Distance") %>%
   scale_color_discrete(labels = c("BA", "BA:T20", "BA:T5")) +
   scale_y_log10()
 ```
+
+
+``` {r results, echo = FALSE}
+control_cols %>%
+  filter(T5 > 0, T5 < 30) -> flux_data
+
+control_cols %>% 
+  group_by(Destination_Plot, Collar) %>%
+  summarise(Flux = mean(Flux), n = n()) %>%
+  mutate(CV = sd(Flux)/mean(Flux))
+
+```
+# Results
+
+### *Basic results*
+We measured Rs, soil temperature, and soil moisture on `r length(unique(control_cols$Date))` different days across the one-year period (Figure 2). Soil temperatures ranged from `r min(flux_data$T5)` to `r round(max(flux_data$T5), digits = 1)` (at 5 cm) and `r min(flux_data$T20)` to `r max(flux_data$T20)` (at 20 cm); volumetric soil moisture values were `r round(min(flux_data$SMoisture), digits = 2)`-`r round(max(flux_data$SMoisture), digits = 2)`. Fluxes ranged from `r round(min(flux_data$Flux), digits = 2)` µmol m-2 s-1 (in March 2019) to `r round(max(flux_data$Flux), digits = 2)` µmol m-2 s-1 (in July 2018). The coefficient of variability between collars within plots, a measure of spatial variability, ranged from 42% to 72%. This implied that a large number of samples was required to estimate Rs accurately (Table 2) .
+
+There was large variability in the basal area and number of trees close to the measurement collars (Figure 3). Mean values were 0 trees (with a basal area of 0 m2) within 1 m, 5 trees (0.29 m2) within 5 m, and 19 trees (1.11 m2) at 10 m. At our maximum radius of measurement, 15 m, there were on average 40 trees and 2.33 m2 of basal area, ranging from a minimum of 0.00 m2 to a maximum of 3.19 m2. The forest was thus highly spatially variable in its distribution of trees relative to the Rs measurement collars. 
+
+### *Effect of BA on Rs*
+The linear mixed-effects model using temperature, soil moisture, and basal area within 5 m (BA5) predicted almost three-quarters of the Rs variability (adjusted R2 = 0.37). BA5 was not significant in a Type III ANOVA using this model (χ2 = 0.081, P = 0.776, but exhibited strong and significant interactions with T5 and T20 (Table 3). In addition, the residuals of a model fit without BA5 had a significant trend with BA5 (Figure 4). In summary, collars with higher basal area within 5 m had significantly higher temperature sensitivity of soil respiration after controlling for temperature and moisture effects.
+
+Separating the data into growing- and dormant-season subsets provided contrasting results. In the growing season, model outputs were similar to those of the overall-year model, with BA5 having highly significant interactions with T5 and T20 (data not shown). The dormant season model, however, was quite different: only BA5 (P = 0.0070), T20 (P = <0.0000), and soil moisture (P = 0.0377) were significant terms. In addition, the dormant season model explained much less of the Rs variability (AIC = 119.80, marginal R2 = 0.48).
+
+Our third hypothesis was that any basal area effect on Rs would be strongest in the driest times of the year, when microbial respiration at the surface soil declines as the soil dries, but trees maintain access to deeper soil moisture. There were in fact strong differences between the driest and wettest thirds of the data. In the dry model ANOVA, BA5 and its interaction with T5 were both marginally significant (P = 0.096 and 0.054 respectively), and the dominant control was instead soil moisture (χ2 = 15.23, P < 0.001).
