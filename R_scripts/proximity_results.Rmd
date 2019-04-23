@@ -107,9 +107,9 @@ prox_data %>%
   select(-Date) %>%
   left_join(tree_data, by = c("Site", "Plot", "Tag"), na_matches = "never") %>%
   # Replace DBH with recorded value for non-tagged trees
-  mutate(DBH_cm = if_else(is.na(Tag), No_tag_DBH, DBH_cm),
+  mutate(DBH_cm = if_else(is.na(Tag), No_tag_DBH, DBH_cm_2018),
          Species_code = if_else(is.na(Tag), No_tag_species, Species_code),
-         BA_sqm = calc_BA(DBH_cm)) -> # Compute basal area for each tree
+         BA_sqm = calc_BA(DBH_cm_2018)) -> # Compute basal area for each tree
   tree_prox_data
 ```
 
@@ -155,7 +155,7 @@ BA_dat_complete %>%
 tree_data %>%
   group_by(Site, Salinity, Species) %>%
   summarise(n = n(),
-            BA_species = sum(calc_BA(DBH_cm), na.rm = TRUE)) %>%
+            BA_species = sum(calc_BA(DBH_cm_2018), na.rm = TRUE)) %>%
   mutate(BA_p = BA_species/sum(BA_species) * 100) ->
   BA_p
 
@@ -164,7 +164,7 @@ tree_data %>%
   group_by(Salinity, Elevation) %>% 
   summarise(n = n(), 
             Plot_area_m2 = mean(Plot_area_m2), 
-            `BA (m2/ha)` = sum(calc_BA(DBH_cm), na.rm = TRUE) / 
+            `BA (m2/ha)` = sum(calc_BA(DBH_cm_2018), na.rm = TRUE) / 
               mean(Plot_area_m2) * 10000) %>% 
   mutate(`Trees (/ha)` = n / Plot_area_m2 * 10000) %>% 
   summarise(tree_mean = mean(`Trees (/ha)`) %>% round(1), 

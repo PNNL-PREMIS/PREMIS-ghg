@@ -32,7 +32,7 @@ plan <- drake_plan(
   collar_data = read_csv(file_in("../design/cores_collars.csv"), col_types = "cciiicic"),
   
   # `inventory_data` and `species_codes` hold tree information
-  inventory_data = read_csv(file_in("../inventory_data/inventory.csv"), col_types = "ccccdccc"),
+  inventory_data = read_csv(file_in("../inventory_data/inventory.csv"), col_types = "cccccdccdccc"),
   species_codes = read_csv(file_in("../inventory_data/species_codes.csv"), col_types = "ccc"),
   tree_data = make_tree_data(inventory_data, species_codes, plot_data),
   
