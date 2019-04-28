@@ -380,6 +380,7 @@ cld_clean %>%
   ungroup ->
   cld_24hr
 
+#             J       F       M     A     M       J     J       A     S       O     N       D
 seasons <- c("DJF", "DJF", "MAM", "MAM", "MAM", "JJA", "JJA", "JJA", "SON", "SON", "SON", "DJF")
 
 cld_24hr %>% 
@@ -400,6 +401,9 @@ p <- ggplot(cld_24hr_errors,
   scale_y_continuous(labels = scales::percent_format(accuracy = 1))
 print(p + ggtitle("J. Best time of day"))
 save_plot("temporal_figures/Figure3-time_of_day.png", plot = p)
+
+ggplot(cld_24hr, aes(Hour, Flux, group=paste(Port, Yday))) + geom_line() + facet_wrap(~month(Timestamp))
+ggplot(cld_24hr, aes(Hour, T5, group=paste(Port, Yday))) + geom_line() + facet_wrap(~month(Timestamp))
 ```
 
 
@@ -583,9 +587,9 @@ distributions$Seconds <- timescales[distributions$Labels]
 
 p <- ggplot(smry, aes(Seconds, CV, label = Labels, group = Labels)) +
   geom_violin(data = distributions, fill = NA, 
-              draw_quantiles = c(0.9, 0.95), color = "darkgrey") +
+              draw_quantiles = c(0.9, 0.95), color = "black") +
   geom_point() + 
-  geom_text(nudge_y = 0.05) +
+  geom_label(nudge_y = 0.05) +
   scale_x_log10(
     breaks = scales::trans_breaks("log10", function(x) 10 ^ x),
     labels = scales::trans_format("log10", scales::math_format(10 ^ .x))
