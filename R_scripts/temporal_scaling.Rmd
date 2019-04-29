@@ -478,7 +478,7 @@ for(delta_fraction in c(0.05, 0.1, 0.25, 0.50)) {
   }
 }
 results <- bind_rows(results_list)
-filter(results, power == 0.95, delta_percent == 50) %>% print
+filter(results, power == 0.95, delta_percent == 50) %>% summary
 
 results %>% 
   group_by(delta_percent, power) %>% 
