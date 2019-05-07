@@ -542,7 +542,7 @@ p1 <- ggplot(srdb2, aes(MI_category, CV)) +
   geom_violin() + geom_jitter(size = 0.25) +
   xlab("Measurement interval (days)") + ylab("Interannual CV")
 p1title <- paste("O. Effect of m. interval and annual coverage, N =",
-                        nrow(srdb2), nrow(srdb3))
+                 nrow(srdb2), nrow(srdb3))
 
 p2 <- ggplot(srdb3, aes(AC_category, CV)) + 
   scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
@@ -602,9 +602,33 @@ p <- ggplot(smry, aes(Seconds, CV, label = Labels, group = Labels)) +
   xlab("Timescale (seconds)") + ylab("CV")
 print(p + ggtitle("P. Summary"))
 save_plot("temporal_figures/Figure6-summary.png", plot = p)
+```
 
+Fligner test for different variances in above graph:
+
+```{r fligner1}
 fligner.test(distributions$CV, factor(distributions$Labels))
 ```
+
+Fligner test for group differences, correcting for multiple comparisons:
+
+```{r fligner2}
+groups <- unique(distributions$Labels)
+results <- matrix(NA_real_, nrow = length(groups),
+                  ncol = length(groups),
+                  dimnames = list(groups, groups))
+n <- (length(groups) - 1) ^ 2
+for(g1 in groups) {
+  for(g2 in setdiff(groups, g1)) {
+    d <- filter(distributions, Labels %in% c(g1, g2))
+    ft <- fligner.test(d$CV, factor(d$Labels))
+    results[g1, g2] <- ft$p.value * n
+  }
+}
+
+print(round(results, digits = 3))
+```
+
 
 ## TODO LIST
 
