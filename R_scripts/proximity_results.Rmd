@@ -373,8 +373,8 @@ bind_rows(sens_output, .id = "Distance") %>%
   scale_y_log10()
 ```
 
+```{r results, echo = FALSE}
 
-``` {r results, echo = FALSE}
 control_cols %>%
   filter(T5 > 0, T5 < 30) -> flux_data
 
@@ -390,7 +390,9 @@ BA_dat_complete %>%
 BA_dat_complete %>%
   filter(dist == 15) %>%
   summarise(min_BA = round(min(BA_m2), digits = 2), max_BA = round(max(BA_m2), digits = 2)) -> BA_15m
+
 ```
+
 # Results
 
 ### *Basic results*
