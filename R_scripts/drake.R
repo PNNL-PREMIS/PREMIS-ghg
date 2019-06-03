@@ -32,7 +32,7 @@ plan <- drake_plan(
   collar_data = read_csv(file_in("../design/cores_collars.csv"), col_types = "cciiicic"),
   
   # `inventory_data` and `species_codes` hold tree information
-  inventory_data = read_csv(file_in("../inventory_data/inventory.csv"), col_types = "cccccdccdccc"),
+  inventory_data = read_csv(file_in("../inventory_data/inventory.csv"), col_types = "cccccdcDdcDc"),
   species_codes = read_csv(file_in("../inventory_data/species_codes.csv"), col_types = "ccc"),
   tree_data = make_tree_data(inventory_data, species_codes, plot_data),
   
@@ -82,12 +82,12 @@ plan <- drake_plan(
   #   output_file = file_out("trend_emergence.html"),
   #   quiet = TRUE),
   # 
-  # Temporal scaling report
+  # --------------------------------------------------------------------------------------------------------
+  # BBL's temporal scaling report
   ts_report = rmarkdown::render(
     knitr_in("temporal_scaling.Rmd"),
     output_file = file_out("temporal_scaling.html"),
     quiet = TRUE)
-  
 )
 
-# Now type `make(plan)` at command line
+message("Now type `make(plan)` at command line")
