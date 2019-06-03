@@ -82,12 +82,12 @@ plan <- drake_plan(
   #   output_file = file_out("trend_emergence.html"),
   #   quiet = TRUE),
   # 
-  # Temporal scaling report
+  # --------------------------------------------------------------------------------------------------------
+  # BBL's temporal scaling report
   ts_report = rmarkdown::render(
     knitr_in("temporal_scaling.Rmd"),
     output_file = file_out("temporal_scaling.html"),
     quiet = TRUE)
-  
 )
 
-# Now type `make(plan)` at command line
+message("Now type `make(plan)` at command line")
