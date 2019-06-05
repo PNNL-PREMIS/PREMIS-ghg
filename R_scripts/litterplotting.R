@@ -34,7 +34,8 @@ ld_hs %>%
   # group_by(Category, Date_collected) %>% 
   # summarise(Mass_g_cumulative_sd = sd(Mass_g_cumulative),
   #           Mass_g_cumulative = mean(Mass_g_cumulative)) %>% 
-  ggplot(aes(Date_collected, Mass_g_cumulative, fill = Category)) + geom_area(position = "stack")
+  ggplot(aes(Date_collected, Mass_g_cumulative, fill = Category)) + geom_area(position = "stack") +
+  labs(x = "Date Collected", y = "Cumulative Mass (g)")
 
   
 
