@@ -10,7 +10,7 @@ output:
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  fig.path = "figures/README-",
+  fig.path = "README_figures/README-",
   fig.width = 9
 )
 options(tibble.print_min = 5, tibble.print_max = 5)
@@ -184,7 +184,7 @@ readd("well_data", path = PATH) %>%
 ### Histogram of trees by DBH
 ```{r inventory, echo = FALSE}
 tree_data <- readd("tree_data", path = PATH)
-ggplot(tree_data, aes(DBH_cm, fill = Species)) + 
+ggplot(tree_data, aes(DBH_cm_2018, fill = Species)) + 
   geom_histogram(position = "stack", binwidth = 5) + 
   facet_grid(Salinity ~ Elevation)
 ```
