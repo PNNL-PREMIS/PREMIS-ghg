@@ -111,7 +111,8 @@ process_continuous_data <- function(raw_data) {
     rename(T5 = V3, SMoist = V2) %>% 
     mutate(T5 = if_else(Port %in% c(6, 8) & Timestamp < DATE_SENSORS_INSTALLED, NA_real_, T5), 
            SMoist = if_else(Port %in% c(6, 8) & Timestamp < DATE_SENSORS_INSTALLED, NA_real_, SMoist),
-           # Chamber 8 was miswired at some point; temperature data is in V1 (see issue #82)
+           # Chamber 8 was miswired between 2018-08-31 and 2019-03-11
+           # For these records the temperature data is in V1 (see issue #82)
            T5 = if_else(T5 > 100 & Port == 8, V1, T5)
     )
 }
