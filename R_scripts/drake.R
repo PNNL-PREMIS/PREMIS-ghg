@@ -47,19 +47,19 @@ plan <- drake_plan(
                      trigger = trigger(change = do_filedigest("../well_data/"))),
   
   # Licor data - transplant cores
-  # We digest the filename list to detect when something changes in the licor_data directory
-  raw_licor_data = target(command = read_licor_dir("../licor_data/"),
-                          trigger = trigger(change = do_filedigest("../licor_data/"))),
+  # We digest the filename list to detect when something changes in the LI-8100A_data directory
+  raw_licor_data = target(command = read_licor_dir("../LI-8100A_data/"),
+                          trigger = trigger(change = do_filedigest("../LI-8100A_data/"))),
   # T5 taken by hand because of broken sensor
-  temp_data = target(command = read_temp_dir("../licor_data/temp_dat/"),
-                     trigger = trigger(change = do_filedigest("../licor_data/temp_dat/"))),
+  temp_data = target(command = read_temp_dir("../LI-8100A_data/temp_dat/"),
+                     trigger = trigger(change = do_filedigest("../LI-8100A/temp_dat/"))),
   # Process, adding in treatment etc. information
   licor_data = process_licor_data(raw_licor_data, collar_data, plot_data, temp_data),
   # Reduce observations to a per-day average
   licor_daily_data = calculate_licor_daily_data(licor_data),
   
-  raw_con_licor_data = target(command = read_licor_dir("../licor_data/longterm_dat/"),
-                              trigger = trigger(change = do_filedigest("../licor_data/longterm_dat/"))),
+  raw_con_licor_data = target(command = read_licor_dir("../LI-8100A_data/longterm_dat/"),
+                              trigger = trigger(change = do_filedigest("../LI-8100A_data/longterm_dat/"))),
   con_licor_data = process_continuous_data(raw_con_licor_data),
   
   # --------------------------------------------------------------------------------------------------------
