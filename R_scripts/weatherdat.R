@@ -3,6 +3,8 @@
 
 # Read a single weather station file, reshape, parse, and join with station information
 read_wxdat <- function(filename, wstation_info) {
+  stopifnot(file.exists(filename))
+  
   cat("Reading", filename, "...\n")
   filename %>% 
     read_csv(skip = 1, col_types = "icdddddddddd") %>%
@@ -29,6 +31,8 @@ read_all_wxdat <- function(dir, read_function, ...) {
 }
 
 read_single_well <- function(filename) {
+  stopifnot(file.exists(filename))
+  
   cat("Reading", filename, "...\n")
   # The first line of the file holds the plot name
   readLines(filename, n = 1) %>% 

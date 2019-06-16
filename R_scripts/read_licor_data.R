@@ -1,6 +1,7 @@
 
 #----- Function to parse a file and return data frame -----
-read_licor_data <- function(filename, debug = FALSE) {
+read_licor8100_data <- function(filename, debug = FALSE) {
+  stopifnot(file.exists(filename))
   
   # Read file into memory and find records
   filedata <- readLines(filename)
@@ -99,8 +100,9 @@ read_licor_data <- function(filename, debug = FALSE) {
 
 #----- Function to loop through directory and call function to read licor data -----
 read_licor_dir <- function(path) {
+  stopifnot(dir.exists(path))
   files <- list.files(path, pattern = ".81x$", full.names = TRUE)
-  lapply(files, read_licor_data) %>%
+  lapply(files, read_licor8100_data) %>%
     bind_rows
 }
 
@@ -108,6 +110,7 @@ read_licor_dir <- function(path) {
 # For those times, we took T5 by hand and entered it into a dedicated file
 # Here we read in the T5 data directory
 read_temp_dir <- function(path) {
+  stopifnot(dir.exists(path))
   files <- list.files(path, pattern = ".csv", full.names = TRUE)
   lapply(files, read_csv, col_types = "cdd") %>% 
     bind_rows %>%
