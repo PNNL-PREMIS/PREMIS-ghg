@@ -18,12 +18,13 @@ source("read_licor_data.R")
 source("process_licor_data.R")
 source("inventory.R")
 source("weatherdat.R")
+#source("litter.R")
 
 do_filedigest <- function(dir) digest::digest(list.files(dir)) # helper function
 
 plan <- drake_plan(
   
-  # ----- Load datasets -----
+  # ----- Inventory and design datasets -----
   # `plot_data` holds information based on the plot code: longitude, latitude,
   # area, and salinity/elevation levels
   plot_data = read_csv(file_in("../design/plots.csv"), col_types = "ccccddi"),
@@ -37,7 +38,7 @@ plan <- drake_plan(
   species_codes = read_csv(file_in("../inventory_data/species_codes.csv"), col_types = "ccc"),
   tree_data = make_tree_data(inventory_data, species_codes, plot_data),
   
-  # Weather data from Hobo loggers and wells
+  # ----- Weather data from Hobo loggers and wells -----
   # We digest the filename list to detect when something changes in the data directories
   # Not perfect--this won't detect a change *within* a file
   wstation_info = read_csv(file_in("../weather_data/wstation_info.csv"), col_types = "cicic"),
@@ -47,7 +48,7 @@ plan <- drake_plan(
   well_data = target(command = read_all_wxdat("../well_data/", read_single_well),
                      trigger = trigger(change = do_filedigest("../well_data/"))),
   
-  # Licor data - transplant cores
+  # ----- Licor data -----
   # We digest the filename list to detect when something changes in the LI-8100A_data directory
   raw_licor_data = target(command = read_licor_dir("../LI-8100A_data/"),
                           trigger = trigger(change = do_filedigest("../LI-8100A_data/"))),
@@ -62,6 +63,10 @@ plan <- drake_plan(
   raw_con_licor_data = target(command = read_licor_dir("../LI-8100A_data/longterm_dat/"),
                               trigger = trigger(change = do_filedigest("../LI-8100A_data/longterm_dat/"))),
   con_licor_data = process_continuous_data(raw_con_licor_data),
+  
+  # ----- Litter data -----
+  #litter_data_transplants = target(command = read_litter_data,
+  #                    trigger = trigger(change = do_filedigest("../litter_data"))),
   
   # ----- Proximity data for SP's proximity analysis manuscript -----
   prox_data = read_csv(file_in("../inventory_data/collar_proximity.csv"), col_types = "ccidccdcc"),
