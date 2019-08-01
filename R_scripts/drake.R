@@ -23,6 +23,7 @@ do_filedigest <- function(dir) digest::digest(list.files(dir)) # helper function
 
 plan <- drake_plan(
   
+  # ----- Load datasets -----
   # `plot_data` holds information based on the plot code: longitude, latitude,
   # area, and salinity/elevation levels
   plot_data = read_csv(file_in("../design/plots.csv"), col_types = "ccccddi"),
@@ -62,8 +63,7 @@ plan <- drake_plan(
                               trigger = trigger(change = do_filedigest("../LI-8100A_data/longterm_dat/"))),
   con_licor_data = process_continuous_data(raw_con_licor_data),
   
-  # --------------------------------------------------------------------------------------------------------
-  # Proximity data for SP's proximity analysis manuscript
+  # ----- Proximity data for SP's proximity analysis manuscript -----
   prox_data = read_csv(file_in("../inventory_data/collar_proximity.csv"), col_types = "ccidccdcc"),
   
   # Proximity analysis report
@@ -72,8 +72,7 @@ plan <- drake_plan(
     output_file = file_out("proximity_results.html"),
     quiet = TRUE),
   
-  # --------------------------------------------------------------------------------------------------------
-  # Global soil respiration database
+  # ----- Global soil respiration database -----
   srdb = read.csv(file_in("../ancillary_data/srdb-data.csv"), stringsAsFactors = FALSE),
   # 
   # # Trend emergence presentation
@@ -82,8 +81,7 @@ plan <- drake_plan(
   #   output_file = file_out("trend_emergence.html"),
   #   quiet = TRUE),
   # 
-  # --------------------------------------------------------------------------------------------------------
-  # BBL's temporal scaling report
+  # ----- BBL's temporal scaling report -----
   ts_report = rmarkdown::render(
     knitr_in("temporal_scaling.Rmd"),
     output_file = file_out("temporal_scaling.html"),
