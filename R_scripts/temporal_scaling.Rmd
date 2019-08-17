@@ -527,7 +527,8 @@ results %>%
 ```{r srdb, echo=FALSE}
 readd("srdb") %>% 
   mutate(CV = Rs_interann_err / Rs_annual) %>% 
-  filter(Leaf_habit == "Deciduous", Ecosystem_type == "Forest", Manipulation == "None", !is.na(CV)) %>% 
+  filter(Leaf_habit == "Deciduous", Ecosystem_type == "Forest", 
+         Manipulation == "None", Meas_method == "IRGA", !is.na(CV)) %>% 
   select(Record_number, Study_number, Rs_annual, Rs_interann_err, CV, 
          Annual_coverage, Meas_interval) %>% 
   mutate(AC_category = cut(Annual_coverage, breaks = c(0, 0.9, 1)),
@@ -568,7 +569,7 @@ fligner.test(srdb$CV, srdb$AC_category)
 summary(srdb$CV)
 ```
 
-Median CV here is `r round(median_cv_annual * 100, 0)`%.
+Median CV here is `r round(median_cv_annual * 100, 0)`%, N = `r nrow(srdb)`.
 
 
 ## Summary
