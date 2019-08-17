@@ -65,8 +65,9 @@ running_cv <- function(x) {
 
 ```{r filtering, echo=FALSE}
 cld %>% 
-  filter(Flux > 0,  # definitely a problem!
-         R2 > 0.75  # probably a chamber closing problem otherwise
+  filter(Flux > 0,   # definitely a problem!
+         Flux <= 20, # somewhat arbitrary
+         R2 > 0.75   # probably a chamber closing problem otherwise
          # TODO: remove snowstorm day
   ) ->
   cld_clean
@@ -541,12 +542,12 @@ p1 <- ggplot(srdb2, aes(MI_category, CV)) +
   scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
   geom_violin() + geom_jitter(size = 0.25) +
   xlab("Measurement interval (days)") + ylab("Interannual CV")
-p1title <- paste("O. Effect of m. interval and annual coverage, N =",
+p1title <- paste("O. Effect of interval and annual coverage, N =",
                  nrow(srdb2), nrow(srdb3))
 
 p2 <- ggplot(srdb3, aes(AC_category, CV)) + 
   scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-  geom_violin() + geom_jitter(size = 0.25) +
+  geom_boxplot() + geom_jitter(size = 0.25) +
   xlab("Annual coverage (fraction)") + ylab("Interannual CV")
 
 print(cowplot::plot_grid(p1 + ggtitle(p1title), p2, nrow = 2))
@@ -572,26 +573,28 @@ timescales <- c("1 minute" = spd / 24 / 60,
                 "1 day" = spd,
                 "1 month" = spd * 30,
                 "1 year" = spd * 365)
+nts <- names(timescales)
+
 smry <- tibble(Seconds = timescales,
-               Labels = names(timescales),
+               Labels = nts,
                CV = c(median_error_minutes, 
                       median_error_hours, 
                       median_error_days, 
                       median_cv_months, 
                       median_cv_annual))
 
-distributions <- bind_rows(tibble(Labels = "1 minute", CV = meas_error_1$CV),
-                           tibble(Labels = "1 hour", CV = cld_cv$CV),
-                           tibble(Labels = "1 day", CV = cld_cv_daily$CV),
-                           tibble(Labels = "1 month", CV = lmd_cv$CV),
-                           tibble(Labels = "1 year", CV = srdb$CV))
+distributions <- bind_rows(tibble(Labels = nts[1], CV = meas_error_1$CV),
+                           tibble(Labels = nts[2], CV = cld_cv$CV),
+                           tibble(Labels = nts[3], CV = cld_cv_daily$CV),
+                           tibble(Labels = nts[4], CV = lmd_cv$CV),
+                           tibble(Labels = nts[5], CV = srdb$CV))
 
 distributions$Seconds <- timescales[distributions$Labels]
 
-p <- ggplot(smry, aes(Seconds, CV, label = Labels, group = Labels)) +
-  geom_violin(data = distributions, fill = NA, 
-              draw_quantiles = c(0.9, 0.95), color = "black") +
+p <- ggplot(smry, aes(Seconds, CV, label = Labels, group = Labels, color = Labels == "1 year")) +
+  geom_violin(data = distributions, fill = NA, draw_quantiles = c(0.9, 0.95)) +
   geom_point() + 
+  scale_color_viridis_d(guide = FALSE) +
   geom_label(nudge_y = 0.05) +
   scale_x_log10(
     breaks = scales::trans_breaks("log10", function(x) 10 ^ x),
@@ -632,9 +635,7 @@ print(round(results, digits = 3))
 
 ## TODO LIST
 
-* The what's driving hour-to-hour CV analysis needs work; maybe remove entirely, and just report what drives the flux itself. Seems clearer
 * Investigate/remove screwy survey collar
-* Could do a real Monte Carlo sampling exercise...i.e. looking for most effective ways to reduce error. Not sure there's enough data for this though.
 
 ```{r msmt-gaps, echo=FALSE}
 licor_data %>% 
