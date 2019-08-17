@@ -372,12 +372,12 @@ cld_clean %>%
   filter(n == 24) %>%   # remove incomplete days
   # for each day and port, compute difference from daily mean
   group_by(Port, Year, Yday) %>% 
-  mutate(Hour = hour(Timestamp),
-         Flux_mean = mean(Flux),
+  mutate(Flux_mean = mean(Flux),
          Diff_24hr = Flux - Flux_mean,
-         Diff_24hr_rel = Diff_24hr / Flux_mean,
-         Rank = min_rank(abs(Diff_24hr_rel))) %>% 
-  ungroup ->
+         Diff_24hr_rel = Diff_24hr / Flux_mean) %>% 
+  ungroup %>% 
+  mutate(Hour = hour(Timestamp),
+         Month = month(Timestamp)) ->
   cld_24hr
 
 seasons <- c("Winter", "Winter",            # J,F
@@ -387,12 +387,17 @@ seasons <- c("Winter", "Winter",            # J,F
              "Winter")                      # D
 
 cld_24hr %>% 
-  mutate(Month = month(Timestamp)) %>% 
   group_by(Year, Month, Hour) %>% 
   summarise(Timestamp = mean(Timestamp),
-            Rank = mean(Rank),
             Diff_24hr_rel = mean(Diff_24hr_rel)) ->
   cld_24hr_errors
+
+# Reviewer 1 asks for a single overall mean line
+cld_24hr %>% 
+  group_by(Hour) %>% 
+  summarise(Timestamp = mean(Timestamp),
+            Diff_24hr_rel = mean(Diff_24hr_rel)) ->
+  cld_24hr_errors_combined
 
 cld_24hr_errors$Season <- factor(seasons[cld_24hr_errors$Month],
                                  levels = c("Fall", "Winter", "Spring", "Summer"))
@@ -400,7 +405,9 @@ cld_24hr_errors$Season <- factor(seasons[cld_24hr_errors$Month],
 p <- ggplot(cld_24hr_errors, 
             aes(Hour, Diff_24hr_rel, group = Month, color = Season)) +
   geom_hline(yintercept = 0, linetype = 2) +
-  geom_line() + scale_color_viridis_d() +
+  geom_line() + 
+  geom_line(data = cld_24hr_errors_combined, group = 1, color = "black", size = 2.5, alpha = 0.75) +
+  scale_color_viridis_d() +
   ylab("Difference from 24-hour mean flux") + 
   scale_y_continuous(labels = scales::percent_format(accuracy = 1))
 print(p + ggtitle("J. Best time of day"))
