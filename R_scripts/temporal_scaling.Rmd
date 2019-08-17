@@ -547,7 +547,7 @@ p1title <- paste("O. Effect of interval and annual coverage, N =",
 
 p2 <- ggplot(srdb3, aes(AC_category, CV)) + 
   scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-  geom_boxplot() + geom_jitter(size = 0.25) +
+  geom_violin() + geom_jitter(size = 0.25) +
   xlab("Annual coverage (fraction)") + ylab("Interannual CV")
 
 print(cowplot::plot_grid(p1 + ggtitle(p1title), p2, nrow = 2))
