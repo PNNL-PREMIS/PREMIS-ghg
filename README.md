@@ -20,7 +20,7 @@ More info [here!](https://osf.io/at9hr)
 Real-time data diagnostics
 ==========================
 
-**Last run: Sun Jun 16 04:08:47 2019**
+**Last run: Wed Aug 21 15:41:18 2019**
 
 | Site | Experiment           |    N|
 |:-----|:---------------------|----:|
@@ -41,7 +41,242 @@ IRGA data
 
 ### Licor soil moisture over time
 
-    #> Warning: Removed 72 rows containing missing values (geom_point).
+    #> Warning in as.POSIXlt.POSIXct(x): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(to): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(x): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(to): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(x, tz): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(x): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(to): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(x): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(to): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(x, tz): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(x): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(to): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(x): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(to): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(x, tz): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(x): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(to): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(x): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(to): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(x, tz): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(x): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(to): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(x): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(to): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(x, tz): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(x): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(to): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(x): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(to): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(x, tz): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(x): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(to): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(x): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(to): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(x, tz): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(x): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(to): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(x): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(to): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(x, tz): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(x): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(to): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(x): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(to): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(from): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXct.POSIXlt(r1): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning in as.POSIXlt.POSIXct(x, tz): unknown timezone 'zone/tz/2019a.1.0/
+    #> zoneinfo/America/New_York'
+    #> Warning: Removed 83 rows containing missing values (geom_point).
+    #> Warning: Removed 8 rows containing missing values (geom_path).
 
 ![](README_figures/README-licor_sm-1.png)
 
@@ -67,24 +302,20 @@ Weather station data
 ### Stdev for each temperature and moisture probe
 
     #> # A tibble: 201,733 x 7
-    #> # Groups:   Site, Sensor_Depth, Sensor_Group [?]
+    #> # Groups:   Site, Sensor_Depth, Sensor_Group [18]
     #>   Site  Sensor_Depth Sensor_Group Timestamp               n meanValue
     #>   <chr> <chr>        <chr>        <dttm>              <int>     <dbl>
-    #> 1 HSLE  20CM         Temp         2018-06-12 13:53:03     1      17.3
-    #> 2 HSLE  20CM         Temp         2018-06-12 14:08:03     1      17.3
-    #> 3 HSLE  20CM         Temp         2018-06-12 14:23:03     1      17.3
-    #> 4 HSLE  20CM         Temp         2018-06-12 14:38:03     1      17.4
-    #> 5 HSLE  20CM         Temp         2018-06-12 14:53:03     1      17.4
+    #> 1 <NA>  <NA>         Temp         2018-06-12 13:53:03     5      18.7
+    #> 2 <NA>  <NA>         Temp         2018-06-12 14:08:03     5      18.8
+    #> 3 <NA>  <NA>         Temp         2018-06-12 14:23:03     5      18.8
+    #> 4 <NA>  <NA>         Temp         2018-06-12 14:38:03     5      18.8
+    #> 5 <NA>  <NA>         Temp         2018-06-12 14:53:03     5      18.9
     #> # … with 2.017e+05 more rows, and 1 more variable: sdValue <dbl>
 
 Wells
 -----
 
 ### Well conductivity data
-
-    #> Warning: Removed 4 rows containing missing values (geom_path).
-
-![](README_figures/README-wells-1.png)
 
 Other
 -----
@@ -95,4 +326,6 @@ Other
 
 ![](README_figures/README-inventory-1.png)
 
-### Coming soon: litter data!
+### Litter data
+
+![](README_figures/README-litter-1.png)

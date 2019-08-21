@@ -172,11 +172,11 @@ weather_data %>%
 
 ### Well conductivity data
 ```{r wells, echo = FALSE}
-readd("well_data", path = PATH) %>% 
-  gather(variable, value, Low_Range, High_Range) %>% 
-  ggplot(aes(x = Timestamp, y = value, color = variable)) +
-  geom_line() +
-  facet_grid(~Plot)
+#readd("well_data", path = PATH) %>% 
+#  gather(variable, value, Low_Range, High_Range) %>% 
+#  ggplot(aes(x = Timestamp, y = value, color = variable)) +
+#  geom_line() +
+#  facet_grid(~Plot)
 ```
 
 ## Other
@@ -189,4 +189,13 @@ ggplot(tree_data, aes(DBH_cm_2018, fill = Species)) +
   facet_grid(Salinity ~ Elevation)
 ```
 
-### Coming soon: litter data!
+### Litter data
+```{r litter, echo = FALSE}
+litter_data <- readd('litter_data', path = PATH)
+litter_data %>% group_by(Date_collected, Plot, Litter_Type) %>% 
+  summarise(Mass_g = mean(Mass_g)) %>% 
+  ggplot(aes(x = Date_collected, y = Mass_g, fill = Litter_Type)) + 
+  facet_wrap(~Plot) + geom_area(aes(color = Litter_Type)) +
+  labs(x = "Date Collected", y = "Mass (g)")
+```
+
