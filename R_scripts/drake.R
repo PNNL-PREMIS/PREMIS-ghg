@@ -18,7 +18,7 @@ source("read_licor_data.R")
 source("process_licor_data.R")
 source("inventory.R")
 source("weatherdat.R")
-#source("litter.R")
+source("litter.R")
 
 do_filedigest <- function(dir) digest::digest(list.files(dir)) # helper function
 
@@ -65,17 +65,17 @@ plan <- drake_plan(
   con_licor_data = process_continuous_data(raw_con_licor_data),
   
   # ----- Litter data -----
-  #litter_data_transplants = target(command = read_litter_data,
-  #                    trigger = trigger(change = do_filedigest("../litter_data"))),
+  litter_data = target(command = read_litter_data("../litter_data"),
+                      trigger = trigger(change = do_filedigest("../litter_data"))),
   
   # ----- Proximity data for SP's proximity analysis manuscript -----
   prox_data = read_csv(file_in("../inventory_data/collar_proximity.csv"), col_types = "ccidccdcc"),
   
   # Proximity analysis report
-  prox_report = rmarkdown::render(
-    knitr_in("proximity_results.Rmd"),
-    output_file = file_out("proximity_results.html"),
-    quiet = TRUE),
+  #prox_report = rmarkdown::render(
+  #  knitr_in("proximity_results.Rmd"),
+  #  output_file = file_out("proximity_results.html"),
+  #  quiet = TRUE),
   
   # ----- Global soil respiration database -----
   srdb = read.csv(file_in("../ancillary_data/srdb-data.csv"), stringsAsFactors = FALSE),
@@ -87,10 +87,10 @@ plan <- drake_plan(
   #   quiet = TRUE),
   # 
   # ----- BBL's temporal scaling report -----
-  ts_report = rmarkdown::render(
-    knitr_in("temporal_scaling.Rmd"),
-    output_file = file_out("temporal_scaling.html"),
-    quiet = TRUE)
+  #ts_report = rmarkdown::render(
+  #  knitr_in("temporal_scaling.Rmd"),
+  #  output_file = file_out("temporal_scaling.html"),
+  #  quiet = TRUE)
 )
 
 message("Now type `make(plan)` at command line")
