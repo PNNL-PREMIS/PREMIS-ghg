@@ -20,7 +20,7 @@ More info [here!](https://osf.io/at9hr)
 Real-time data diagnostics
 ==========================
 
-**Last run: Wed Aug 21 15:47:39 2019**
+**Last run: Wed Aug 21 15:54:31 2019**
 
 | Site | Experiment           |    N|
 |:-----|:---------------------|----:|
@@ -84,8 +84,6 @@ Other
 -----
 
 ### Histogram of trees by DBH
-
-    #> Warning: Removed 3 rows containing non-finite values (stat_bin).
 
 ![](README_figures/README-inventory-1.png)
 
