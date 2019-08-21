@@ -72,11 +72,11 @@ plan <- drake_plan(
   prox_data = read_csv(file_in("../inventory_data/collar_proximity.csv"), col_types = "ccidccdcc"),
   
   # Proximity analysis report
-  #prox_report = rmarkdown::render(
-  #  knitr_in("proximity_results.Rmd"),
-  #  output_file = file_out("proximity_results.html"),
-  #  quiet = TRUE),
-  
+  prox_report = rmarkdown::render(
+    knitr_in("proximity_results.Rmd"),
+    output_file = file_out("proximity_results.html"),
+    quiet = TRUE),
+
   # ----- Global soil respiration database -----
   srdb = read.csv(file_in("../ancillary_data/srdb-data.csv"), stringsAsFactors = FALSE),
   # 
@@ -87,10 +87,10 @@ plan <- drake_plan(
   #   quiet = TRUE),
   # 
   # ----- BBL's temporal scaling report -----
-  #ts_report = rmarkdown::render(
-  #  knitr_in("temporal_scaling.Rmd"),
-  #  output_file = file_out("temporal_scaling.html"),
-  #  quiet = TRUE)
+  ts_report = rmarkdown::render(
+    knitr_in("temporal_scaling.Rmd"),
+    output_file = file_out("temporal_scaling.html"),
+    quiet = TRUE)
 )
 
 message("Now type `make(plan)` at command line")
