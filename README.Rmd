@@ -103,7 +103,7 @@ licor_daily_data %>%
 ```
 
 ### Licor soil moisture over time
-```{r licor_sm, echo = FALSE}
+```{r licor_sm, echo = FALSE, warning = FALSE}
 daily_treatment_means %>% 
   filter(!is.na(meanSM)) %>% 
   ggplot(aes(x = Timestamp, y = meanSM, color = Experiment, group = Group)) +
@@ -182,11 +182,12 @@ weather_data %>%
 ## Other
 
 ### Histogram of trees by DBH
-```{r inventory, echo = FALSE}
+```{r inventory, echo = FALSE, warning = FALSE}
 tree_data <- readd("tree_data", path = PATH)
 ggplot(tree_data, aes(DBH_cm_2018, fill = Species)) + 
   geom_histogram(position = "stack", binwidth = 5) + 
-  facet_grid(Salinity ~ Elevation)
+  facet_grid(Salinity ~ Elevation) +
+  labs(x = "DBH (cm)", y = "Count")
 ```
 
 ### Litter data
@@ -196,6 +197,7 @@ litter_data %>% group_by(Date_collected, Plot, Litter_Type) %>%
   summarise(Mass_g = mean(Mass_g)) %>% 
   ggplot(aes(x = Date_collected, y = Mass_g, fill = Litter_Type)) + 
   facet_wrap(~Plot) + geom_area(aes(color = Litter_Type)) +
-  labs(x = "Date Collected", y = "Mass (g)")
+  labs(x = "Date Collected", y = "Mass (g)") +
+  theme(axis.text.x = element_text(angle = 90))
 ```
 
