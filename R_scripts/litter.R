@@ -11,7 +11,7 @@ read_litter_data <- function(path) {
     lapply(read_csv) %>% 
     bind_rows()
     
- #select useful columns 
+ # Select useful columns 
     litter_data %>% 
       gather(key = "Litter_Type", value = "Mass_g", M_woody:M_leaf_other) %>% 
       select(-Date_weighed, -Notes)
