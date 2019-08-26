@@ -20,7 +20,7 @@ More info [here!](https://osf.io/at9hr)
 Real-time data diagnostics
 ==========================
 
-**Last run: Wed Aug 21 15:54:31 2019**
+**Last run: Mon Aug 26 12:44:05 2019**
 
 | Site | Experiment           |    N|
 |:-----|:---------------------|----:|
@@ -65,20 +65,22 @@ Weather station data
 ### Stdev for each temperature and moisture probe
 
     #> # A tibble: 201,733 x 7
-    #> # Groups:   Site, Sensor_Depth, Sensor_Group [18]
+    #> # Groups:   Site, Sensor_Depth, Sensor_Group [?]
     #>   Site  Sensor_Depth Sensor_Group Timestamp               n meanValue
     #>   <chr> <chr>        <chr>        <dttm>              <int>     <dbl>
-    #> 1 <NA>  <NA>         Temp         2018-06-12 13:53:03     5      18.7
-    #> 2 <NA>  <NA>         Temp         2018-06-12 14:08:03     5      18.8
-    #> 3 <NA>  <NA>         Temp         2018-06-12 14:23:03     5      18.8
-    #> 4 <NA>  <NA>         Temp         2018-06-12 14:38:03     5      18.8
-    #> 5 <NA>  <NA>         Temp         2018-06-12 14:53:03     5      18.9
-    #> # … with 2.017e+05 more rows, and 1 more variable: sdValue <dbl>
+    #> 1 HSLE  20CM         Temp         2018-06-12 13:53:03     1      17.3
+    #> 2 HSLE  20CM         Temp         2018-06-12 14:08:03     1      17.3
+    #> 3 HSLE  20CM         Temp         2018-06-12 14:23:03     1      17.3
+    #> 4 HSLE  20CM         Temp         2018-06-12 14:38:03     1      17.4
+    #> 5 HSLE  20CM         Temp         2018-06-12 14:53:03     1      17.4
+    #> # ... with 2.017e+05 more rows, and 1 more variable: sdValue <dbl>
 
 Wells
 -----
 
 ### Well conductivity data
+
+![](README_figures/README-wells-1.png)
 
 Other
 -----
