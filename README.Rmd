@@ -172,11 +172,11 @@ weather_data %>%
 
 ### Well conductivity data
 ```{r wells, echo = FALSE}
-#readd("well_data", path = PATH) %>% 
-#  gather(variable, value, Low_Range, High_Range) %>% 
-#  ggplot(aes(x = Timestamp, y = value, color = variable)) +
-#  geom_line() +
-#  facet_grid(~Plot)
+readd("well_data", path = PATH) %>% 
+  gather(variable, value, Low_Range, High_Range) %>% 
+  ggplot(aes(x = Timestamp, y = value, color = variable)) +
+  geom_line() +
+  facet_grid(~Plot)
 ```
 
 ## Other
@@ -193,10 +193,22 @@ ggplot(tree_data, aes(DBH_cm_2018, fill = Species)) +
 ### Litter data
 ```{r litter, echo = FALSE}
 litter_data <- readd('litter_data', path = PATH)
-litter_data %>% group_by(Date_collected, Plot, Litter_Type) %>% 
+litter_data %>% 
+  filter(Litter_Type == "M_leaf_oak" | Litter_Type == "M_leaf_beech" | 
+         Litter_Type == "M_leaf_other" | Litter_Type == "M_leaf_tulip") %>% 
+  group_by(Date_collected, Plot, Litter_Type) %>% 
   summarise(Mass_g = mean(Mass_g)) %>% 
-  ggplot(aes(x = Date_collected, y = Mass_g, fill = Litter_Type)) + 
-  facet_wrap(~Plot) + geom_area(aes(color = Litter_Type)) +
+  ungroup() -> litter_mean
+  
+litter_mean %>% 
+  arrange(Plot, Litter_Type, Date_collected) %>% 
+  group_by(Plot, Litter_Type) %>% 
+  mutate(Mass_g_cumuluative = cumsum(Mass_g)) %>% 
+  ungroup %>% 
+  mutate(Plot = factor(Plot, levels = c("HSHE", "MSHE", "LSHE", "HSME", "MSME", "LSME", "HSLE", "MSLE", "LSLE"))) %>% 
+  ggplot(aes(x = Date_collected, y = Mass_g_cumuluative, group = Litter_Type, fill = Litter_Type)) + 
+  facet_wrap(~Plot) +
+  geom_area() +
   labs(x = "Date Collected", y = "Mass (g)") +
   theme(axis.text.x = element_text(angle = 90))
 ```
