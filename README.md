@@ -20,7 +20,7 @@ More info [here!](https://osf.io/at9hr)
 Real-time data diagnostics
 ==========================
 
-**Last run: Sun Jun 16 04:08:47 2019**
+**Last run: Mon Aug 26 12:44:05 2019**
 
 | Site | Experiment           |    N|
 |:-----|:---------------------|----:|
@@ -40,8 +40,6 @@ IRGA data
 ![](README_figures/README-q10-1.png)
 
 ### Licor soil moisture over time
-
-    #> Warning: Removed 72 rows containing missing values (geom_point).
 
 ![](README_figures/README-licor_sm-1.png)
 
@@ -75,14 +73,12 @@ Weather station data
     #> 3 HSLE  20CM         Temp         2018-06-12 14:23:03     1      17.3
     #> 4 HSLE  20CM         Temp         2018-06-12 14:38:03     1      17.4
     #> 5 HSLE  20CM         Temp         2018-06-12 14:53:03     1      17.4
-    #> # … with 2.017e+05 more rows, and 1 more variable: sdValue <dbl>
+    #> # ... with 2.017e+05 more rows, and 1 more variable: sdValue <dbl>
 
 Wells
 -----
 
 ### Well conductivity data
-
-    #> Warning: Removed 4 rows containing missing values (geom_path).
 
 ![](README_figures/README-wells-1.png)
 
@@ -91,8 +87,8 @@ Other
 
 ### Histogram of trees by DBH
 
-    #> Warning: Removed 3 rows containing non-finite values (stat_bin).
-
 ![](README_figures/README-inventory-1.png)
 
-### Coming soon: litter data!
+### Litter data
+
+![](README_figures/README-litter-1.png)
