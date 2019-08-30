@@ -116,6 +116,12 @@ Time scales we're looking at:
 * **Months**: what's CV between successive months? How many times do we need to sample for a good annual estimate? Uses survey data.
 * **Years**: What's the CV between successive years in the SRDB?
 
+Continuous soil temperature and moisture data:
+```{r, soiltemps}
+print(summary(cld_clean$T5))
+print(summary(cld_clean$SMoist))
+```
+
 ## Results
 
 ### Drivers
@@ -319,13 +325,22 @@ for(p in unique(cld_clean$Port)) {
                    lag.max = 15)
   results[[p]] <- tibble(Port = p,
                          lag = pacf_obj$lag[,,1], 
-                         PACF = pacf_obj$acf[,,1])
+                         PACF = pacf_obj$acf[,,1],
+                         n = length(na.omit(cld_p$Flux)))
   # Compute the CV between successive measurements
   cld_p$CV <- running_cv(cld_p$Flux)
   cld_cv_daily[[p]] <- cld_p
 }
 # Combine results and compute mean PACF at each lag
 bind_rows(results) %>% 
+  # there are several zany values here we're just going to remove:
+  # Port lag  PACF
+  # 7    11   251.  
+  # 4    13   -86.0 
+  # 7    15   -4.83
+ #  7     7   3.20
+  # this is noted in the methods
+  filter(PACF >= -2, PACF <= 2) %>% 
   group_by(lag) %>% 
   summarise(PACF_sd = sd(PACF), PACF = mean(PACF)) ->
   pacf_df
@@ -413,8 +428,8 @@ p <- ggplot(cld_24hr_errors,
 print(p + ggtitle("J. Best time of day"))
 save_plot("temporal_figures/Figure4-time_of_day.png", plot = p)
 
-ggplot(cld_24hr, aes(Hour, Flux, group=paste(Port, Yday))) + geom_line() + facet_wrap(~month(Timestamp))
-ggplot(cld_24hr, aes(Hour, T5, group=paste(Port, Yday))) + geom_line() + facet_wrap(~month(Timestamp))
+ggplot(filter(cld_24hr, Port==2), aes(Hour, Flux, group = Yday)) +
+  geom_line() + facet_wrap(~Month, scales = "free")
 ```
 
 
@@ -590,6 +605,7 @@ smry <- tibble(Seconds = timescales,
                       median_error_days, 
                       median_cv_months, 
                       median_cv_annual))
+print(smry)
 
 distributions <- bind_rows(tibble(Labels = nts[1], CV = meas_error_1$CV),
                            tibble(Labels = nts[2], CV = cld_cv$CV),
