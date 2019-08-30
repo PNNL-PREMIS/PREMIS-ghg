@@ -103,7 +103,7 @@ licor_daily_data %>%
 ```
 
 ### Licor soil moisture over time
-```{r licor_sm, echo = FALSE}
+```{r licor_sm, echo = FALSE, warning = FALSE}
 daily_treatment_means %>% 
   filter(!is.na(meanSM)) %>% 
   ggplot(aes(x = Timestamp, y = meanSM, color = Experiment, group = Group)) +
@@ -182,11 +182,34 @@ readd("well_data", path = PATH) %>%
 ## Other
 
 ### Histogram of trees by DBH
-```{r inventory, echo = FALSE}
+```{r inventory, echo = FALSE, warning = FALSE}
 tree_data <- readd("tree_data", path = PATH)
 ggplot(tree_data, aes(DBH_cm_2018, fill = Species)) + 
   geom_histogram(position = "stack", binwidth = 5) + 
-  facet_grid(Salinity ~ Elevation)
+  facet_grid(Salinity ~ Elevation) +
+  labs(x = "DBH (cm)", y = "Count")
 ```
 
-### Coming soon: litter data!
+### Litter data
+```{r litter, echo = FALSE}
+litter_data <- readd('litter_data', path = PATH)
+litter_data %>% 
+  filter(Litter_Type == "M_leaf_oak" | Litter_Type == "M_leaf_beech" | 
+         Litter_Type == "M_leaf_other" | Litter_Type == "M_leaf_tulip") %>% 
+  group_by(Date_collected, Plot, Litter_Type) %>% 
+  summarise(Mass_g = mean(Mass_g)) %>% 
+  ungroup() -> litter_mean
+  
+litter_mean %>% 
+  arrange(Plot, Litter_Type, Date_collected) %>% 
+  group_by(Plot, Litter_Type) %>% 
+  mutate(Mass_g_cumuluative = cumsum(Mass_g)) %>% 
+  ungroup %>% 
+  mutate(Plot = factor(Plot, levels = c("HSHE", "MSHE", "LSHE", "HSME", "MSME", "LSME", "HSLE", "MSLE", "LSLE"))) %>% 
+  ggplot(aes(x = Date_collected, y = Mass_g_cumuluative, group = Litter_Type, fill = Litter_Type)) + 
+  facet_wrap(~Plot) +
+  geom_area() +
+  labs(x = "Date Collected", y = "Mass (g)") +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
