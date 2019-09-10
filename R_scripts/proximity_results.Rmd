@@ -1,7 +1,8 @@
 ---
 title: "proximity_results"
 author: "SP"
-output: html_document
+output:
+  html_document: default
 ---
 
 ### `r Sys.Date()`
@@ -209,7 +210,51 @@ licor_daily_data %>%
   ggtitle("Figure 3") +
   labs(x = "Date", 
        y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
+  ylim(c(0,20)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+```{r co2_BA, echo = FALSE, warning = FALSE, fig.width = 8}
+TEST_DISTANCE <- 5
+
+readd("licor_data") %>% 
+  filter(Experiment == "Control", is.na(Notes)) %>% 
+  # Filter out bad soil moisture and flux readings
+  filter(SMoisture > 0, SMoisture < 1,
+         Flux > 0) ->
+  control_cols
+
+# Calculate basal area within 5 m
+BA5 <- basal_area_sum(tree_prox_data, distance = TEST_DISTANCE)
+
+filter_NAs <- function(x) {
+  x %>% filter(!is.na(Flux), !is.na(T5), !is.na(T20), !is.na(SMoisture), !is.na(BA_m2))
+}
+
+# Join the respiration data with the BA proximity data; this is main analysis dataset
+control_cols %>% 
+  left_join(BA5, by = "Collar") %>% 
+  mutate(Timestamp = ymd_hms(Timestamp)) %>% 
+  select(Timestamp, Flux, T5, T20, SMoisture, BA_m2, Site = Dest_Site) %>% 
+  na.omit -> 
+  control_cols_5m
+
+BA_CUTOFF <- median(control_cols_5m$BA_m2)
+
+control_cols_5m %>% 
+  filter(BA_m2 > BA_CUTOFF) %>% mutate(which = "High BA") -> high_BA
+
+control_cols_5m %>% 
+  filter(BA_m2 <= BA_CUTOFF) %>% mutate(which = "Low BA") -> low_BA
+
+rbind(high_BA, low_BA) -> BA
+  
+ggplot(data = BA, aes(x = yday(Timestamp), y = Flux, color = which)) +
+  geom_point(alpha = I(0.5)) +
+  geom_smooth(size = 1.5) +
+  labs(x = "Day of Year") + 
+  scale_color_discrete()
+
 ```
 
 ## Power calculation
@@ -263,29 +308,6 @@ results %>%
 ```{r test-h1, echo = FALSE, warning = FALSE}
 # Filter Licor data for only true control collars and screen out bad SM data
 MODEL_TYPE <- "lme"
-TEST_DISTANCE <- 5
-
-readd("licor_data") %>% 
-  filter(Experiment == "Control", is.na(Notes)) %>% 
-  # Filter out bad soil moisture and flux readings
-  filter(SMoisture > 0, SMoisture < 1,
-         Flux > 0) ->
-  control_cols
-
-# Calculate basal area within 5 m
-BA5 <- basal_area_sum(tree_prox_data, distance = TEST_DISTANCE)
-
-filter_NAs <- function(x) {
-  x %>% filter(!is.na(Flux), !is.na(T5), !is.na(T20), !is.na(SMoisture), !is.na(BA_m2))
-}
-
-# Join the respiration data with the BA proximity data; this is main analysis dataset
-control_cols %>% 
-  left_join(BA5, by = "Collar") %>% 
-  mutate(Timestamp = ymd_hms(Timestamp)) %>% 
-  select(Timestamp, Flux, T5, T20, SMoisture, BA_m2, Site = Dest_Site) %>% 
-  na.omit -> 
-  control_cols_5m
 
 # Run the main analysis
 h1 <- run_model(control_cols_5m, model_type = MODEL_TYPE)
