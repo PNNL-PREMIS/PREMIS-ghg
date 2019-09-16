@@ -242,16 +242,16 @@ control_cols %>%
 BA_CUTOFF <- median(control_cols_5m$BA_m2)
 
 control_cols_5m %>% 
-  filter(BA_m2 > BA_CUTOFF) %>% mutate(which = "High BA") -> high_BA
+  filter(BA_m2 > BA_CUTOFF) %>% mutate(Type = "High BA") -> high_BA
 
 control_cols_5m %>% 
-  filter(BA_m2 <= BA_CUTOFF) %>% mutate(which = "Low BA") -> low_BA
+  filter(BA_m2 <= BA_CUTOFF) %>% mutate(Type = "Low BA") -> low_BA
 
 rbind(high_BA, low_BA) -> BA
   
-ggplot(data = BA, aes(x = yday(Timestamp), y = Flux, color = which)) +
+ggplot(data = BA, aes(x = yday(Timestamp), y = Flux, color = Type)) +
   geom_point(alpha = I(0.5)) +
-  geom_smooth(size = 1.5) +
+  geom_smooth(size = 1) +
   labs(x = "Day of Year") + 
   scale_color_discrete()
 
