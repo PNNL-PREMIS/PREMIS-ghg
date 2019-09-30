@@ -6,9 +6,15 @@
 make_tree_data <- function(inventory_data, species_codes, plot_data) {
   
   # Join the two and check for any unknown species code
-  inventory_data %>% 
-    left_join(species_codes, by = "Species_code") ->
-    trees
+  inventory_data %>%
+    gather("Type", "Value", matches("_[0-9]{4}$")) %>% 
+    separate(Type, into = c("Category", "Unit", "Year"), sep = "_")  %>% 
+    select(-Unit, - Year) %>%
+    group_by(Category) %>% 
+    mutate(grouped_id = row_number()) %>% 
+    spread(Category, Value) %>% 
+    select(-grouped_id) %>% 
+    left_join(species_codes, by = "Species_code") -> trees
   
   unmatched <- filter(trees, is.na(Species))
   if(nrow(unmatched)) {
