@@ -312,6 +312,13 @@ MODEL_TYPE <- "lme"
 # Run the main analysis
 h1 <- run_model(control_cols_5m, model_type = MODEL_TYPE)
 model_stats(h1, control_cols_5m)
+
+# Run it again as a linear model just for variable importance
+h1_lin <- run_model(control_cols_5m, model_type = "linear")
+suppressMessages(library(relaimpo, quietly = TRUE))
+imp <- relaimpo::calc.relimp(h1_lin$reduced_model, type = "lmg", rela = TRUE)
+print(imp, show.coeffs = FALSE)
+print(round(sort(imp$lmg, decreasing = TRUE), 2))
 ```
 
 ### Hypothesis II - growing vs. dormant season
@@ -321,16 +328,24 @@ GS_MONTHS <- 4:10  # growing season months, i.e. April-October
 control_cols_5m$Growing_season <- month(control_cols_5m$Timestamp) %in% GS_MONTHS
 
 growing_flux <- filter(control_cols_5m, Growing_season)
-h2g <- run_model(growing_flux, model_type = MODEL_TYPE)
+# Seems like calc.relimp can't handle a lme model so use linear instead
+h2g <- run_model(growing_flux, model_type = "linear")
+
 print("Growing Season")
 model_stats(h2g, growing_flux)
+imp <- relaimpo::calc.relimp(h2g$reduced_model, type = "lmg", rela = TRUE)
+print(imp, show.coeffs = FALSE)
+print(round(sort(imp$lmg, decreasing = TRUE), 2))
 
 # Filter true controls for dormant season
 dormant_flux <- filter(control_cols_5m, !Growing_season)
-h2d <- run_model(dormant_flux, model_type = MODEL_TYPE)
+h2d <- run_model(dormant_flux, model_type = "linear")
 
 print("Dormant Season")
 model_stats(h2d, dormant_flux)
+imp <- relaimpo::calc.relimp(h2d$reduced_model, type = "lmg", rela = TRUE)
+print(imp, show.coeffs = FALSE)
+print(round(sort(imp$lmg, decreasing = TRUE), 2))
 ```
 
 ### Hypothesis III - moisture-limited times
@@ -343,17 +358,23 @@ low_i <- which(control_cols_5m$SM_bin == 1)
 
 ## Filter true controls for the bottom and top 33% soil moisture values
 m_low <- control_cols_5m[low_i, ] %>% filter_NAs
-h3l <- run_model(m_low, model_type = MODEL_TYPE)
+h3l <- run_model(m_low, model_type = "linear")
 
 print("Low Moisture")
 model_stats(h3l, m_low)
+imp <- relaimpo::calc.relimp(h3l$reduced_model, type = "lmg", rela = TRUE)
+print(imp, show.coeffs = FALSE)
+print(round(sort(imp$lmg, decreasing = TRUE), 2))
 
 high_i <- which(control_cols_5m$SM_bin == 3)
 m_high <- control_cols_5m[high_i, ] %>% filter_NAs
-h3h <- run_model(m_high, model_type = MODEL_TYPE)
+h3h <- run_model(m_high, model_type = "linear")
 
 print("High Moisture")
 model_stats(h3h, m_high)
+imp <- relaimpo::calc.relimp(h3h$reduced_model, type = "lmg", rela = TRUE)
+print(imp, show.coeffs = FALSE)
+print(round(sort(imp$lmg, decreasing = TRUE), 2))
 ```
 
 ## Sensitivity test - BA significance with distance
