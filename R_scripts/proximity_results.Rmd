@@ -77,7 +77,7 @@ model_stats <- function(mods, dat) {
   # WITHOUT basal area included
   dat$no_BA_residuals <- residuals(mods$mod_no_BA)
   p <- ggplot(dat, aes(no_BA_residuals, BA_m2, color = Site)) + 
-    geom_point(alpha = 0.75) + 
+    geom_point(alpha = 0.75, na.rm = TRUE) + 
     geom_smooth(method = "lm", se = FALSE) +
     geom_smooth(method = "lm", group = 1, color = "black") +
     xlab(expression(Residual~(µmol~m^-2~s^-1))) +
@@ -89,6 +89,16 @@ model_stats <- function(mods, dat) {
   print(summary(m_reduced))
   print(car::Anova(m_reduced, type = "III"))   # NOT stats::anova()!
   plot(m_reduced)
+}
+
+# Print variable importance (contribution to total explained variance) as calculated
+# by relaimpo package (per Reviewer 2), and return data, invisibly
+print_var_importance <- function(m) {
+  suppressMessages(library(relaimpo, quietly = TRUE))
+  imp <- relaimpo::calc.relimp(m, type = "lmg", rela = TRUE)
+  print(imp, show.coeffs = FALSE)
+  print(round(sort(imp$lmg, decreasing = TRUE), 2))
+  invisible(imp$lmg)
 }
 
 # Helper function to calculate sample size
@@ -248,7 +258,7 @@ control_cols_5m %>%
   filter(BA_m2 <= BA_CUTOFF) %>% mutate(Type = "Low BA") -> low_BA
 
 rbind(high_BA, low_BA) -> BA
-  
+
 ggplot(data = BA, aes(x = yday(Timestamp), y = Flux, color = Type)) +
   geom_point(alpha = I(0.5)) +
   geom_smooth(size = 1) +
@@ -315,10 +325,7 @@ model_stats(h1, control_cols_5m)
 
 # Run it again as a linear model just for variable importance
 h1_lin <- run_model(control_cols_5m, model_type = "linear")
-suppressMessages(library(relaimpo, quietly = TRUE))
-imp <- relaimpo::calc.relimp(h1_lin$reduced_model, type = "lmg", rela = TRUE)
-print(imp, show.coeffs = FALSE)
-print(round(sort(imp$lmg, decreasing = TRUE), 2))
+print_var_importance(h1_lin$reduced_model)
 ```
 
 ### Hypothesis II - growing vs. dormant season
@@ -333,9 +340,7 @@ h2g <- run_model(growing_flux, model_type = "linear")
 
 print("Growing Season")
 model_stats(h2g, growing_flux)
-imp <- relaimpo::calc.relimp(h2g$reduced_model, type = "lmg", rela = TRUE)
-print(imp, show.coeffs = FALSE)
-print(round(sort(imp$lmg, decreasing = TRUE), 2))
+print_var_importance(h2g$reduced_model)
 
 # Filter true controls for dormant season
 dormant_flux <- filter(control_cols_5m, !Growing_season)
@@ -343,9 +348,7 @@ h2d <- run_model(dormant_flux, model_type = "linear")
 
 print("Dormant Season")
 model_stats(h2d, dormant_flux)
-imp <- relaimpo::calc.relimp(h2d$reduced_model, type = "lmg", rela = TRUE)
-print(imp, show.coeffs = FALSE)
-print(round(sort(imp$lmg, decreasing = TRUE), 2))
+print_var_importance(h2d$reduced_model)
 ```
 
 ### Hypothesis III - moisture-limited times
@@ -362,9 +365,7 @@ h3l <- run_model(m_low, model_type = "linear")
 
 print("Low Moisture")
 model_stats(h3l, m_low)
-imp <- relaimpo::calc.relimp(h3l$reduced_model, type = "lmg", rela = TRUE)
-print(imp, show.coeffs = FALSE)
-print(round(sort(imp$lmg, decreasing = TRUE), 2))
+print_var_importance(h3l$reduced_model)
 
 high_i <- which(control_cols_5m$SM_bin == 3)
 m_high <- control_cols_5m[high_i, ] %>% filter_NAs
@@ -372,9 +373,7 @@ h3h <- run_model(m_high, model_type = "linear")
 
 print("High Moisture")
 model_stats(h3h, m_high)
-imp <- relaimpo::calc.relimp(h3h$reduced_model, type = "lmg", rela = TRUE)
-print(imp, show.coeffs = FALSE)
-print(round(sort(imp$lmg, decreasing = TRUE), 2))
+print_var_importance(h3h$reduced_model)
 ```
 
 ## Sensitivity test - BA significance with distance
