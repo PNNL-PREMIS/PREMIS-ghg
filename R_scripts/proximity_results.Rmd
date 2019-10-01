@@ -93,12 +93,14 @@ model_stats <- function(mods, dat) {
 
 # Print variable importance (contribution to total explained variance) as calculated
 # by relaimpo package (per Reviewer 2), and return data, invisibly
-print_var_importance <- function(m) {
+var_importance <- function(m, print_it = TRUE) {
   suppressMessages(library(relaimpo, quietly = TRUE))
   imp <- relaimpo::calc.relimp(m, type = "lmg", rela = TRUE)
-  print(imp, show.coeffs = FALSE)
-  print(round(sort(imp$lmg, decreasing = TRUE), 2))
-  invisible(imp$lmg)
+  if(print_it) {
+    print(imp, show.coeffs = FALSE)
+    print(round(sort(imp$lmg, decreasing = TRUE), 2))
+  }
+  invisible(tibble(variable = names(imp$lmg), importance = imp$lmg))
 }
 
 # Helper function to calculate sample size
@@ -325,7 +327,7 @@ model_stats(h1, control_cols_5m)
 
 # Run it again as a linear model just for variable importance
 h1_lin <- run_model(control_cols_5m, model_type = "linear")
-print_var_importance(h1_lin$reduced_model)
+var_importance(h1_lin$reduced_model)
 ```
 
 ### Hypothesis II - growing vs. dormant season
@@ -340,7 +342,7 @@ h2g <- run_model(growing_flux, model_type = "linear")
 
 print("Growing Season")
 model_stats(h2g, growing_flux)
-print_var_importance(h2g$reduced_model)
+var_importance(h2g$reduced_model)
 
 # Filter true controls for dormant season
 dormant_flux <- filter(control_cols_5m, !Growing_season)
@@ -348,7 +350,7 @@ h2d <- run_model(dormant_flux, model_type = "linear")
 
 print("Dormant Season")
 model_stats(h2d, dormant_flux)
-print_var_importance(h2d$reduced_model)
+var_importance(h2d$reduced_model)
 ```
 
 ### Hypothesis III - moisture-limited times
@@ -365,7 +367,7 @@ h3l <- run_model(m_low, model_type = "linear")
 
 print("Low Moisture")
 model_stats(h3l, m_low)
-print_var_importance(h3l$reduced_model)
+var_importance(h3l$reduced_model)
 
 high_i <- which(control_cols_5m$SM_bin == 3)
 m_high <- control_cols_5m[high_i, ] %>% filter_NAs
@@ -373,12 +375,11 @@ h3h <- run_model(m_high, model_type = "linear")
 
 print("High Moisture")
 model_stats(h3h, m_high)
-print_var_importance(h3h$reduced_model)
+var_importance(h3h$reduced_model)
 ```
 
 ## Sensitivity test - BA significance with distance
 ```{r sensitivity, echo = FALSE, warning = FALSE, fig.width = 9}
-
 sens_output <- list()
 BA_output <- list()
 # Loop through the range of distances we measured and run 
@@ -390,29 +391,25 @@ for (i in seq.int(2, max(tree_prox_data$Distance_m, na.rm = TRUE))) {
     select(Timestamp, Flux, T5, T20, SMoisture, BA_m2, Site = Dest_Salinity) %>% 
     na.omit ->
     dat
-  mods <- run_model(dat, model_type = MODEL_TYPE)
-  smry <- car::Anova(mods$reduced_model, type = "III")
+  mods <- run_model(dat, model_type = "linear")
+  imp <- var_importance(mods$reduced_model, print_it = FALSE)
   
-  # linear and lme models and car::Anova return differently-named p-value columns;
-  # rename for consistency
-  names(smry)[ncol(smry)] <- "p-value"
-  smry$Term = rownames(smry)
-  sens_output[[as.character(i)]] <- as_tibble(smry)
+  sens_output[[as.character(i)]] <- as_tibble(imp)
 }
 
+prettynames <- c("BA_m2" = "BA", "BA_m2:T20" = "BA:T20", "T5:BA_m2" = "BA:T5")
+
 bind_rows(sens_output, .id = "Distance") %>%
-  filter(grepl("BA_m2", Term)) %>%
-  mutate(Distance = as.integer(Distance)) %>%
+  filter(grepl("BA_m2", variable)) %>%
+  mutate(Distance = as.integer(Distance),
+         Variable = prettynames[variable]) %>%
   print %>%
-  ggplot(aes(Distance, `p-value`, color = Term)) + 
+  ggplot(aes(Distance, importance, color = Variable)) + 
   geom_line(size = 1) + 
   geom_point(size = 2.5) +
   geom_vline(xintercept = TEST_DISTANCE, linetype = 2) +
-  geom_hline(yintercept = 0.05, linetype = 2) +
   xlab("Radial distance from collar (m)") + 
-  ylab("P-value") +
-  scale_color_discrete(labels = c("BA", "BA:T20", "BA:T5")) +
-  scale_y_log10()
+  ylab("Relative importance")
 ```
 
 ```{r results, echo = FALSE}
