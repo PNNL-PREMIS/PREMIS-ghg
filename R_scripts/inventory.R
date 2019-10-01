@@ -14,7 +14,8 @@ make_tree_data <- function(inventory_data, species_codes, plot_data) {
     mutate(grouped_id = row_number()) %>% 
     spread(Category, Value) %>% 
     select(-grouped_id) %>% 
-    left_join(species_codes, by = "Species_code") -> trees
+    left_join(species_codes, by = "Species_code") %>% 
+    mutate(Date = lubridate::mdy(Date)) -> trees
   
   unmatched <- filter(trees, is.na(Species))
   if(nrow(unmatched)) {
