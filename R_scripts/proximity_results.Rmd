@@ -19,6 +19,7 @@ theme_set(theme_bw())
 library(broom)
 library(lubridate)
 library(piecewiseSEM)
+library(cowplot)
 
 # Define functions
 
@@ -69,7 +70,7 @@ run_model <- function(dat, model_type) {
 }
 
 # Produce summaries and plots for the run_model() objects
-model_stats <- function(mods, dat) {
+model_stats <- function(mods, dat, which) {
   
   print(piecewiseSEM::rsquared(mods$full_model))
   
@@ -83,6 +84,7 @@ model_stats <- function(mods, dat) {
     xlab(expression(Residual~(µmol~m^-2~s^-1))) +
     ylab(expression(Basal~area~(m^2)))
   print(p)
+  ggsave(paste0("proximity_figures/Figure4_", which, ".png"))
   
   m_reduced <- mods$reduced_model
   
@@ -150,15 +152,22 @@ bind_rows(BA_dat) %>%
   BA_dat_complete
 
 # ...and plot
-BA_dat_complete %>% 
+p <- BA_dat_complete %>% 
   ggplot(aes(x = dist, y = BA_m2, group = Collar, color = n_trees)) + 
-  geom_line(size = 1) +
   scale_colour_gradientn(colours = topo.colors(9)) +
-  ggtitle("Figure 2") +
   labs(x = "Radial distance from collar (m)", 
-       y = expression(Basal~Area~(m^2)), 
-       color = "Number \nof Trees")
+       y = expression(Basal~area~(m^2)), 
+       color = "Number \nof trees")
+p_inset <- p + xlim(c(0, 5)) + ylim(c(0, 1.25)) +
+  geom_line(size = 0.25, na.rm = TRUE) +
+  theme(legend.position = "none",
+        axis.title = element_blank())
 
+fig2 <- ggdraw() +
+  draw_plot(p + geom_line(size = 1, na.rm = TRUE)) +
+  draw_plot(p_inset, 0.1, 0.65, width = 0.45, height = 0.3)
+print(fig2)
+save_plot("proximity_figures/Figure3.png", fig2)
 ```
 
 
@@ -187,20 +196,15 @@ tree_data %>%
   tabledata
 
 # Site info
-tabledata$tree_mean <- round(tabledata$tree_mean, digits = 1)
-tabledata$tree_sd <- round(tabledata$tree_sd, digits = 1)
-tabledata$BA_mean <- round(tabledata$BA_mean, digits = 1)
-tabledata$BA_sd <- round(tabledata$BA_sd, digits = 1)
 tabledata$Salinity <- sub("Salinity H", "GCReW", tabledata$Salinity)
 tabledata$Salinity <- sub("Salinity M", "Canoe Shed", tabledata$Salinity)
 tabledata$Salinity <- sub("Salinity L", "North Branch", tabledata$Salinity)
-# tabledata$Soil_Type[1] <- "Collington-Wist complex; Collington and Annapolis soils"
-# tabledata$Soil_Type[2] <- "Annapolis fine sandy loam"
-# tabledata$Soil_Type[3] <- "Collington and Annapolis soils; Collington, Wist, and Westphalia soils"
 
 tabledata %>% 
-  unite(col = 'Trees (/ha)', tree_mean, tree_sd, sep = " ± ") %>%
-  unite(col = 'BA (m2/ha)', BA_mean, BA_sd, sep = " ± ") %>%
+  transmute(Salinity = Salinity,
+            `Trees (/ha)` = paste0(tree_mean, " (", tree_sd, ")"),
+            `BA (m2/ha)` = paste0(BA_mean, " (", BA_sd, ")")) %>%
+  
   knitr::kable(digits = 1, format = "html", 
                col.names = c("Site", "Trees (/ha)", "BA (m2/ha)")) %>%
   kableExtra::kable_styling(c("striped", "bordered"), full_width = FALSE)
@@ -208,25 +212,9 @@ tabledata %>%
 
 
 ## Flux over time figure for control collars
-```{r co2_time, echo = FALSE, warning = FALSE, fig.width = 8}
-licor_daily_data <- readd("licor_daily_data")
-
-# s.d. is based on successive measurements at same collar
-licor_daily_data %>% 
-  filter(!is.na(meanFlux), !is.na(sdFlux)) %>% 
-  filter(Group == "Control") %>%
-  ggplot(aes(x = Timestamp, y = meanFlux, group = Collar)) +
-  geom_point() +
-  geom_smooth(aes(group = Dest_Site), color = "dodgerblue", se = FALSE) +
-  facet_grid(~Dest_Site) +
-  ggtitle("Figure 3") +
-  labs(x = "Date", 
-       y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
-  ylim(c(0,20)) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-```
 
 ```{r co2_BA, echo = FALSE, warning = FALSE, fig.width = 8}
+licor_daily_data <- readd("licor_daily_data")
 TEST_DISTANCE <- 5
 
 readd("licor_data") %>% 
@@ -261,12 +249,15 @@ control_cols_5m %>%
 
 rbind(high_BA, low_BA) -> BA
 
-ggplot(data = BA, aes(x = yday(Timestamp), y = Flux, color = Type)) +
-  geom_point(alpha = I(0.5)) +
-  geom_smooth(size = 1) +
-  labs(x = "Day of Year") + 
-  scale_color_discrete()
-
+BA %>% 
+  ggplot(aes(x = yday(Timestamp), y = Flux, color = Type)) +
+  geom_point(na.rm = TRUE, alpha = I(0.5)) +
+  geom_smooth(size = 1, se = FALSE, na.rm = TRUE) +
+  facet_grid(~Site) +
+  labs(x = "Day of year", 
+       y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
+  scale_color_discrete("")
+ggsave("proximity_figures/Figure2.png")
 ```
 
 ## Power calculation
@@ -323,7 +314,7 @@ MODEL_TYPE <- "lme"
 
 # Run the main analysis
 h1 <- run_model(control_cols_5m, model_type = MODEL_TYPE)
-model_stats(h1, control_cols_5m)
+model_stats(h1, control_cols_5m, which = "H1")
 
 # Run it again as a linear model just for variable importance
 h1_lin <- run_model(control_cols_5m, model_type = "linear")
@@ -341,7 +332,7 @@ growing_flux <- filter(control_cols_5m, Growing_season)
 h2g <- run_model(growing_flux, model_type = "linear")
 
 print("Growing Season")
-model_stats(h2g, growing_flux)
+model_stats(h2g, growing_flux, which = "H2gs")
 var_importance(h2g$reduced_model)
 
 # Filter true controls for dormant season
@@ -349,7 +340,7 @@ dormant_flux <- filter(control_cols_5m, !Growing_season)
 h2d <- run_model(dormant_flux, model_type = "linear")
 
 print("Dormant Season")
-model_stats(h2d, dormant_flux)
+model_stats(h2d, dormant_flux, which = "H2ds")
 var_importance(h2d$reduced_model)
 ```
 
@@ -366,7 +357,7 @@ m_low <- control_cols_5m[low_i, ] %>% filter_NAs
 h3l <- run_model(m_low, model_type = "linear")
 
 print("Low Moisture")
-model_stats(h3l, m_low)
+model_stats(h3l, m_low, which = "H3lm")
 var_importance(h3l$reduced_model)
 
 high_i <- which(control_cols_5m$SM_bin == 3)
@@ -374,7 +365,7 @@ m_high <- control_cols_5m[high_i, ] %>% filter_NAs
 h3h <- run_model(m_high, model_type = "linear")
 
 print("High Moisture")
-model_stats(h3h, m_high)
+model_stats(h3h, m_high, which = "H3hm")
 var_importance(h3h$reduced_model)
 ```
 
@@ -410,6 +401,7 @@ bind_rows(sens_output, .id = "Distance") %>%
   geom_vline(xintercept = TEST_DISTANCE, linetype = 2) +
   xlab("Radial distance from collar (m)") + 
   ylab("Relative importance")
+ggsave("proximity_figures/figure5.png")
 ```
 
 ```{r results, echo = FALSE}
