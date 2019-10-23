@@ -164,7 +164,7 @@ p_inset <- p + xlim(c(0, 5)) + ylim(c(0, 1.25)) +
         axis.title = element_blank())
 
 fig2 <- ggdraw() +
-  draw_plot(p + geom_line(size = 1, na.rm = TRUE)) +
+  draw_plot(p + geom_line(size = 0.5, na.rm = TRUE)) +
   draw_plot(p_inset, 0.1, 0.65, width = 0.45, height = 0.3)
 print(fig2)
 save_plot("proximity_figures/Figure3.png", fig2)
@@ -215,6 +215,20 @@ tabledata %>%
 
 ```{r co2_BA, echo = FALSE, warning = FALSE, fig.width = 8}
 licor_daily_data <- readd("licor_daily_data")
+
+licor_daily_data %>% 
+  filter(!is.na(meanFlux), !is.na(sdFlux), Group == "Control") %>%
+  ggplot(aes(x = yday(Timestamp), y = meanFlux, group = Collar)) +
+  geom_point() +
+  geom_smooth(aes(group = Dest_Site), color = "dodgerblue", se = FALSE) +
+  facet_grid(~Dest_Site) +
+  ggtitle("Figure 3") +
+  labs(x = "Day of Year", 
+       y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
+  ylim(c(0, 20)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+ggsave("proximity_figures/Figure2.png")
+
 TEST_DISTANCE <- 5
 
 readd("licor_data") %>% 
@@ -248,16 +262,6 @@ control_cols_5m %>%
   filter(BA_m2 <= BA_CUTOFF) %>% mutate(Type = "Low BA") -> low_BA
 
 rbind(high_BA, low_BA) -> BA
-
-BA %>% 
-  ggplot(aes(x = yday(Timestamp), y = Flux, color = Type)) +
-  geom_point(na.rm = TRUE, alpha = I(0.5)) +
-  geom_smooth(size = 1, se = FALSE, na.rm = TRUE) +
-  facet_grid(~Site) +
-  labs(x = "Day of year", 
-       y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
-  scale_color_discrete("")
-ggsave("proximity_figures/Figure2.png")
 ```
 
 ## Power calculation

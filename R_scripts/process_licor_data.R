@@ -81,7 +81,7 @@ process_licor_data <- function(raw_data, collar_data, plot_data, temp_data) {
            Origin_Elevation = factor(Origin_Elevation, levels = HML),
            Dest_Salinity = factor(Dest_Salinity, levels = HML),
            Dest_Elevation = factor(Dest_Elevation, levels = HML),
-           Date = paste(month(Timestamp), "/", day(Timestamp)),
+           Date = floor_date(Timestamp),
            Group = paste(Origin_Plot, "->", Destination_Plot),
            Group = if_else(Experiment == "Control", "Control", Group))
 }
