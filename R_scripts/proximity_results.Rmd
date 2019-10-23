@@ -140,6 +140,7 @@ for (i in 1:max(tree_prox_data$Distance_m, na.rm = TRUE)) {
     group_by(Collar) %>% 
     summarise(n_trees = n(), 
               BA_m2 = sum(BA_sqm, na.rm = TRUE), 
+              DBH_cm = sum(DBH_cm),
               dist = i) -> #%>%
     #    complete(dist = i, Collar, fill = list(BA_m2 = 0, n_trees = 0))->
     BA_dat[[i]]
@@ -202,8 +203,8 @@ tabledata$Salinity <- sub("Salinity L", "North Branch", tabledata$Salinity)
 
 tabledata %>% 
   transmute(Salinity = Salinity,
-            `Trees (/ha)` = paste0(tree_mean, " (", tree_sd, ")"),
-            `BA (m2/ha)` = paste0(BA_mean, " (", BA_sd, ")")) %>%
+            `Trees (/ha)` = paste(tree_mean, tree_sd, sep = " ± "),
+            `BA (m2/ha)` = paste(BA_mean, BA_sd, sep = " ± ")) %>%
   
   knitr::kable(digits = 1, format = "html", 
                col.names = c("Site", "Trees (/ha)", "BA (m2/ha)")) %>%
@@ -219,7 +220,7 @@ licor_daily_data <- readd("licor_daily_data")
 licor_daily_data %>% 
   filter(!is.na(meanFlux), !is.na(sdFlux), Group == "Control") %>%
   ggplot(aes(x = yday(Timestamp), y = meanFlux, group = Collar)) +
-  geom_point() +
+  geom_point(alpha = 0.5) +
   geom_smooth(aes(group = Dest_Site), color = "dodgerblue", se = FALSE) +
   facet_grid(~Dest_Site) +
   ggtitle("Figure 3") +
@@ -249,7 +250,7 @@ filter_NAs <- function(x) {
 control_cols %>% 
   left_join(BA5, by = "Collar") %>% 
   mutate(Timestamp = ymd_hms(Timestamp)) %>% 
-  select(Timestamp, Flux, T5, T20, SMoisture, BA_m2, Site = Dest_Site) %>% 
+  select(Collar, Timestamp, Flux, T5, T20, SMoisture, BA_m2, Site = Dest_Site) %>% 
   na.omit -> 
   control_cols_5m
 
@@ -301,7 +302,7 @@ ggplot(results, aes(power, n, color = factor(delta), group = delta)) +
 # Make a nice table
 results %>% 
   filter(power >= 0.5) %>% 
-  mutate(N = paste(floor(n), floor(n_sd), sep = " ± ")) %>% 
+  mutate(N = paste0(floor(n), " (" ,floor(n_sd), ")")) %>% 
   select(delta, power, N) %>% 
   spread(power, N) %>% 
   kableExtra::kable() %>%
@@ -431,7 +432,7 @@ BA_dat_complete %>%
 # Results
 
 ### *Basic results*
-We measured Rs, soil temperature, and soil moisture on `r length(unique(control_cols$Date))` different days across the one-year period (Figure 2). Soil temperatures ranged from `r min(flux_data$T5)` to `r round(max(flux_data$T5), digits = 1)` (at 5 cm) and `r min(flux_data$T20)` to `r max(flux_data$T20)` (at 20 cm); volumetric soil moisture values were `r round(min(flux_data$SMoisture), digits = 2)`-`r round(max(flux_data$SMoisture), digits = 2)`. Fluxes ranged from `r round(min(flux_data$Flux), digits = 2)` µmol m-2 s-1 (in March 2019) to `r round(max(flux_data$Flux), digits = 2)` µmol m-2 s-1 (in July 2018). The coefficient of variability between collars within plots, a measure of spatial variability, ranged from `r round(min(flux_CV$CV))`% to `r round(max(flux_CV$CV))`%. This implied that a large number of samples was required to estimate Rs accurately (Table 2) .
+We measured Rs, soil temperature, and soil moisture on `r length(unique(control_cols$Date))` different days across the one-year period (Figure 2). Soil temperatures ranged from `r min(flux_data$T5)` to `r round(max(flux_data$T5), digits = 1)` (at 5 cm) and `r min(flux_data$T20, na.rm = TRUE)` to `r max(flux_data$T20, na.rm = TRUE)` (at 20 cm); volumetric soil moisture values were `r round(min(flux_data$SMoisture), digits = 2)`-`r round(max(flux_data$SMoisture), digits = 2)`. Fluxes ranged from `r round(min(flux_data$Flux), digits = 2)` µmol m-2 s-1 (in March 2019) to `r round(max(flux_data$Flux), digits = 2)` µmol m-2 s-1 (in July 2018). The coefficient of variability between collars within plots, a measure of spatial variability, ranged from `r round(min(flux_CV$CV))`% to `r round(max(flux_CV$CV))`%. This implied that a large number of samples was required to estimate Rs accurately (Table 2) .
 
 There was large variability in the basal area and number of trees close to the measurement collars (Figure 3). Mean values were `r BA_stats$sum_trees[which(BA_stats$dist == 1)]` trees (with a basal area of `r BA_stats$BA_mean[which(BA_stats$dist == 1)]` m2) within 1 m, `r BA_stats$sum_trees[which(BA_stats$dist == 5)]` trees (`r BA_stats$BA_mean[which(BA_stats$dist == 5)]` m2) within 5 m, and `r BA_stats$sum_trees[which(BA_stats$dist == 10)]` trees (`r BA_stats$BA_mean[which(BA_stats$dist == 10)]` m2) at 10 m. At our maximum radius of measurement, 15 m, there were on average `r BA_stats$sum_trees[which(BA_stats$dist == 15)]` trees and `r BA_stats$BA_mean[which(BA_stats$dist == 15)]` m2 of basal area, ranging from a minimum of `r BA_15m$min_BA` m2 to a maximum of `r BA_15m$max_BA` m2. The forest was thus highly spatially variable in its distribution of trees relative to the Rs measurement collars. 
 
