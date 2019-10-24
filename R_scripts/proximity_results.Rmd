@@ -20,6 +20,7 @@ library(broom)
 library(lubridate)
 library(piecewiseSEM)
 library(cowplot)
+library(wesanderson)
 
 # Define functions
 
@@ -77,12 +78,12 @@ model_stats <- function(mods, dat, which) {
   # Plot correlation between BA and the residuals of the model
   # WITHOUT basal area included
   dat$no_BA_residuals <- residuals(mods$mod_no_BA)
-  p <- ggplot(dat, aes(no_BA_residuals, BA_m2, color = Site)) + 
+  p <- ggplot(dat, aes(x = BA_m2, y = no_BA_residuals, color = Site)) + 
     geom_point(alpha = 0.75, na.rm = TRUE) + 
     geom_smooth(method = "lm", se = FALSE) +
     geom_smooth(method = "lm", group = 1, color = "black") +
-    xlab(expression(Residual~(µmol~m^-2~s^-1))) +
-    ylab(expression(Basal~area~(m^2)))
+    ylab(expression(Residual~(µmol~m^-2~s^-1))) +
+    xlab(expression(Basal~area~(m^2)))
   print(p)
   ggsave(paste0("proximity_figures/Figure4_", which, ".png"))
   
@@ -153,22 +154,26 @@ bind_rows(BA_dat) %>%
   BA_dat_complete
 
 # ...and plot
+pal <- (wes_palette(name = "Cavalcanti1", 4, type = "discrete"))
+
 p <- BA_dat_complete %>% 
   ggplot(aes(x = dist, y = BA_m2, group = Collar, color = n_trees)) + 
-  scale_colour_gradientn(colours = topo.colors(9)) +
-  labs(x = "Radial distance from collar (m)", 
+#  scale_colour_gradientn(colours = pal) +
+    scale_color_jcolors_contin(palette = rev("pal10")) +
+    labs(x = "Radial distance from collar (m)", 
        y = expression(Basal~area~(m^2)), 
        color = "Number \nof trees")
 p_inset <- p + xlim(c(0, 5)) + ylim(c(0, 1.25)) +
-  geom_line(size = 0.25, na.rm = TRUE) +
+  geom_line(size = 0.7, na.rm = TRUE) +
+  scale_fill_gradientn(colours = pal) +
   theme(legend.position = "none",
         axis.title = element_blank())
 
 fig2 <- ggdraw() +
-  draw_plot(p + geom_line(size = 0.5, na.rm = TRUE)) +
+  draw_plot(p + geom_line(size = 1.5, na.rm = TRUE, alpha = 0.7)) +
   draw_plot(p_inset, 0.1, 0.65, width = 0.45, height = 0.3)
 print(fig2)
-save_plot("proximity_figures/Figure3.png", fig2)
+#save_plot("proximity_figures/Figure3.png", fig2)
 ```
 
 
