@@ -35,6 +35,7 @@ library(lattice)
 library(cowplot)  # 0.9.4
 theme_set(theme_bw())
 
+N_HISTOGRAM_BINS <- 20
 START_DATE <- "2018-10-01"
 END_DATE <- "2019-08-01"
 
@@ -146,7 +147,8 @@ What drives changes in the flux at different timescales? Hourly:
 
 ```{r, drivers-hourly, echo=FALSE}
 drivers <- function(df) {
-  m <- lme4::lmer(log(Flux) ~ T5 * SMoist + I(SMoist ^ 2) + (1 | Port), data = df)
+  # We use Flux+1 because there are small negative values
+  m <- lme4::lmer(log(Flux + 1) ~ T5 * SMoist + I(SMoist ^ 2) + (1 | Port), data = df)
   print(summary(m))
   print(plot(m))
   print(piecewiseSEM::rsquared(m))
@@ -214,7 +216,7 @@ licor_data_clean %>%
 
 median_error_minutes <- median(meas_error_1$CV)
 median_error_minutes_n <- length(meas_error_1$CV)
-ggplot(meas_error_1, aes(x = CV)) + geom_histogram(bins = 20) +
+ggplot(meas_error_1, aes(x = CV)) + geom_histogram(bins = N_HISTOGRAM_BINS, na.rm = TRUE) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
   geom_vline(xintercept = median_error_minutes, color = "red") +
   ylab("Count") + xlab("CV between successive IRGA measurements") +
@@ -293,10 +295,14 @@ run_pacf <- function(df) {
   # Combine results and compute mean PACF at each lag
   bind_rows(results) %>% 
     group_by(lag) %>% 
-    summarise(PACF_sd = sd(PACF), PACF = mean(PACF)) 
+    summarise(PACF_sd = sd(PACF), PACF = mean(PACF)) ->
+    smry
+  list(cld_cv, smry)  # return both the CV and PACF data
 }
 
-pacf_df <- run_pacf(cld_clean)
+hr_dat <- run_pacf(cld_clean)
+cld_cv <- hr_dat[[1]]
+pacf_df <- hr_dat[[2]]
 
 p <- ggplot(pacf_df, aes(lag, PACF)) + 
   xlab("Lag (hours)") + geom_hline(yintercept = 0) +
@@ -314,7 +320,7 @@ In the figure above, Rs values measured in successive hours at a given collar ex
 cld_clean %>% 
   mutate(Month = month(Timestamp)) %>% 
   group_by(Month) %>% 
-  do(run_pacf(.)) ->
+  do(run_pacf(.)[[2]]) ->
   pacf_monthly
 
 p <- ggplot(pacf_monthly, aes(lag, PACF)) + 
@@ -337,7 +343,7 @@ cld_cv <- bind_rows(cld_cv) %>%
 median_error_hours <- median(cld_cv$CV, na.rm = TRUE)
 median_error_hours_n <- length(cld_cv$CV)
 
-ggplot(cld_cv, aes(x = CV)) + geom_histogram(bins = 20) +
+ggplot(cld_cv, aes(x = CV)) + geom_histogram(bins = N_HISTOGRAM_BINS, na.rm = TRUE) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
   geom_vline(xintercept = median_error_hours, color = "red") +
   ylab("Count") + xlab("CV between successive hourly measurements") +
@@ -408,7 +414,7 @@ bind_rows(cld_cv_daily) %>%
 median_error_days <- median(cld_cv_daily$CV, na.rm = TRUE)
 median_error_days_n <- length(cld_cv_daily$CV)
 
-ggplot(cld_cv_daily, aes(x = CV)) + geom_histogram(bins = 20) +
+ggplot(cld_cv_daily, aes(x = CV)) + geom_histogram(bins = N_HISTOGRAM_BINS, na.rm = TRUE) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
   geom_vline(xintercept = median_error_hours, color = "red") +
   ylab("Count") + xlab("CV between successive daily measurements") +
@@ -515,7 +521,7 @@ ld_monthly %>%
 
 median_cv_months <- median(lmd_cv$CV, na.rm = TRUE)
 median_cv_months_n <- length(lmd_cv$CV)
-ggplot(lmd_cv, aes(x = CV)) + geom_histogram(bins = 20) +
+ggplot(lmd_cv, aes(x = CV)) + geom_histogram(bins = N_HISTOGRAM_BINS, na.rm = TRUE) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
   geom_vline(xintercept = median_cv_months, color = "red") +
   ylab("Count") + xlab("CV between successive monthly measurements") +
@@ -601,7 +607,7 @@ median_cv_annual <- median(srdb$CV, na.rm = TRUE)
 median_cv_annual_n <- length(srdb$CV)
 
 srdb1 <- filter(srdb, !is.na(CV))
-ggplot(srdb1, aes(x = CV)) + geom_histogram(bins = 20) +
+ggplot(srdb1, aes(x = CV)) + geom_histogram(bins = N_HISTOGRAM_BINS, na.rm = TRUE) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
   geom_vline(xintercept = median_cv_annual, color = "red") +
   ylab("Count") + xlab("CV between successive years") +
@@ -673,8 +679,8 @@ p <- ggplot(smry, aes(Seconds, CV, label = Labels, group = Labels, color = Label
   geom_violin(data = distributions, fill = NA, draw_quantiles = c(0.9, 0.95)) +
   geom_point() + 
   scale_color_viridis_d(guide = FALSE) +
-  geom_label(nudge_y = 0.05) +
-  geom_text(aes(label = N), size = 2.5, nudge_y = -0.05) +   # N info
+  geom_label(nudge_y = 0.05, color = "black") +
+  geom_text(aes(label = N), size = 2.5, nudge_y = -0.05, color = "black") +   # N info
   scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10 ^ x),
                 labels = scales::trans_format("log10", scales::math_format(10 ^ .x))) +
   coord_cartesian(ylim = c(0, 1)) +
@@ -710,18 +716,8 @@ print(round(results, digits = 3))
 ```
 
 
-## TODO LIST
-
-* Investigate/remove screwy survey collar
-
-```{r msmt-gaps, echo=FALSE}
-licor_data_clean %>% 
-  group_by(month(Timestamp), Collar) %>% 
-  summarize(Timestamp = mean(Timestamp), n = n()) %>% 
-  summarise(Timestamp = mean(Timestamp), n_sd = sd(n), n = mean(n))
-```
+## Session
 
 ```{r, echo=FALSE}
 sessionInfo()
 ```
-
