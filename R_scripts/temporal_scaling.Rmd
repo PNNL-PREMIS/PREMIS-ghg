@@ -35,18 +35,26 @@ library(lattice)
 library(cowplot)  # 0.9.4
 theme_set(theme_bw())
 
+START_DATE <- "2018-10-01"
+END_DATE <- "2019-08-01"
+
 readd("licor_data") %>% 
-  filter(Group == "Control") %>% 
+  filter(Group == "Control",
+         # Filter for when system was in SALT plot (previously was testing)
+         Timestamp >= START_DATE,
+         #  and for beginning of August download (so we always get same results)
+         Timestamp < END_DATE) %>% 
   arrange(Timestamp) %>% 
   mutate(Dest_Elevation = factor(Dest_Elevation,
                                  levels = c("Low", "Medium", "High"))) ->
   licor_data
 
 readd("con_licor_data") %>% 
-  # Filter for when system was in SALT plot (previously was testing)
-  filter(Timestamp >= "2018-10-01") %>% 
+  filter(Timestamp >= START_DATE, Timestamp < END_DATE) %>% 
   arrange(Timestamp, Port) ->
   cld
+
+message("Data limits: ", START_DATE, " to ", END_DATE)
 
 # Helper function - compute coefficient of variability (CV) between
 # x[1] and x[2], x[2] and x[3], etc.
@@ -64,12 +72,13 @@ running_cv <- function(x) {
 ## Methods
 
 ```{r filtering, echo=FALSE}
+
+
 cld %>% 
-  filter(Flux > 0,   # definitely a problem!
-         Flux <= 20, # somewhat arbitrary
-         R2 > 0.75   # probably a chamber closing problem otherwise
-         # TODO: remove snowstorm day
-  ) ->
+  filter(R2 > 0.75, !is.na(Flux)) %>%  # probably a chamber closing problem otherwise
+  group_by(week(Timestamp)) %>% 
+  mutate(mad = abs(Flux - median(Flux,  na.rm = TRUE)) / mad(Flux, na.rm = TRUE)) %>% 
+  filter(mad <= 4) ->
   cld_clean
 removed <- nrow(cld) - nrow(cld_clean)
 
@@ -338,7 +347,7 @@ bind_rows(results) %>%
   # 7    11   251.  
   # 4    13   -86.0 
   # 7    15   -4.83
- #  7     7   3.20
+  #  7     7   3.20
   # this is noted in the methods
   filter(PACF >= -2, PACF <= 2) %>% 
   group_by(lag) %>% 
