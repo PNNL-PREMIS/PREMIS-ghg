@@ -72,15 +72,22 @@ running_cv <- function(x) {
 ## Methods
 
 ```{r filtering, echo=FALSE}
-
+licor_data %>% 
+  filter(R2 > 0.75, !is.na(Flux)) %>%  # probably a chamber closing problem otherwise
+  group_by(week(Timestamp)) %>% 
+  mutate(mad = abs(Flux - median(Flux,  na.rm = TRUE)) / mad(Flux, na.rm = TRUE)) %>% 
+  filter(mad <= 4) ->
+  licor_data_clean
+removed <- nrow(licor_data) - nrow(licor_data_clean)
 
 cld %>% 
   filter(R2 > 0.75, !is.na(Flux)) %>%  # probably a chamber closing problem otherwise
   group_by(week(Timestamp)) %>% 
   mutate(mad = abs(Flux - median(Flux,  na.rm = TRUE)) / mad(Flux, na.rm = TRUE)) %>% 
-  filter(mad <= 4) ->
+  filter(mad <= 4) %>% 
+  ungroup() ->
   cld_clean
-removed <- nrow(cld) - nrow(cld_clean)
+removed_cld <- nrow(cld) - nrow(cld_clean)
 
 # Insert missing dates
 cld_clean %>% 
@@ -99,7 +106,9 @@ cld_clean %>%
   cld_clean
 ```
 
-Continuous data: `r nrow (cld)` observations; `r removed` (`r round(removed / nrow(cld) * 100, 0)`%) removed because of chamber closure or other problems.
+Continuous data: `r nrow (licor_data)` observations; `r removed` (`r round(removed / nrow(licor_data) * 100, 0)`%) removed because of chamber closure or other problems. Final data is `nrow(licor_data_clean)` observations.
+
+Continuous data: `r nrow (cld)` observations; `r removed_cld` (`r round(removed_cld / nrow(cld) * 100, 0)`%) removed because of chamber closure or other problems. Final data is `nrow(cld_clean)` observations.
 
 ```{r continuous-plot, echo=FALSE}
 ggplot(cld_clean, aes(Timestamp, Flux)) + 
@@ -110,7 +119,7 @@ ggplot(cld_clean, aes(Timestamp, Flux)) +
 Survey data: `r nrow (licor_data)` observations.
 
 ```{r survey-plot, echo=FALSE}
-ggplot(licor_data, aes(Timestamp, Flux, group = Collar)) + 
+ggplot(licor_data_clean, aes(Timestamp, Flux, group = Collar)) + 
   geom_point() + geom_line(color = "darkgrey") +
   facet_grid(~Dest_Elevation) +
   ggtitle("B. Survey data")
@@ -165,8 +174,10 @@ Weekly:
 ```{r, drivers-weekly, echo=FALSE}
 cld_clean %>% 
   group_by(year(Timestamp), week(Timestamp), Port) %>% 
-  summarise(Flux = mean(Flux, na.rm = TRUE), T5 = mean(T5, na.rm = TRUE), 
-            SMoist = mean(SMoist, na.rm = TRUE), n = n()) %>% 
+  summarise(Flux = mean(Flux, na.rm = TRUE), 
+            T5 = mean(T5, na.rm = TRUE), 
+            SMoist = mean(SMoist, na.rm = TRUE), 
+            n = n()) %>% 
   filter(n > 7 * 24 / 2) %>% 
   drivers()
 ```
@@ -185,7 +196,7 @@ cld_clean %>%
 Survey:
 
 ```{r, drivers-survey, echo=FALSE}
-licor_data %>%
+licor_data_clean %>%
   select(Timestamp, Port = Destination_Plot, Flux, T5, SMoist = SMoisture) %>% 
   drivers()
 ```
@@ -197,7 +208,7 @@ licor_data %>%
 This uses the _survey_ data, examining the variability in multiple Licor observations separated by ~1 m versus 1, 2, 3...
 
 ```{r cv12, echo = FALSE}
-licor_data %>% 
+licor_data_clean %>% 
   group_by(Date, Group, Collar) %>%
   summarise(n = n(), meanFlux = mean(Flux), CV = sd(Flux) / mean(Flux)) %>% 
   filter(n == 2) ->
@@ -219,7 +230,7 @@ The median measurement error here is ~`r round(median_error_minutes * 100, 0)`% 
 How many times do we need to sample? Use the times Stephanie measured 2x, 3x, and 4x at collars (which we did early on to assess this question).
 
 ```{r seconds-to-minutes, echo = FALSE}
-licor_data %>% 
+licor_data_clean %>% 
   filter(Flux < 10) %>% 
   group_by(Date, Group, Collar) %>%
   summarize(n = n(), mean_gt_2 = mean(Flux), mean_1 = Flux[1], mean_2 = mean(Flux[1:2])) %>% 
@@ -448,7 +459,7 @@ ggplot(filter(cld_24hr, Port==2), aes(Hour, Flux, group = Yday)) +
 Plot the control survey data:
 
 ```{r months, echo=FALSE}
-licor_data %>% 
+licor_data_clean %>% 
   filter(Group == "Control") %>% 
   mutate(year = year(Timestamp), month = month(Timestamp)) %>% 
   group_by(Dest_Elevation, year, month, Collar) %>% 
@@ -671,7 +682,7 @@ print(round(results, digits = 3))
 * Investigate/remove screwy survey collar
 
 ```{r msmt-gaps, echo=FALSE}
-licor_data %>% 
+licor_data_clean %>% 
   group_by(month(Timestamp), Collar) %>% 
   summarize(Timestamp = mean(Timestamp), n = n()) %>% 
   summarise(Timestamp = mean(Timestamp), n_sd = sd(n), n = mean(n))
