@@ -1,7 +1,7 @@
 ---
-title: "Seconds to years: soil respiration variability and sensitivity across temporal scales"
+title: "Soil respiration variability and correlation across a wide range of temporal scales"
 author: "Ben Bond-Lamberty"
-date: "25 February 2019"
+date: "28 October 2019"
 output: html_document
 ---
 
@@ -75,6 +75,7 @@ licor_data %>%
   filter(R2 > 0.75, !is.na(Flux)) %>%  # probably a chamber closing problem otherwise
   group_by(week(Timestamp)) %>% 
   mutate(mad = abs(Flux - median(Flux,  na.rm = TRUE)) / mad(Flux, na.rm = TRUE)) %>% 
+  ungroup() %>% 
   filter(mad <= 4) ->
   licor_data_clean
 removed <- nrow(licor_data) - nrow(licor_data_clean)
@@ -83,11 +84,18 @@ cld %>%
   filter(R2 > 0.75, !is.na(Flux)) %>%  # probably a chamber closing problem otherwise
   group_by(week(Timestamp)) %>% 
   mutate(mad = abs(Flux - median(Flux,  na.rm = TRUE)) / mad(Flux, na.rm = TRUE)) %>% 
+  ungroup() %>% 
   filter(mad <= 4) %>% 
   ungroup() ->
   cld_clean
 removed_cld <- nrow(cld) - nrow(cld_clean)
+```
 
+Continuous data: `r nrow (licor_data)` observations; `r removed` (`r round(removed / nrow(licor_data) * 100, 0)`%) removed because of chamber closure or other problems. Final data is `r nrow(licor_data_clean)` observations.
+
+Continuous data: `r nrow (cld)` observations; `r removed_cld` (`r round(removed_cld / nrow(cld) * 100, 0)`%) removed because of chamber closure or other problems. Final data is `r nrow(cld_clean)` observations.
+
+```{r missing-dates, echo=FALSE}
 # Insert missing dates
 cld_clean %>% 
   mutate(year = year(Timestamp), month = month(Timestamp),
@@ -105,9 +113,6 @@ cld_clean %>%
   cld_clean
 ```
 
-Continuous data: `r nrow (licor_data)` observations; `r removed` (`r round(removed / nrow(licor_data) * 100, 0)`%) removed because of chamber closure or other problems. Final data is `nrow(licor_data_clean)` observations.
-
-Continuous data: `r nrow (cld)` observations; `r removed_cld` (`r round(removed_cld / nrow(cld) * 100, 0)`%) removed because of chamber closure or other problems. Final data is `nrow(cld_clean)` observations.
 
 ```{r continuous-plot, echo=FALSE}
 ggplot(cld_clean, aes(Timestamp, Flux)) + 
@@ -242,13 +247,14 @@ lds %>%
   gather(variable, value, mean_1, mean_2) ->
   lds_plot
 
-p <- ggplot(lds_plot, aes(x = mean_gt_2, y = value, color = variable)) + 
+p <- ggplot(lds_plot, aes(x = value, y = mean_gt_2, color = variable)) + 
   geom_abline(slope = 1, intercept = 0) +
   geom_smooth(method = "lm", linetype = 2, se = FALSE, show.legend = FALSE) +
   geom_point(size = 1, alpha = 0.5) + 
   scale_color_viridis_d("Samples", labels = c("1x", "2x")) +
-  labs(x = expression(Mean~flux~of~all~("">=3)~measurements~(µmol~m^-2~s^-1)), 
-       y = expression(Mean~flux~(µmol~m^-2~s^-1)))
+  labs(y = expression(Flux~"for"~all~("">=3)~measurements~(µmol~m^-2~s^-1)), 
+       x = expression(Flux~"for"~""<3~measurements~(µmol~m^-2~s^-1))) +
+  coord_equal()
 print(p + ggtitle("D. Minute sampling"))
 save_plot("temporal_figures/Figure1-sampling.png", plot = p)
 
@@ -529,7 +535,7 @@ ggplot(lmd_cv, aes(x = CV)) + geom_histogram(bins = N_HISTOGRAM_BINS, na.rm = TR
 summary(lmd_cv$CV)
 ```
 
-Median CV is `r round(median_cv_months * 100, 0)`%.
+The median measurement error here is ~`r round(median_cv_months * 100, 0)`% for `r nrow(ld_monthly)` observations of fluxes between `r round(min(ld_monthly$Flux), 2)` and `r round(max(ld_monthly$Flux), 2)` µmol/m2/s.
 
 How often do we need to sample to get good monthly number? (Use hourly data.) We use the Student's t statistic to calculate this based on the standard deviation of hourly Rs, the desired power of the test, and the allowable delta (difference from the true mean value).
 
