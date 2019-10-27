@@ -213,6 +213,7 @@ licor_data_clean %>%
   meas_error_1
 
 median_error_minutes <- median(meas_error_1$CV)
+median_error_minutes_n <- length(meas_error_1$CV)
 ggplot(meas_error_1, aes(x = CV)) + geom_histogram(bins = 20) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
   geom_vline(xintercept = median_error_minutes, color = "red") +
@@ -325,7 +326,7 @@ p <- ggplot(pacf_monthly, aes(lag, PACF)) +
                  color = "darkgrey", linetype = 2) +
   facet_wrap(~Month)
 print(p + ggtitle("E2. Hourly PACF by month"))
-save_plot("temporal_figures/FigureS1-hourly_pacf_by_month.png", plot = p)
+ggsave("temporal_figures/FigureS1-hourly_pacf_by_month.png", plot = p)
 ```
 
 
@@ -334,6 +335,7 @@ save_plot("temporal_figures/FigureS1-hourly_pacf_by_month.png", plot = p)
 cld_cv <- bind_rows(cld_cv) %>% 
   filter(!is.na(CV))
 median_error_hours <- median(cld_cv$CV, na.rm = TRUE)
+median_error_hours_n <- length(cld_cv$CV)
 
 ggplot(cld_cv, aes(x = CV)) + geom_histogram(bins = 20) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
@@ -404,6 +406,8 @@ bind_rows(cld_cv_daily) %>%
   filter(!is.na(CV)) ->
   cld_cv_daily
 median_error_days <- median(cld_cv_daily$CV, na.rm = TRUE)
+median_error_days_n <- length(cld_cv_daily$CV)
+
 ggplot(cld_cv_daily, aes(x = CV)) + geom_histogram(bins = 20) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
   geom_vline(xintercept = median_error_hours, color = "red") +
@@ -510,6 +514,7 @@ ld_monthly %>%
   lmd_cv
 
 median_cv_months <- median(lmd_cv$CV, na.rm = TRUE)
+median_cv_months_n <- length(lmd_cv$CV)
 ggplot(lmd_cv, aes(x = CV)) + geom_histogram(bins = 20) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
   geom_vline(xintercept = median_cv_months, color = "red") +
@@ -593,6 +598,7 @@ readd("srdb") %>%
          MI_category = cut(Meas_interval, breaks = c(0, 1, 10, 30, 60))) ->
   srdb
 median_cv_annual <- median(srdb$CV, na.rm = TRUE)
+median_cv_annual_n <- length(srdb$CV)
 
 srdb1 <- filter(srdb, !is.na(CV))
 ggplot(srdb1, aes(x = CV)) + geom_histogram(bins = 20) +
@@ -614,7 +620,7 @@ p1title <- paste("O. Effect of interval and annual coverage, N =",
 p2 <- ggplot(srdb3, aes(AC_category, CV)) + 
   scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
   geom_violin() + geom_jitter(size = 0.25) +
-  xlab("Annual coverage (fraction)") + ylab("Interannual CV")
+  xlab("Annual coverage (fraction of year)") + ylab("Interannual CV")
 
 print(cowplot::plot_grid(p1 + ggtitle(p1title), p2, nrow = 2))
 
@@ -647,7 +653,12 @@ smry <- tibble(Seconds = timescales,
                       median_error_hours, 
                       median_error_days, 
                       median_cv_months, 
-                      median_cv_annual))
+                      median_cv_annual),
+               N = c(median_error_minutes_n, 
+                     median_error_hours_n, 
+                     median_error_days_n, 
+                     median_cv_months_n, 
+                     median_cv_annual_n))
 print(smry)
 
 distributions <- bind_rows(tibble(Labels = nts[1], CV = meas_error_1$CV),
@@ -663,10 +674,9 @@ p <- ggplot(smry, aes(Seconds, CV, label = Labels, group = Labels, color = Label
   geom_point() + 
   scale_color_viridis_d(guide = FALSE) +
   geom_label(nudge_y = 0.05) +
-  scale_x_log10(
-    breaks = scales::trans_breaks("log10", function(x) 10 ^ x),
-    labels = scales::trans_format("log10", scales::math_format(10 ^ .x))
-  ) +
+  geom_text(aes(label = N), size = 2.5, nudge_y = -0.05) +   # N info
+  scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10 ^ x),
+                labels = scales::trans_format("log10", scales::math_format(10 ^ .x))) +
   coord_cartesian(ylim = c(0, 1)) +
   scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
   xlab("Timescale (seconds)") + ylab("CV")
