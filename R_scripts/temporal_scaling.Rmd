@@ -40,8 +40,6 @@ END_DATE <- "2019-08-01"
 
 readd("licor_data") %>% 
   filter(Group == "Control",
-         # Filter for when system was in SALT plot (previously was testing)
-         Timestamp >= START_DATE,
          #  and for beginning of August download (so we always get same results)
          Timestamp < END_DATE) %>% 
   arrange(Timestamp) %>% 
@@ -244,7 +242,8 @@ lds %>%
 p <- ggplot(lds_plot, aes(x = mean_gt_2, y = value, color = variable)) + 
   geom_abline(slope = 1, intercept = 0) +
   geom_smooth(method = "lm", linetype = 2, se = FALSE, show.legend = FALSE) +
-  geom_point() + scale_color_viridis_d("Samples", labels = c("1x", "2x")) +
+  geom_point(size = 1, alpha = 0.5) + 
+  scale_color_viridis_d("Samples", labels = c("1x", "2x")) +
   labs(x = expression(Mean~flux~of~all~("">=3)~measurements~(µmol~m^-2~s^-1)), 
        y = expression(Mean~flux~(µmol~m^-2~s^-1)))
 print(p + ggtitle("D. Minute sampling"))
@@ -268,32 +267,36 @@ Basically, you need two samples--one is not enough--but not more.
 That's the correlation in the continuous time series? What's the CV between successive values?
 
 ```{r hours, echo=FALSE}
-# Compute the partial autocorrelation function for each port (collar).
-# First need to convert to a timeseries object so `pacf` can 'see'
-# the gaps in the data
-results <- list()
-cld_cv <- list()
-for(p in unique(cld_clean$Port)) {
-  cld_p <- filter(cld_clean, Port == p)
-  pacf_obj <- pacf(as.ts(cld_p$Flux,
-                         start = min(cld_p$Timestamp),
-                         end = max(cld_p$Timestamp)), 
-                   na.action = na.pass,
-                   plot = FALSE)
-  results[[p]] <- tibble(Port = p,
-                         lag = pacf_obj$lag[,,1], 
-                         PACF = pacf_obj$acf[,,1])
-  # Compute the CV between successive measurements
-  cld_p$CV <- running_cv(cld_p$Flux)
-  cld_p$T5_diff <- c(NA, diff(cld_p$T5))
-  cld_p$SMoist_diff <- c(NA, diff(cld_p$SMoist))
-  cld_cv[[p]] <- cld_p
+run_pacf <- function(df) {
+  # Compute the partial autocorrelation function for each port (collar).
+  # First need to convert to a timeseries object so `pacf` can 'see'
+  # the gaps in the data
+  results <- list()
+  cld_cv <- list()
+  for(p in unique(df$Port)) {
+    cld_p <- filter(df, Port == p)
+    pacf_obj <- pacf(as.ts(cld_p$Flux,
+                           start = min(cld_p$Timestamp),
+                           end = max(cld_p$Timestamp)), 
+                     na.action = na.pass,
+                     plot = FALSE)
+    results[[p]] <- tibble(Port = p,
+                           lag = pacf_obj$lag[,,1], 
+                           PACF = pacf_obj$acf[,,1])
+    # Compute the CV between successive measurements
+    cld_p$CV <- running_cv(cld_p$Flux)
+    cld_p$T5_diff <- c(NA, diff(cld_p$T5))
+    cld_p$SMoist_diff <- c(NA, diff(cld_p$SMoist))
+    cld_cv[[p]] <- cld_p
+  }
+  # Combine results and compute mean PACF at each lag
+  bind_rows(results) %>% 
+    group_by(lag) %>% 
+    summarise(PACF_sd = sd(PACF), PACF = mean(PACF)) 
 }
-# Combine results and compute mean PACF at each lag
-bind_rows(results) %>% 
-  group_by(lag) %>% 
-  summarise(PACF_sd = sd(PACF), PACF = mean(PACF)) ->
-  pacf_df
+
+pacf_df <- run_pacf(cld_clean)
+
 p <- ggplot(pacf_df, aes(lag, PACF)) + 
   xlab("Lag (hours)") + geom_hline(yintercept = 0) +
   geom_point() + 
@@ -305,6 +308,26 @@ save_plot("temporal_figures/Figure2-hourly_pacf.png", plot = p)
 ```
 
 In the figure above, Rs values measured in successive hours at a given collar exhibit a strong correlation (`r round(pacf_df$PACF[1], 3)`), and a moderate one at a two-hour lag (`r round(pacf_df$PACF[2], 3)`). Day-to-day (24 hour lag) observations are essentially uncorrelated (`r round(pacf_df$PACF[24], 3)`).
+
+```{r pacf-over-time, echo=FALSE}
+cld_clean %>% 
+  mutate(Month = month(Timestamp)) %>% 
+  group_by(Month) %>% 
+  do(run_pacf(.)) ->
+  pacf_monthly
+
+p <- ggplot(pacf_monthly, aes(lag, PACF)) + 
+  xlab("Lag (hours)") + geom_hline(yintercept = 0) +
+  geom_point() + 
+  coord_cartesian(ylim = c(-0.1, 0.8)) +
+  geom_errorbar(aes(ymin = PACF - PACF_sd, ymax = PACF + PACF_sd)) + 
+  geom_linerange(aes(ymin = 0, ymax = PACF), 
+                 color = "darkgrey", linetype = 2) +
+  facet_wrap(~Month)
+print(p + ggtitle("E2. Hourly PACF by month"))
+save_plot("temporal_figures/FigureS1-hourly_pacf_by_month.png", plot = p)
+```
+
 
 ```{r hourly-cv, echo=FALSE}
 # Histogram of CV values
