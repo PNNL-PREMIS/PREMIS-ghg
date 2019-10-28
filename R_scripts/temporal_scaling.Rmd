@@ -1,7 +1,7 @@
 ---
-title: "Seconds to years: soil respiration variability and sensitivity across temporal scales"
+title: "Soil respiration variability and correlation across a wide range of temporal scales"
 author: "Ben Bond-Lamberty"
-date: "25 February 2019"
+date: "28 October 2019"
 output: html_document
 ---
 
@@ -35,18 +35,25 @@ library(lattice)
 library(cowplot)  # 0.9.4
 theme_set(theme_bw())
 
+N_HISTOGRAM_BINS <- 20
+START_DATE <- "2018-10-01"
+END_DATE <- "2019-08-01"
+
 readd("licor_data") %>% 
-  filter(Group == "Control") %>% 
+  filter(Group == "Control",
+         #  and for beginning of August download (so we always get same results)
+         Timestamp < END_DATE) %>% 
   arrange(Timestamp) %>% 
   mutate(Dest_Elevation = factor(Dest_Elevation,
                                  levels = c("Low", "Medium", "High"))) ->
   licor_data
 
 readd("con_licor_data") %>% 
-  # Filter for when system was in SALT plot (previously was testing)
-  filter(Timestamp >= "2018-10-01") %>% 
+  filter(Timestamp >= START_DATE, Timestamp < END_DATE) %>% 
   arrange(Timestamp, Port) ->
   cld
+
+message("Data limits: ", START_DATE, " to ", END_DATE)
 
 # Helper function - compute coefficient of variability (CV) between
 # x[1] and x[2], x[2] and x[3], etc.
@@ -64,15 +71,31 @@ running_cv <- function(x) {
 ## Methods
 
 ```{r filtering, echo=FALSE}
-cld %>% 
-  filter(Flux > 0,   # definitely a problem!
-         Flux <= 20, # somewhat arbitrary
-         R2 > 0.75   # probably a chamber closing problem otherwise
-         # TODO: remove snowstorm day
-  ) ->
-  cld_clean
-removed <- nrow(cld) - nrow(cld_clean)
+licor_data %>% 
+  filter(R2 > 0.75, !is.na(Flux)) %>%  # probably a chamber closing problem otherwise
+  group_by(week(Timestamp)) %>% 
+  mutate(mad = abs(Flux - median(Flux,  na.rm = TRUE)) / mad(Flux, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  filter(mad <= 4) ->
+  licor_data_clean
+removed <- nrow(licor_data) - nrow(licor_data_clean)
 
+cld %>% 
+  filter(R2 > 0.75, !is.na(Flux)) %>%  # probably a chamber closing problem otherwise
+  group_by(week(Timestamp)) %>% 
+  mutate(mad = abs(Flux - median(Flux,  na.rm = TRUE)) / mad(Flux, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  filter(mad <= 4) %>% 
+  ungroup() ->
+  cld_clean
+removed_cld <- nrow(cld) - nrow(cld_clean)
+```
+
+Continuous data: `r nrow (licor_data)` observations; `r removed` (`r round(removed / nrow(licor_data) * 100, 0)`%) removed because of chamber closure or other problems. Final data is `r nrow(licor_data_clean)` observations.
+
+Continuous data: `r nrow (cld)` observations; `r removed_cld` (`r round(removed_cld / nrow(cld) * 100, 0)`%) removed because of chamber closure or other problems. Final data is `r nrow(cld_clean)` observations.
+
+```{r missing-dates, echo=FALSE}
 # Insert missing dates
 cld_clean %>% 
   mutate(year = year(Timestamp), month = month(Timestamp),
@@ -90,7 +113,6 @@ cld_clean %>%
   cld_clean
 ```
 
-Continuous data: `r nrow (cld)` observations; `r removed` (`r round(removed / nrow(cld) * 100, 0)`%) removed because of chamber closure or other problems.
 
 ```{r continuous-plot, echo=FALSE}
 ggplot(cld_clean, aes(Timestamp, Flux)) + 
@@ -101,7 +123,7 @@ ggplot(cld_clean, aes(Timestamp, Flux)) +
 Survey data: `r nrow (licor_data)` observations.
 
 ```{r survey-plot, echo=FALSE}
-ggplot(licor_data, aes(Timestamp, Flux, group = Collar)) + 
+ggplot(licor_data_clean, aes(Timestamp, Flux, group = Collar)) + 
   geom_point() + geom_line(color = "darkgrey") +
   facet_grid(~Dest_Elevation) +
   ggtitle("B. Survey data")
@@ -130,7 +152,8 @@ What drives changes in the flux at different timescales? Hourly:
 
 ```{r, drivers-hourly, echo=FALSE}
 drivers <- function(df) {
-  m <- lme4::lmer(log(Flux) ~ T5 * SMoist + I(SMoist ^ 2) + (1 | Port), data = df)
+  # We use Flux+1 because there are small negative values
+  m <- lme4::lmer(log(Flux + 1) ~ T5 * SMoist + I(SMoist ^ 2) + (1 | Port), data = df)
   print(summary(m))
   print(plot(m))
   print(piecewiseSEM::rsquared(m))
@@ -156,8 +179,10 @@ Weekly:
 ```{r, drivers-weekly, echo=FALSE}
 cld_clean %>% 
   group_by(year(Timestamp), week(Timestamp), Port) %>% 
-  summarise(Flux = mean(Flux, na.rm = TRUE), T5 = mean(T5, na.rm = TRUE), 
-            SMoist = mean(SMoist, na.rm = TRUE), n = n()) %>% 
+  summarise(Flux = mean(Flux, na.rm = TRUE), 
+            T5 = mean(T5, na.rm = TRUE), 
+            SMoist = mean(SMoist, na.rm = TRUE), 
+            n = n()) %>% 
   filter(n > 7 * 24 / 2) %>% 
   drivers()
 ```
@@ -176,7 +201,7 @@ cld_clean %>%
 Survey:
 
 ```{r, drivers-survey, echo=FALSE}
-licor_data %>%
+licor_data_clean %>%
   select(Timestamp, Port = Destination_Plot, Flux, T5, SMoist = SMoisture) %>% 
   drivers()
 ```
@@ -188,14 +213,15 @@ licor_data %>%
 This uses the _survey_ data, examining the variability in multiple Licor observations separated by ~1 m versus 1, 2, 3...
 
 ```{r cv12, echo = FALSE}
-licor_data %>% 
+licor_data_clean %>% 
   group_by(Date, Group, Collar) %>%
   summarise(n = n(), meanFlux = mean(Flux), CV = sd(Flux) / mean(Flux)) %>% 
   filter(n == 2) ->
   meas_error_1
 
 median_error_minutes <- median(meas_error_1$CV)
-ggplot(meas_error_1, aes(x = CV)) + geom_histogram(bins = 20) +
+median_error_minutes_n <- length(meas_error_1$CV)
+ggplot(meas_error_1, aes(x = CV)) + geom_histogram(bins = N_HISTOGRAM_BINS, na.rm = TRUE) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
   geom_vline(xintercept = median_error_minutes, color = "red") +
   ylab("Count") + xlab("CV between successive IRGA measurements") +
@@ -210,7 +236,7 @@ The median measurement error here is ~`r round(median_error_minutes * 100, 0)`% 
 How many times do we need to sample? Use the times Stephanie measured 2x, 3x, and 4x at collars (which we did early on to assess this question).
 
 ```{r seconds-to-minutes, echo = FALSE}
-licor_data %>% 
+licor_data_clean %>% 
   filter(Flux < 10) %>% 
   group_by(Date, Group, Collar) %>%
   summarize(n = n(), mean_gt_2 = mean(Flux), mean_1 = Flux[1], mean_2 = mean(Flux[1:2])) %>% 
@@ -221,12 +247,14 @@ lds %>%
   gather(variable, value, mean_1, mean_2) ->
   lds_plot
 
-p <- ggplot(lds_plot, aes(x = mean_gt_2, y = value, color = variable)) + 
+p <- ggplot(lds_plot, aes(x = value, y = mean_gt_2, color = variable)) + 
   geom_abline(slope = 1, intercept = 0) +
   geom_smooth(method = "lm", linetype = 2, se = FALSE, show.legend = FALSE) +
-  geom_point() + scale_color_viridis_d("Samples", labels = c("1x", "2x")) +
-  labs(x = expression(Mean~flux~of~all~("">=3)~measurements~(µmol~m^-2~s^-1)), 
-       y = expression(Mean~flux~(µmol~m^-2~s^-1)))
+  geom_point(size = 1, alpha = 0.5) + 
+  scale_color_viridis_d("Samples", labels = c("1x", "2x")) +
+  labs(y = expression(Flux~"for"~all~("">=3)~measurements~(µmol~m^-2~s^-1)), 
+       x = expression(Flux~"for"~""<3~measurements~(µmol~m^-2~s^-1))) +
+  coord_equal()
 print(p + ggtitle("D. Minute sampling"))
 save_plot("temporal_figures/Figure1-sampling.png", plot = p)
 
@@ -248,32 +276,40 @@ Basically, you need two samples--one is not enough--but not more.
 That's the correlation in the continuous time series? What's the CV between successive values?
 
 ```{r hours, echo=FALSE}
-# Compute the partial autocorrelation function for each port (collar).
-# First need to convert to a timeseries object so `pacf` can 'see'
-# the gaps in the data
-results <- list()
-cld_cv <- list()
-for(p in unique(cld_clean$Port)) {
-  cld_p <- filter(cld_clean, Port == p)
-  pacf_obj <- pacf(as.ts(cld_p$Flux,
-                         start = min(cld_p$Timestamp),
-                         end = max(cld_p$Timestamp)), 
-                   na.action = na.pass,
-                   plot = FALSE)
-  results[[p]] <- tibble(Port = p,
-                         lag = pacf_obj$lag[,,1], 
-                         PACF = pacf_obj$acf[,,1])
-  # Compute the CV between successive measurements
-  cld_p$CV <- running_cv(cld_p$Flux)
-  cld_p$T5_diff <- c(NA, diff(cld_p$T5))
-  cld_p$SMoist_diff <- c(NA, diff(cld_p$SMoist))
-  cld_cv[[p]] <- cld_p
+run_pacf <- function(df) {
+  # Compute the partial autocorrelation function for each port (collar).
+  # First need to convert to a timeseries object so `pacf` can 'see'
+  # the gaps in the data
+  results <- list()
+  cld_cv <- list()
+  for(p in unique(df$Port)) {
+    cld_p <- filter(df, Port == p)
+    pacf_obj <- pacf(as.ts(cld_p$Flux,
+                           start = min(cld_p$Timestamp),
+                           end = max(cld_p$Timestamp)), 
+                     na.action = na.pass,
+                     plot = FALSE)
+    results[[p]] <- tibble(Port = p,
+                           lag = pacf_obj$lag[,,1], 
+                           PACF = pacf_obj$acf[,,1])
+    # Compute the CV between successive measurements
+    cld_p$CV <- running_cv(cld_p$Flux)
+    cld_p$T5_diff <- c(NA, diff(cld_p$T5))
+    cld_p$SMoist_diff <- c(NA, diff(cld_p$SMoist))
+    cld_cv[[p]] <- cld_p
+  }
+  # Combine results and compute mean PACF at each lag
+  bind_rows(results) %>% 
+    group_by(lag) %>% 
+    summarise(PACF_sd = sd(PACF), PACF = mean(PACF)) ->
+    smry
+  list(cld_cv, smry)  # return both the CV and PACF data
 }
-# Combine results and compute mean PACF at each lag
-bind_rows(results) %>% 
-  group_by(lag) %>% 
-  summarise(PACF_sd = sd(PACF), PACF = mean(PACF)) ->
-  pacf_df
+
+hr_dat <- run_pacf(cld_clean)
+cld_cv <- hr_dat[[1]]
+pacf_df <- hr_dat[[2]]
+
 p <- ggplot(pacf_df, aes(lag, PACF)) + 
   xlab("Lag (hours)") + geom_hline(yintercept = 0) +
   geom_point() + 
@@ -286,13 +322,34 @@ save_plot("temporal_figures/Figure2-hourly_pacf.png", plot = p)
 
 In the figure above, Rs values measured in successive hours at a given collar exhibit a strong correlation (`r round(pacf_df$PACF[1], 3)`), and a moderate one at a two-hour lag (`r round(pacf_df$PACF[2], 3)`). Day-to-day (24 hour lag) observations are essentially uncorrelated (`r round(pacf_df$PACF[24], 3)`).
 
+```{r pacf-over-time, echo=FALSE}
+cld_clean %>% 
+  mutate(Month = month(Timestamp)) %>% 
+  group_by(Month) %>% 
+  do(run_pacf(.)[[2]]) ->
+  pacf_monthly
+
+p <- ggplot(pacf_monthly, aes(lag, PACF)) + 
+  xlab("Lag (hours)") + geom_hline(yintercept = 0) +
+  geom_point() + 
+  coord_cartesian(ylim = c(-0.1, 0.8)) +
+  geom_errorbar(aes(ymin = PACF - PACF_sd, ymax = PACF + PACF_sd)) + 
+  geom_linerange(aes(ymin = 0, ymax = PACF), 
+                 color = "darkgrey", linetype = 2) +
+  facet_wrap(~Month)
+print(p + ggtitle("E2. Hourly PACF by month"))
+ggsave("temporal_figures/FigureS1-hourly_pacf_by_month.png", plot = p)
+```
+
+
 ```{r hourly-cv, echo=FALSE}
 # Histogram of CV values
 cld_cv <- bind_rows(cld_cv) %>% 
   filter(!is.na(CV))
 median_error_hours <- median(cld_cv$CV, na.rm = TRUE)
+median_error_hours_n <- length(cld_cv$CV)
 
-ggplot(cld_cv, aes(x = CV)) + geom_histogram(bins = 20) +
+ggplot(cld_cv, aes(x = CV)) + geom_histogram(bins = N_HISTOGRAM_BINS, na.rm = TRUE) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
   geom_vline(xintercept = median_error_hours, color = "red") +
   ylab("Count") + xlab("CV between successive hourly measurements") +
@@ -338,7 +395,7 @@ bind_rows(results) %>%
   # 7    11   251.  
   # 4    13   -86.0 
   # 7    15   -4.83
- #  7     7   3.20
+  #  7     7   3.20
   # this is noted in the methods
   filter(PACF >= -2, PACF <= 2) %>% 
   group_by(lag) %>% 
@@ -361,7 +418,9 @@ bind_rows(cld_cv_daily) %>%
   filter(!is.na(CV)) ->
   cld_cv_daily
 median_error_days <- median(cld_cv_daily$CV, na.rm = TRUE)
-ggplot(cld_cv_daily, aes(x = CV)) + geom_histogram(bins = 20) +
+median_error_days_n <- length(cld_cv_daily$CV)
+
+ggplot(cld_cv_daily, aes(x = CV)) + geom_histogram(bins = N_HISTOGRAM_BINS, na.rm = TRUE) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
   geom_vline(xintercept = median_error_hours, color = "red") +
   ylab("Count") + xlab("CV between successive daily measurements") +
@@ -439,7 +498,7 @@ ggplot(filter(cld_24hr, Port==2), aes(Hour, Flux, group = Yday)) +
 Plot the control survey data:
 
 ```{r months, echo=FALSE}
-licor_data %>% 
+licor_data_clean %>% 
   filter(Group == "Control") %>% 
   mutate(year = year(Timestamp), month = month(Timestamp)) %>% 
   group_by(Dest_Elevation, year, month, Collar) %>% 
@@ -467,7 +526,8 @@ ld_monthly %>%
   lmd_cv
 
 median_cv_months <- median(lmd_cv$CV, na.rm = TRUE)
-ggplot(lmd_cv, aes(x = CV)) + geom_histogram(bins = 20) +
+median_cv_months_n <- length(lmd_cv$CV)
+ggplot(lmd_cv, aes(x = CV)) + geom_histogram(bins = N_HISTOGRAM_BINS, na.rm = TRUE) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
   geom_vline(xintercept = median_cv_months, color = "red") +
   ylab("Count") + xlab("CV between successive monthly measurements") +
@@ -475,7 +535,7 @@ ggplot(lmd_cv, aes(x = CV)) + geom_histogram(bins = 20) +
 summary(lmd_cv$CV)
 ```
 
-Median CV is `r round(median_cv_months * 100, 0)`%.
+The median measurement error here is ~`r round(median_cv_months * 100, 0)`% for `r nrow(ld_monthly)` observations of fluxes between `r round(min(ld_monthly$Flux), 2)` and `r round(max(ld_monthly$Flux), 2)` µmol/m2/s.
 
 How often do we need to sample to get good monthly number? (Use hourly data.) We use the Student's t statistic to calculate this based on the standard deviation of hourly Rs, the desired power of the test, and the allowable delta (difference from the true mean value).
 
@@ -550,9 +610,10 @@ readd("srdb") %>%
          MI_category = cut(Meas_interval, breaks = c(0, 1, 10, 30, 60))) ->
   srdb
 median_cv_annual <- median(srdb$CV, na.rm = TRUE)
+median_cv_annual_n <- length(srdb$CV)
 
 srdb1 <- filter(srdb, !is.na(CV))
-ggplot(srdb1, aes(x = CV)) + geom_histogram(bins = 20) +
+ggplot(srdb1, aes(x = CV)) + geom_histogram(bins = N_HISTOGRAM_BINS, na.rm = TRUE) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
   geom_vline(xintercept = median_cv_annual, color = "red") +
   ylab("Count") + xlab("CV between successive years") +
@@ -571,7 +632,7 @@ p1title <- paste("O. Effect of interval and annual coverage, N =",
 p2 <- ggplot(srdb3, aes(AC_category, CV)) + 
   scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
   geom_violin() + geom_jitter(size = 0.25) +
-  xlab("Annual coverage (fraction)") + ylab("Interannual CV")
+  xlab("Annual coverage (fraction of year)") + ylab("Interannual CV")
 
 print(cowplot::plot_grid(p1 + ggtitle(p1title), p2, nrow = 2))
 
@@ -604,7 +665,12 @@ smry <- tibble(Seconds = timescales,
                       median_error_hours, 
                       median_error_days, 
                       median_cv_months, 
-                      median_cv_annual))
+                      median_cv_annual),
+               N = c(median_error_minutes_n, 
+                     median_error_hours_n, 
+                     median_error_days_n, 
+                     median_cv_months_n, 
+                     median_cv_annual_n))
 print(smry)
 
 distributions <- bind_rows(tibble(Labels = nts[1], CV = meas_error_1$CV),
@@ -619,11 +685,10 @@ p <- ggplot(smry, aes(Seconds, CV, label = Labels, group = Labels, color = Label
   geom_violin(data = distributions, fill = NA, draw_quantiles = c(0.9, 0.95)) +
   geom_point() + 
   scale_color_viridis_d(guide = FALSE) +
-  geom_label(nudge_y = 0.05) +
-  scale_x_log10(
-    breaks = scales::trans_breaks("log10", function(x) 10 ^ x),
-    labels = scales::trans_format("log10", scales::math_format(10 ^ .x))
-  ) +
+  geom_label(nudge_y = 0.05, color = "black") +
+  geom_text(aes(label = N), size = 2.5, nudge_y = -0.05, color = "black") +   # N info
+  scale_x_log10(breaks = scales::trans_breaks("log10", function(x) 10 ^ x),
+                labels = scales::trans_format("log10", scales::math_format(10 ^ .x))) +
   coord_cartesian(ylim = c(0, 1)) +
   scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
   xlab("Timescale (seconds)") + ylab("CV")
@@ -657,18 +722,8 @@ print(round(results, digits = 3))
 ```
 
 
-## TODO LIST
-
-* Investigate/remove screwy survey collar
-
-```{r msmt-gaps, echo=FALSE}
-licor_data %>% 
-  group_by(month(Timestamp), Collar) %>% 
-  summarize(Timestamp = mean(Timestamp), n = n()) %>% 
-  summarise(Timestamp = mean(Timestamp), n_sd = sd(n), n = mean(n))
-```
+## Session
 
 ```{r, echo=FALSE}
 sessionInfo()
 ```
-
