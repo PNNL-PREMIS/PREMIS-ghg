@@ -22,6 +22,9 @@ library(piecewiseSEM)
 library(cowplot)
 library(wesanderson)
 
+# Set color palette
+pal <- (wes_palette(name = "Zissou1", 3, type = "continuous"))
+
 # Define functions
 
 # Calcuate basal area (m2) from tree diameter (cm)
@@ -79,11 +82,13 @@ model_stats <- function(mods, dat, which) {
   # WITHOUT basal area included
   dat$no_BA_residuals <- residuals(mods$mod_no_BA)
   p <- ggplot(dat, aes(x = BA_m2, y = no_BA_residuals, color = Site)) + 
+    scale_colour_manual(values = c("#3B9AB2", "#EBCC2A", "#F21A00")) +
     geom_point(alpha = 0.75, na.rm = TRUE) + 
-    geom_smooth(method = "lm", se = FALSE) +
-    geom_smooth(method = "lm", group = 1, color = "black") +
+    geom_smooth(method = "lm", se = FALSE, linetype = "dashed") +
+    geom_smooth(stat="smooth", method = "lm", group = 1, color = "grey30") +
     ylab(expression(Residual~(µmol~m^-2~s^-1))) +
-    xlab(expression(Basal~area~(m^2)))
+    xlab(expression(Basal~area~(m^2))) +
+    ylim(c(-1,1))
   print(p)
   ggsave(paste0("proximity_figures/Figure4_", which, ".png"))
   
@@ -154,23 +159,21 @@ bind_rows(BA_dat) %>%
   BA_dat_complete
 
 # ...and plot
-pal <- (wes_palette(name = "Cavalcanti1", 4, type = "discrete"))
 
 p <- BA_dat_complete %>% 
   ggplot(aes(x = dist, y = BA_m2, group = Collar, color = n_trees)) + 
-#  scale_colour_gradientn(colours = pal) +
-    scale_color_jcolors_contin(palette = rev("pal10")) +
+  scale_colour_gradientn(colours = pal) +
     labs(x = "Radial distance from collar (m)", 
        y = expression(Basal~area~(m^2)), 
        color = "Number \nof trees")
 p_inset <- p + xlim(c(0, 5)) + ylim(c(0, 1.25)) +
-  geom_line(size = 0.7, na.rm = TRUE) +
+  geom_line(size = 0.5, na.rm = TRUE) +
   scale_fill_gradientn(colours = pal) +
   theme(legend.position = "none",
         axis.title = element_blank())
 
 fig2 <- ggdraw() +
-  draw_plot(p + geom_line(size = 1.5, na.rm = TRUE, alpha = 0.7)) +
+  draw_plot(p + geom_line(size = 1, na.rm = TRUE)) +
   draw_plot(p_inset, 0.1, 0.65, width = 0.45, height = 0.3)
 print(fig2)
 #save_plot("proximity_figures/Figure3.png", fig2)
@@ -223,26 +226,29 @@ tabledata %>%
 licor_daily_data <- readd("licor_daily_data")
 
 licor_daily_data %>% 
-  filter(!is.na(meanFlux), !is.na(sdFlux), Group == "Control") %>%
-  ggplot(aes(x = yday(Timestamp), y = meanFlux, group = Collar)) +
-  geom_point(alpha = 0.5) +
-  geom_smooth(aes(group = Dest_Site), color = "dodgerblue", se = FALSE) +
+  filter(Experiment == "Control") %>% 
+  # Filter out bad soil moisture and flux readings
+  rename(SMoisture = meanSM, Flux = meanFlux, T5 = meanT5, T20 = meanT20) %>% 
+  filter(SMoisture > 0, SMoisture < 1,
+         Flux > 0, 
+         Timestamp >= "2018-04-01 00:00:00", Timestamp < "2019-04-01 00:00:00" ) ->
+  control_cols
+
+licor_daily_data %>% 
+  filter(!is.na(meanFlux), !is.na(sdFlux), Experiment == "Control",
+         Timestamp >= "2018-04-01 00:00:00", Timestamp < "2019-04-01 00:00:00") %>%
+  ggplot(aes(x = Timestamp, y = meanFlux, group = Collar)) +
+  geom_point(size = 1.3, alpha = 0.75, pch = 20) +
+  geom_smooth(aes(group = Dest_Site), color = "#F21A00", se = FALSE) +
   facet_grid(~Dest_Site) +
   ggtitle("Figure 3") +
-  labs(x = "Day of Year", 
+  labs(x = "Date", 
        y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
   ylim(c(0, 20)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ggsave("proximity_figures/Figure2.png")
 
 TEST_DISTANCE <- 5
-
-readd("licor_data") %>% 
-  filter(Experiment == "Control", is.na(Notes)) %>% 
-  # Filter out bad soil moisture and flux readings
-  filter(SMoisture > 0, SMoisture < 1,
-         Flux > 0) ->
-  control_cols
 
 # Calculate basal area within 5 m
 BA5 <- basal_area_sum(tree_prox_data, distance = TEST_DISTANCE)
@@ -406,6 +412,7 @@ bind_rows(sens_output, .id = "Distance") %>%
          Variable = prettynames[variable]) %>%
   print %>%
   ggplot(aes(Distance, importance, color = Variable)) + 
+  scale_colour_manual(values = c("#3B9AB2", "#EBCC2A", "#F21A00")) +
   geom_line(size = 1) + 
   geom_point(size = 2.5) +
   geom_vline(xintercept = TEST_DISTANCE, linetype = 2) +
