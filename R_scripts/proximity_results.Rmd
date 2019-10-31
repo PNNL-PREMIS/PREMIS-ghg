@@ -19,6 +19,11 @@ theme_set(theme_bw())
 library(broom)
 library(lubridate)
 library(piecewiseSEM)
+library(cowplot)
+library(wesanderson)
+
+# Set color palette
+pal <- (wes_palette(name = "Zissou1", 3, type = "continuous"))
 
 # Define functions
 
@@ -69,26 +74,41 @@ run_model <- function(dat, model_type) {
 }
 
 # Produce summaries and plots for the run_model() objects
-model_stats <- function(mods, dat) {
+model_stats <- function(mods, dat, which) {
   
   print(piecewiseSEM::rsquared(mods$full_model))
   
   # Plot correlation between BA and the residuals of the model
   # WITHOUT basal area included
   dat$no_BA_residuals <- residuals(mods$mod_no_BA)
-  p <- ggplot(dat, aes(no_BA_residuals, BA_m2, color = Site)) + 
-    geom_point(alpha = 0.75) + 
-    geom_smooth(method = "lm", se = FALSE) +
-    geom_smooth(method = "lm", group = 1, color = "black") +
-    xlab(expression(Residual~(µmol~m^-2~s^-1))) +
-    ylab(expression(Basal~area~(m^2)))
+  p <- ggplot(dat, aes(x = BA_m2, y = no_BA_residuals, color = Site)) + 
+    scale_colour_manual(values = c("#3B9AB2", "#EBCC2A", "#F21A00")) +
+    geom_point(alpha = 0.75, na.rm = TRUE) + 
+    geom_smooth(method = "lm", se = FALSE, linetype = "dashed") +
+    geom_smooth(stat="smooth", method = "lm", group = 1, color = "grey30") +
+    ylab(expression(Residual~(µmol~m^-2~s^-1))) +
+    xlab(expression(Basal~area~(m^2))) +
+    ylim(c(-1,1))
   print(p)
+  ggsave(paste0("proximity_figures/Figure4_", which, ".png"))
   
   m_reduced <- mods$reduced_model
   
   print(summary(m_reduced))
   print(car::Anova(m_reduced, type = "III"))   # NOT stats::anova()!
   plot(m_reduced)
+}
+
+# Print variable importance (contribution to total explained variance) as calculated
+# by relaimpo package (per Reviewer 2), and return data, invisibly
+var_importance <- function(m, print_it = TRUE) {
+  suppressMessages(library(relaimpo, quietly = TRUE))
+  imp <- relaimpo::calc.relimp(m, type = "lmg", rela = TRUE)
+  if(print_it) {
+    print(imp, show.coeffs = FALSE)
+    print(round(sort(imp$lmg, decreasing = TRUE), 2))
+  }
+  invisible(tibble(variable = names(imp$lmg), importance = imp$lmg))
 }
 
 # Helper function to calculate sample size
@@ -126,6 +146,7 @@ for (i in 1:max(tree_prox_data$Distance_m, na.rm = TRUE)) {
     group_by(Collar) %>% 
     summarise(n_trees = n(), 
               BA_m2 = sum(BA_sqm, na.rm = TRUE), 
+              DBH_cm = sum(DBH_cm),
               dist = i) -> #%>%
     #    complete(dist = i, Collar, fill = list(BA_m2 = 0, n_trees = 0))->
     BA_dat[[i]]
@@ -138,15 +159,24 @@ bind_rows(BA_dat) %>%
   BA_dat_complete
 
 # ...and plot
-BA_dat_complete %>% 
-  ggplot(aes(x = dist, y = BA_m2, group = Collar, color = n_trees)) + 
-  geom_line(size = 1) +
-  scale_colour_gradientn(colours = topo.colors(9)) +
-  ggtitle("Figure 2") +
-  labs(x = "Radial distance from collar (m)", 
-       y = expression(Basal~Area~(m^2)), 
-       color = "Number \nof Trees")
 
+p <- BA_dat_complete %>% 
+  ggplot(aes(x = dist, y = BA_m2, group = Collar, color = n_trees)) + 
+  scale_colour_gradientn(colours = pal) +
+    labs(x = "Radial distance from collar (m)", 
+       y = expression(Basal~area~(m^2)), 
+       color = "Number \nof trees")
+p_inset <- p + xlim(c(0, 5)) + ylim(c(0, 1.25)) +
+  geom_line(size = 0.5, na.rm = TRUE) +
+  scale_fill_gradientn(colours = pal) +
+  theme(legend.position = "none",
+        axis.title = element_blank())
+
+fig2 <- ggdraw() +
+  draw_plot(p + geom_line(size = 1, na.rm = TRUE)) +
+  draw_plot(p_inset, 0.1, 0.65, width = 0.45, height = 0.3)
+print(fig2)
+#save_plot("proximity_figures/Figure3.png", fig2)
 ```
 
 
@@ -175,20 +205,15 @@ tree_data %>%
   tabledata
 
 # Site info
-tabledata$tree_mean <- round(tabledata$tree_mean, digits = 1)
-tabledata$tree_sd <- round(tabledata$tree_sd, digits = 1)
-tabledata$BA_mean <- round(tabledata$BA_mean, digits = 1)
-tabledata$BA_sd <- round(tabledata$BA_sd, digits = 1)
 tabledata$Salinity <- sub("Salinity H", "GCReW", tabledata$Salinity)
 tabledata$Salinity <- sub("Salinity M", "Canoe Shed", tabledata$Salinity)
 tabledata$Salinity <- sub("Salinity L", "North Branch", tabledata$Salinity)
-# tabledata$Soil_Type[1] <- "Collington-Wist complex; Collington and Annapolis soils"
-# tabledata$Soil_Type[2] <- "Annapolis fine sandy loam"
-# tabledata$Soil_Type[3] <- "Collington and Annapolis soils; Collington, Wist, and Westphalia soils"
 
 tabledata %>% 
-  unite(col = 'Trees (/ha)', tree_mean, tree_sd, sep = " ± ") %>%
-  unite(col = 'BA (m2/ha)', BA_mean, BA_sd, sep = " ± ") %>%
+  transmute(Salinity = Salinity,
+            `Trees (/ha)` = paste(tree_mean, tree_sd, sep = " ± "),
+            `BA (m2/ha)` = paste(BA_mean, BA_sd, sep = " ± ")) %>%
+  
   knitr::kable(digits = 1, format = "html", 
                col.names = c("Site", "Trees (/ha)", "BA (m2/ha)")) %>%
   kableExtra::kable_styling(c("striped", "bordered"), full_width = FALSE)
@@ -196,33 +221,34 @@ tabledata %>%
 
 
 ## Flux over time figure for control collars
-```{r co2_time, echo = FALSE, warning = FALSE, fig.width = 8}
+
+```{r co2_BA, echo = FALSE, warning = FALSE, fig.width = 8}
 licor_daily_data <- readd("licor_daily_data")
 
-# s.d. is based on successive measurements at same collar
 licor_daily_data %>% 
-  filter(!is.na(meanFlux), !is.na(sdFlux)) %>% 
-  filter(Group == "Control") %>%
+  filter(Experiment == "Control") %>% 
+  # Filter out bad soil moisture and flux readings
+  rename(SMoisture = meanSM, Flux = meanFlux, T5 = meanT5, T20 = meanT20) %>% 
+  filter(SMoisture > 0, SMoisture < 1,
+         Flux > 0, 
+         Timestamp >= "2018-04-01 00:00:00", Timestamp < "2019-04-01 00:00:00" ) ->
+  control_cols
+
+licor_daily_data %>% 
+  filter(!is.na(meanFlux), !is.na(sdFlux), Experiment == "Control",
+         Timestamp >= "2018-04-01 00:00:00", Timestamp < "2019-04-01 00:00:00") %>%
   ggplot(aes(x = Timestamp, y = meanFlux, group = Collar)) +
-  geom_point() +
-  geom_smooth(aes(group = Dest_Site), color = "dodgerblue", se = FALSE) +
+  geom_point(size = 1.3, alpha = 0.75, pch = 20) +
+  geom_smooth(aes(group = Dest_Site), color = "#F21A00", se = FALSE) +
   facet_grid(~Dest_Site) +
   ggtitle("Figure 3") +
   labs(x = "Date", 
        y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
-  ylim(c(0,20)) +
+  ylim(c(0, 20)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
-```
+ggsave("proximity_figures/Figure2.png")
 
-```{r co2_BA, echo = FALSE, warning = FALSE, fig.width = 8}
 TEST_DISTANCE <- 5
-
-readd("licor_data") %>% 
-  filter(Experiment == "Control", is.na(Notes)) %>% 
-  # Filter out bad soil moisture and flux readings
-  filter(SMoisture > 0, SMoisture < 1,
-         Flux > 0) ->
-  control_cols
 
 # Calculate basal area within 5 m
 BA5 <- basal_area_sum(tree_prox_data, distance = TEST_DISTANCE)
@@ -235,7 +261,7 @@ filter_NAs <- function(x) {
 control_cols %>% 
   left_join(BA5, by = "Collar") %>% 
   mutate(Timestamp = ymd_hms(Timestamp)) %>% 
-  select(Timestamp, Flux, T5, T20, SMoisture, BA_m2, Site = Dest_Site) %>% 
+  select(Collar, Timestamp, Flux, T5, T20, SMoisture, BA_m2, Site = Dest_Site) %>% 
   na.omit -> 
   control_cols_5m
 
@@ -248,13 +274,6 @@ control_cols_5m %>%
   filter(BA_m2 <= BA_CUTOFF) %>% mutate(Type = "Low BA") -> low_BA
 
 rbind(high_BA, low_BA) -> BA
-  
-ggplot(data = BA, aes(x = yday(Timestamp), y = Flux, color = Type)) +
-  geom_point(alpha = I(0.5)) +
-  geom_smooth(size = 1) +
-  labs(x = "Day of Year") + 
-  scale_color_discrete()
-
 ```
 
 ## Power calculation
@@ -294,7 +313,7 @@ ggplot(results, aes(power, n, color = factor(delta), group = delta)) +
 # Make a nice table
 results %>% 
   filter(power >= 0.5) %>% 
-  mutate(N = paste(floor(n), floor(n_sd), sep = " ± ")) %>% 
+  mutate(N = paste0(floor(n), " (" ,floor(n_sd), ")")) %>% 
   select(delta, power, N) %>% 
   spread(power, N) %>% 
   kableExtra::kable() %>%
@@ -311,7 +330,11 @@ MODEL_TYPE <- "lme"
 
 # Run the main analysis
 h1 <- run_model(control_cols_5m, model_type = MODEL_TYPE)
-model_stats(h1, control_cols_5m)
+model_stats(h1, control_cols_5m, which = "H1")
+
+# Run it again as a linear model just for variable importance
+h1_lin <- run_model(control_cols_5m, model_type = "linear")
+var_importance(h1_lin$reduced_model)
 ```
 
 ### Hypothesis II - growing vs. dormant season
@@ -321,16 +344,20 @@ GS_MONTHS <- 4:10  # growing season months, i.e. April-October
 control_cols_5m$Growing_season <- month(control_cols_5m$Timestamp) %in% GS_MONTHS
 
 growing_flux <- filter(control_cols_5m, Growing_season)
-h2g <- run_model(growing_flux, model_type = MODEL_TYPE)
+# Seems like calc.relimp can't handle a lme model so use linear instead
+h2g <- run_model(growing_flux, model_type = "linear")
+
 print("Growing Season")
-model_stats(h2g, growing_flux)
+model_stats(h2g, growing_flux, which = "H2gs")
+var_importance(h2g$reduced_model)
 
 # Filter true controls for dormant season
 dormant_flux <- filter(control_cols_5m, !Growing_season)
-h2d <- run_model(dormant_flux, model_type = MODEL_TYPE)
+h2d <- run_model(dormant_flux, model_type = "linear")
 
 print("Dormant Season")
-model_stats(h2d, dormant_flux)
+model_stats(h2d, dormant_flux, which = "H2ds")
+var_importance(h2d$reduced_model)
 ```
 
 ### Hypothesis III - moisture-limited times
@@ -343,22 +370,23 @@ low_i <- which(control_cols_5m$SM_bin == 1)
 
 ## Filter true controls for the bottom and top 33% soil moisture values
 m_low <- control_cols_5m[low_i, ] %>% filter_NAs
-h3l <- run_model(m_low, model_type = MODEL_TYPE)
+h3l <- run_model(m_low, model_type = "linear")
 
 print("Low Moisture")
-model_stats(h3l, m_low)
+model_stats(h3l, m_low, which = "H3lm")
+var_importance(h3l$reduced_model)
 
 high_i <- which(control_cols_5m$SM_bin == 3)
 m_high <- control_cols_5m[high_i, ] %>% filter_NAs
-h3h <- run_model(m_high, model_type = MODEL_TYPE)
+h3h <- run_model(m_high, model_type = "linear")
 
 print("High Moisture")
-model_stats(h3h, m_high)
+model_stats(h3h, m_high, which = "H3hm")
+var_importance(h3h$reduced_model)
 ```
 
 ## Sensitivity test - BA significance with distance
 ```{r sensitivity, echo = FALSE, warning = FALSE, fig.width = 9}
-
 sens_output <- list()
 BA_output <- list()
 # Loop through the range of distances we measured and run 
@@ -370,29 +398,27 @@ for (i in seq.int(2, max(tree_prox_data$Distance_m, na.rm = TRUE))) {
     select(Timestamp, Flux, T5, T20, SMoisture, BA_m2, Site = Dest_Salinity) %>% 
     na.omit ->
     dat
-  mods <- run_model(dat, model_type = MODEL_TYPE)
-  smry <- car::Anova(mods$reduced_model, type = "III")
+  mods <- run_model(dat, model_type = "linear")
+  imp <- var_importance(mods$reduced_model, print_it = FALSE)
   
-  # linear and lme models and car::Anova return differently-named p-value columns;
-  # rename for consistency
-  names(smry)[ncol(smry)] <- "p-value"
-  smry$Term = rownames(smry)
-  sens_output[[as.character(i)]] <- as_tibble(smry)
+  sens_output[[as.character(i)]] <- as_tibble(imp)
 }
 
+prettynames <- c("BA_m2" = "BA", "BA_m2:T20" = "BA:T20", "T5:BA_m2" = "BA:T5")
+
 bind_rows(sens_output, .id = "Distance") %>%
-  filter(grepl("BA_m2", Term)) %>%
-  mutate(Distance = as.integer(Distance)) %>%
+  filter(grepl("BA_m2", variable)) %>%
+  mutate(Distance = as.integer(Distance),
+         Variable = prettynames[variable]) %>%
   print %>%
-  ggplot(aes(Distance, `p-value`, color = Term)) + 
+  ggplot(aes(Distance, importance, color = Variable)) + 
+  scale_colour_manual(values = c("#3B9AB2", "#EBCC2A", "#F21A00")) +
   geom_line(size = 1) + 
   geom_point(size = 2.5) +
   geom_vline(xintercept = TEST_DISTANCE, linetype = 2) +
-  geom_hline(yintercept = 0.05, linetype = 2) +
   xlab("Radial distance from collar (m)") + 
-  ylab("P-value") +
-  scale_color_discrete(labels = c("BA", "BA:T20", "BA:T5")) +
-  scale_y_log10()
+  ylab("Relative importance")
+ggsave("proximity_figures/figure5.png")
 ```
 
 ```{r results, echo = FALSE}
@@ -418,7 +444,7 @@ BA_dat_complete %>%
 # Results
 
 ### *Basic results*
-We measured Rs, soil temperature, and soil moisture on `r length(unique(control_cols$Date))` different days across the one-year period (Figure 2). Soil temperatures ranged from `r min(flux_data$T5)` to `r round(max(flux_data$T5), digits = 1)` (at 5 cm) and `r min(flux_data$T20)` to `r max(flux_data$T20)` (at 20 cm); volumetric soil moisture values were `r round(min(flux_data$SMoisture), digits = 2)`-`r round(max(flux_data$SMoisture), digits = 2)`. Fluxes ranged from `r round(min(flux_data$Flux), digits = 2)` µmol m-2 s-1 (in March 2019) to `r round(max(flux_data$Flux), digits = 2)` µmol m-2 s-1 (in July 2018). The coefficient of variability between collars within plots, a measure of spatial variability, ranged from `r round(min(flux_CV$CV))`% to `r round(max(flux_CV$CV))`%. This implied that a large number of samples was required to estimate Rs accurately (Table 2) .
+We measured Rs, soil temperature, and soil moisture on `r length(unique(control_cols$Date))` different days across the one-year period (Figure 2). Soil temperatures ranged from `r min(flux_data$T5)` to `r round(max(flux_data$T5), digits = 1)` (at 5 cm) and `r min(flux_data$T20, na.rm = TRUE)` to `r max(flux_data$T20, na.rm = TRUE)` (at 20 cm); volumetric soil moisture values were `r round(min(flux_data$SMoisture), digits = 2)`-`r round(max(flux_data$SMoisture), digits = 2)`. Fluxes ranged from `r round(min(flux_data$Flux), digits = 2)` µmol m-2 s-1 (in March 2019) to `r round(max(flux_data$Flux), digits = 2)` µmol m-2 s-1 (in July 2018). The coefficient of variability between collars within plots, a measure of spatial variability, ranged from `r round(min(flux_CV$CV))`% to `r round(max(flux_CV$CV))`%. This implied that a large number of samples was required to estimate Rs accurately (Table 2) .
 
 There was large variability in the basal area and number of trees close to the measurement collars (Figure 3). Mean values were `r BA_stats$sum_trees[which(BA_stats$dist == 1)]` trees (with a basal area of `r BA_stats$BA_mean[which(BA_stats$dist == 1)]` m2) within 1 m, `r BA_stats$sum_trees[which(BA_stats$dist == 5)]` trees (`r BA_stats$BA_mean[which(BA_stats$dist == 5)]` m2) within 5 m, and `r BA_stats$sum_trees[which(BA_stats$dist == 10)]` trees (`r BA_stats$BA_mean[which(BA_stats$dist == 10)]` m2) at 10 m. At our maximum radius of measurement, 15 m, there were on average `r BA_stats$sum_trees[which(BA_stats$dist == 15)]` trees and `r BA_stats$BA_mean[which(BA_stats$dist == 15)]` m2 of basal area, ranging from a minimum of `r BA_15m$min_BA` m2 to a maximum of `r BA_15m$max_BA` m2. The forest was thus highly spatially variable in its distribution of trees relative to the Rs measurement collars. 
 
