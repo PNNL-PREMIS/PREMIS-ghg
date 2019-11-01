@@ -247,12 +247,11 @@ lds %>%
   gather(variable, value, mean_1, mean_2) ->
   lds_plot
 
-p <- ggplot(lds_plot, aes(x = value, y = mean_gt_2, shape = variable, color = variable)) + 
-  geom_abline(slope = 1, intercept = 0) +
-  geom_smooth(method = "lm", linetype = 2, se = FALSE, show.legend = FALSE) +
-  geom_point(size = 1.5) + 
-  scale_color_viridis_d("Samples", labels = c("1x", "2x")) +
-  scale_shape_discrete("Samples", labels = c("1x", "2x")) +
+p <- ggplot(lds_plot, aes(x = value, y = mean_gt_2, shape = variable)) + 
+  geom_abline(slope = 1, intercept = 0, color = "blue") +
+  geom_smooth(aes(linetype = variable), method = "lm", color = "black", se = FALSE, show.legend = FALSE) +
+  geom_point(size = 1.5) +
+  scale_shape_manual("Samples", labels = c("1x", "2x"), values = c(16, 21)) +
   labs(y = expression(Flux~"for"~all~("">=3)~measurements~(µmol~m^-2~s^-1)), 
        x = expression(Flux~"for"~""<3~measurements~(µmol~m^-2~s^-1))) +
   coord_equal()
