@@ -21,6 +21,7 @@ source("process_licor_data.R")
 source("inventory.R")
 source("weatherdat.R")
 source("litter.R")
+source("datahub.R")
 
 do_filedigest <- function(dir) digest::digest(list.files(dir)) # helper function
 
@@ -92,7 +93,10 @@ plan <- drake_plan(
   ts_report = rmarkdown::render(
     knitr_in("temporal_scaling.Rmd"),
     output_file = file_out("temporal_scaling.html"),
-    quiet = TRUE)
+    quiet = TRUE),
+  
+  # Generate the data to update PNNL's DataHub system
+  datahub = make_datahub()
 )
 
 message("Now type `make(plan)` at command line")
