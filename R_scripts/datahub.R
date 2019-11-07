@@ -16,6 +16,9 @@ make_datahub <- function() {
     file.remove(MDF)
   }  
   
+  cat("Metadata file - PREMIS-ghg data products",
+      date(), sep = "\n", file = MDF)
+  
   write_df <- function(x) {
     x_name <- deparse(substitute(x))
     x_fn <- file.path(DIR, paste0(x_name, ".csv"))
@@ -44,7 +47,7 @@ make_datahub <- function() {
   write_metadata(con_licor_data, 
                  doi = "In press (JGR)",
                  metadata = c("table" = "Internal reference; ignore",
-                              "Timestamp" = "Timestamp in YYYY-MM-DDTHH:MM:SSZ format",
+                              "Timestamp" = "Timestamp in YYYY-MM-DDTHH:MM:SSZ (ISO 8601) format",
                               "Label" = "Internal reference; ignore",
                               "Port" = "Multiplexer port number, integer",
                               "Flux" = "Soil surface CO2 flux, µmol/m2/s",
@@ -64,8 +67,8 @@ make_datahub <- function() {
   
   write_df(licor_daily_data)
   write_metadata(licor_daily_data,
-                 doi = c("In press (Biogeosciences)", "In press (JGR)"),
-                 metadata = c("Timestamp" = "Timestamp in YYYY-MM-DDTHH:MM:SSZ format",
+                 doi = c("In press (Biogeosciences)"),
+                 metadata = c("Timestamp" = "Timestamp in YYYY-MM-DDTHH:MM:SSZ (ISO 8601) format",
                               "Collar" = "Transplant collar number",
                               "Origin_Plot" = "Origin plot of transplants",
                               "Destination_Plot" = "Destination plot of transplants",
@@ -75,4 +78,16 @@ make_datahub <- function() {
                               "meanT5" = "Soil temperature at 5 cm, degC",
                               "meanT20" = "Soil temperature at 20 cm, degC"
                  ))
+  
+  plot_data <- readd("plot_data")
+  write_df(plot_data)
+  write_metadata(plot_data,
+                 doi = c("In press (Biogeosciences)", "In press (JGR)"),
+                 metadata = c("Site" = "Site name (SERC, Smithsonian Environmental Research Center)",
+                              "Plot" = "Plot code (High/Medium/Low Salinity, High/Medium/Low Elevation",
+                              "Salinity" = "Salinity level of creek",
+                              "Elevation" = "High, medium, or low (creekside)",
+                              "Longitude" = "Decimal longitude (WGS84)",
+                              "Latitude" = "Decimal latitude (WGS84)",
+                              "Plot_area_m2" = "Area of plot, m2"))
 }
