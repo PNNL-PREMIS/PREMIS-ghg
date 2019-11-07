@@ -13,7 +13,6 @@ read_csv("../well_data/HSLE_20180716-20190624.csv", skip = 1) %>%
          Temp_degF = `Temp, °F (LGR S/N: 20370966_duplicate_duplicate_duplicate_duplicate_duplicate_duplicate_duplicate, SEN S/N: 20370966)`) %>% 
   select(Timestamp, Low_Range, High_Range, Temp_degF) -> hsle_full
 
-
 hsle_20190913 <- read_csv("../well_data/HSLE_20190913.csv", skip = 1)
 hsle_20190828 <- read_csv("../well_data/HSLE_20190828.csv", skip = 1)
 
@@ -39,4 +38,8 @@ hsle_20190913 %>%
   select(Timestamp, Low_Range, High_Range, Temp_degF) %>% 
   head(-2) -> hsle_2
 
-bind_rows(hsle_full, hsle_1, hsle_2) -> test
+bind_rows(hsle_full, hsle_1, hsle_2) -> HSLE_20180716_20190913
+
+write.csv(HSLE_20180716_20190913, "../well_data/HSLE_20180716-20190913.csv")
+
+
