@@ -26,7 +26,7 @@ make_datahub <- function() {
     write_csv(x, x_fn)
   }
   
-  write_metadata <- function(x, doi, metadata, mdf = MDF) {
+  write_metadata <- function(x, description, doi, metadata, mdf = MDF) {
     x_name <- deparse(substitute(x))
     if(!identical(colnames(x), names(metadata))) {
       stop("Metadata doesn't match dataset for ", x_name)
@@ -36,6 +36,7 @@ make_datahub <- function() {
     
     cat("\n===================================",
         paste("Metadata for object: ", x_name),
+        paste("Description: ", description),
         paste("Paper or data reference(s):", paste(doi, collapse = " "), "\n"),
         file = mdf, sep = "\n", append = TRUE)
     cat(paste(names(metadata), metadata, sep = ": "),
@@ -45,6 +46,7 @@ make_datahub <- function() {
   con_licor_data <- readd("con_licor_data")
   write_df(con_licor_data)
   write_metadata(con_licor_data, 
+                 description = "Continuous soil respiration fluxes measured at SERC 2018-2019",
                  doi = "In press (JGR)",
                  metadata = c("table" = "Internal reference; ignore",
                               "Timestamp" = "Timestamp in YYYY-MM-DDTHH:MM:SSZ (ISO 8601) format",
@@ -67,6 +69,7 @@ make_datahub <- function() {
   
   write_df(licor_daily_data)
   write_metadata(licor_daily_data,
+                 description = "Survey soil respiration fluxes measured at SERC 2018-2019",
                  doi = c("In press (Biogeosciences)"),
                  metadata = c("Timestamp" = "Timestamp in YYYY-MM-DDTHH:MM:SSZ (ISO 8601) format",
                               "Collar" = "Transplant collar number",
@@ -82,6 +85,7 @@ make_datahub <- function() {
   plot_data <- readd("plot_data")
   write_df(plot_data)
   write_metadata(plot_data,
+                 description = "SERC plot metadata",
                  doi = c("In press (Biogeosciences)", "In press (JGR)"),
                  metadata = c("Site" = "Site name (SERC, Smithsonian Environmental Research Center)",
                               "Plot" = "Plot code (High/Medium/Low Salinity, High/Medium/Low Elevation",
