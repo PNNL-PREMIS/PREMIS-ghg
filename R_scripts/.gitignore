@@ -1,2 +1,5 @@
 # no figure files
 *.png
+
+# DataHub
+datahub/
