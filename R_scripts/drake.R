@@ -96,10 +96,10 @@ plan <- drake_plan(
   #   quiet = TRUE),
   #
   # ----- BBL exploratory -----
-  autochamber_play = rmarkdown::render(
-    knitr_in("autochamber_play.Rmd"),
-    output_file = file_out("autochamber_play.html"),
-    quiet = TRUE),
+  # autochamber_play = rmarkdown::render(
+  #   knitr_in("autochamber_play.Rmd"),
+  #   output_file = file_out("autochamber_play.html"),
+  #   quiet = TRUE),
   
   # Generate the data to update PNNL's DataHub system
   datahub = make_datahub()
