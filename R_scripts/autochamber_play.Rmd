@@ -9,10 +9,9 @@ output: html_document
 
 * Noodling
 
-
 ```{r setup, include=FALSE}
 library(drake)
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 library(readr)
 library(dplyr)
 library(tidyr)
@@ -33,13 +32,12 @@ readd("con_licor_data") %>%
   arrange(Timestamp, Port) ->
   cld
 
-message("Data limits: ", START_DATE, " to ", END_DATE)
 ```
 
+Data limits are `r START_DATE` to `r END_DATE`.
 
-## Methods
 
-```{r filtering, echo=FALSE}
+```{r filtering}
 cld %>% 
   filter(R2 > 0.75, !is.na(Flux)) %>%  # probably a chamber closing problem otherwise
   group_by(week(Timestamp)) %>% 
@@ -55,35 +53,46 @@ Continuous data: `r nrow (cld)` observations; `r removed_cld` (`r round(removed_
 
 Have data for `r length(unique(yday(cld_clean$Timestamp)))` unique days of the year.
 
-```{r missing-dates, echo=FALSE}
+```{r missing-dates}
 # Insert missing dates
+cld_clean$Timestamp <- as.POSIXct(round(cld_clean$Timestamp, "hour"))
+mints <- min(cld_clean$Timestamp)
+maxts <- max(cld_clean$Timestamp)
+
 cld_clean %>% 
+  group_by(Timestamp, Port) %>%
+  summarise(Flux = mean(Flux, na.rm = TRUE))->
+  cld_clean_avg
+
+expand.grid(Port = 1:8,
+            Timestamp = seq(mints, maxts, by = "hour")) %>% 
+  as_tibble() %>%  
+  left_join(cld_clean_avg, by = c("Port", "Timestamp")) %>% 
   mutate(Year = year(Timestamp), Month = month(Timestamp),
          Yday = yday(Timestamp), Hour = hour(Timestamp)) %>% 
-  # complete() will fill in a few impossible dates, generating warnings below
-  complete(Year, Month = 1:12, Yday = 1:365, Hour = 0:23, Port = 1:8) %>% 
-  mutate(Timestamp = if_else(is.na(Timestamp), 
-                             suppressWarnings(ymd_h(paste(Year, Month, Yday, Hour))),
-                             Timestamp)) %>%
-  # complete() also adds 'missing' data before and after we measured; remove
-  filter(!is.na(Timestamp),
-         Timestamp >= min(cld_clean$Timestamp),
-         Timestamp <= max(cld_clean$Timestamp)) %>% 
   select(Timestamp, Year, Month, Yday, Hour, Port, Flux) ->
   cld_clean_hourly
 ```
 
+After missing-date insertion, have data for `r length(unique(cld_clean_hourly$Yday))` unique days of the year.
 
-```{r continuous-plot, echo=FALSE,fig.height=8}
+## Distribution and variability
+
+```{r continuous-plot, fig.height=8}
 cld_clean_hourly %>% 
-  mutate(Year = as.factor(year(Timestamp))) %>% 
+  mutate(Year = as.factor(Year)) %>% 
   ggplot(aes(yday(Timestamp), Flux, color = Year)) + 
-  geom_line(alpha = 0.75) + facet_grid(Port ~ .) +
+  geom_line(alpha = 0.75, na.rm = TRUE) + facet_grid(Port ~ .) +
   ggtitle("A. Continuous data")
 ```
 
+```{r distributions}
+ggplot(cld_clean, aes(x = Flux, color = factor(Port))) + geom_density() +
+  ggtitle("B. Distribution")
+```
 
-```{r continuous-collar-cv, echo=FALSE}
+
+```{r continuous-collar-cv}
 cld_clean_hourly %>% 
   mutate(Year = as.factor(year(Timestamp)),
          Hour = hour(Timestamp)) %>% 
@@ -94,8 +103,8 @@ cld_clean_hourly %>%
 
 cld_cv %>% 
   ggplot(aes(Yday, Flux_cv, color = Year)) + 
-  geom_line() +
-  ggtitle("B. Collar-to-collar CV")
+  geom_point(alpha = 0.5, na.rm = TRUE) +
+  ggtitle("C. Collar-to-collar CV")
 
 cld_clean_hourly %>% 
   mutate(Month = month(Timestamp),
@@ -105,24 +114,81 @@ cld_clean_hourly %>%
   ungroup() %>% 
   ggplot(aes(Hour, Flux_cv, color = Month, group = Month)) + 
   geom_line() +
-  ggtitle("C. Collar-to-collar CV by month")
+  ggtitle("D. Collar-to-collar CV by month")
 ```
+
+## Gapfilling
+
+```{r gapfill}
+# Compute s.d. of the log values, by port and month
+cld_clean_hourly %>% 
+  filter(Flux > 0) %>% 
+  group_by(Month, Port) %>% 
+  summarise(Flux_logsd = sd(log(Flux), na.rm = TRUE),
+            Flux_sd = sd(Flux, na.rm = TRUE)) ->
+  cld_sd
+
+# What's the difference if we use rnorm versus rlnorm (following XXX)
+
+cld_clean_hourly %>% 
+  left_join(cld_sd, by = c("Month", "Port")) %>% 
+  arrange(Timestamp) %>% 
+  group_by(Port) %>% 
+  mutate(Flux_approx = approx(Timestamp, Flux, xout = Timestamp, rule = 2)$y) %>% 
+  ungroup() ->
+  cld_clean_gapfill
+
+cld_clean_gapfill %>% 
+  mutate(Type = "rnorm",
+         Flux_approx_noise = if_else(is.na(Flux),
+                                     abs(rnorm(n(), Flux_approx, Flux_sd)),
+                                     Flux)) ->
+  cld_clean_gapfill_noise
+
+cld_clean_gapfill %>% 
+  mutate(Type = "rlnorm",
+         Flux_approx_noise = if_else(is.na(Flux),
+                                     rlnorm(n(), log(Flux_approx), Flux_logsd),
+                                     Flux)) ->
+  cld_clean_gapfill_lognoise
+
+
+cld_clean_gapfill_all <- bind_rows(cld_clean_gapfill_noise, cld_clean_gapfill_lognoise)
+
+cld_clean_gapfill_all %>% 
+  filter(is.na(Flux)) %>% 
+  spread(Type, Flux_approx_noise) %>% 
+  ggplot(aes(rnorm, rlnorm)) + geom_point(alpha = 0.5) + geom_abline(color = "blue") + 
+  facet_wrap(~Port, scales = "free") ->
+  p
+print(p)
+
+# Compute annual mean flux for each port and gapfill type
+cld_clean_gapfill_all %>% 
+  group_by(Type, Port, Yday) %>% 
+  summarise(Flux_approx_noise = mean(Flux_approx_noise, na.rm = TRUE)) %>% 
+  summarise(Flux_approx_noise = mean(Flux_approx_noise, na.rm = TRUE)) %>% 
+  group_by(Type) %>% 
+  summarise_at("Flux_approx_noise", tibble::lst(mean, sd))
+
+cld_clean_gapfill_all %>% 
+  filter(Port == 2) %>% 
+  ggplot(aes(Timestamp, Flux_approx_noise, color = Type)) +
+  geom_point() +
+  facet_grid(Port ~ .) ->
+  p
+print(p)
+```
+
+
 
 As we changing sampling frequency, how does our estimate of Rs_annual change?
 
 ```{r monte-carlo, cache=TRUE}
-cld_clean_hourly %>% 
-  arrange(Timestamp) %>% 
-  group_by(Port) %>% 
-  mutate(Flux_approx = approx(Timestamp, Flux, xout = Timestamp)$y) %>% 
-  filter(!is.na(Flux_approx)) ->
-  cld_clean_gapfill
-
-
 compute_frac_mean <- function(frac, df) {
   df %>% 
     sample_frac(frac) %>% 
-    pull(Flux_approx) %>% 
+    pull(Flux_approx_noise) %>% 
     mean()
 }
 
@@ -133,17 +199,17 @@ compute_frac_mean <- function(frac, df) {
 
 set.seed(12345)
 N_MC <- 100
-cld_clean_gapfill %>% 
+cld_clean_gapfill_noise %>% 
   group_by(Port) %>% 
-  summarise(meanflux = mean(Flux_approx)) ->
+  summarise(meanflux = mean(Flux_approx, na.rm = TRUE)) ->
   meanflux
 
 results <- list()
-for(p in unique(cld_clean_hourly$Port)) {
-  x <- filter(cld_clean_gapfill, Port == p)
+for(p in unique(cld_clean_gapfill_noise$Port)) {
+  x <- filter(cld_clean_gapfill_noise, Port == p, !is.na(Flux_approx_noise))
   results[[p]] <- tibble(Port = p,
-                         frac = rep(seq(0.01, 1, by = 0.05), times = N_MC),
-                         N_per_month = 365.25 * frac / 12,
+                         frac = rep(c(0.001, seq(0.01, 1, by = 0.05), 1.0), times = N_MC),
+                         N_per_month = 365.25 * 24 / 12 * frac,
                          flux = sapply(frac, compute_frac_mean, x))
 }
 bind_rows(results) %>% 
@@ -162,7 +228,7 @@ ggplot(y, aes(N_per_month, flux_error_mean)) +
   geom_ribbon(aes(ymin = flux_error_mean - flux_error_sd, 
                   ymax = flux_error_mean + flux_error_sd), alpha = 0.5) +
   scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
-  scale_x_continuous(breaks = c(1, 4, 10, 20)) +
+  scale_x_continuous(breaks = c(1, 4, 10, 30, 720)) +
   coord_trans(x = "log10") + 
   facet_wrap(~Port)
 ```
