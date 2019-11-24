@@ -3,3 +3,6 @@
 
 # DataHub
 datahub/
+
+# RMarkdown cache
+*_cache/

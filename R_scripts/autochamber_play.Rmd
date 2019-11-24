@@ -21,7 +21,8 @@ library(lubridate)
 library(kableExtra)
 library(lattice)
 library(cowplot)  # 0.9.4
-theme_set(theme_cowplot())
+theme_set(theme_bw())
+#theme_set(theme_cowplot())
 
 N_HISTOGRAM_BINS <- 20
 START_DATE <- "2017-10-01"
@@ -104,7 +105,7 @@ cld_clean_hourly %>%
   ungroup() %>% 
   ggplot(aes(Hour, Flux_cv, color = Month, group = Month)) + 
   geom_line() +
-  ggtitle("B. Collar-to-collar CV")
+  ggtitle("C. Collar-to-collar CV by month")
 ```
 
 As we changing sampling frequency, how does our estimate of Rs_annual change?
@@ -117,6 +118,7 @@ cld_clean_hourly %>%
   filter(!is.na(Flux_approx)) ->
   cld_clean_gapfill
 
+
 compute_frac_mean <- function(frac, df) {
   df %>% 
     sample_frac(frac) %>% 
@@ -124,14 +126,30 @@ compute_frac_mean <- function(frac, df) {
     mean()
 }
 
+# This isn't what we want
+# Want to compute the time length of the series; sample some fraction;
+# and then adjust to an annual (or monthly or whatever) rate
+# We want the "sample per year" variable to go to 365 * 24
+
 set.seed(12345)
-N_SAMPLES <- 100
-meanflux <- mean(cld_clean_gapfill$Flux_approx)
-x <- tibble(frac = rep(seq(0.01, 1, by = 0.05), times = N_SAMPLES),
-            flux = sapply(frac, compute_frac_mean, cld_clean_gapfill),
-            flux_error = (flux - meanflux) / meanflux)
-x %>% 
-  group_by(frac) %>% 
+N_MC <- 100
+cld_clean_gapfill %>% 
+  group_by(Port) %>% 
+  summarise(meanflux = mean(Flux_approx)) ->
+  meanflux
+
+results <- list()
+for(p in unique(cld_clean_hourly$Port)) {
+  x <- filter(cld_clean_gapfill, Port == p)
+  results[[p]] <- tibble(Port = p,
+                         frac = rep(seq(0.01, 1, by = 0.05), times = N_MC),
+                         N_per_month = 365.25 * frac / 12,
+                         flux = sapply(frac, compute_frac_mean, x))
+}
+bind_rows(results) %>% 
+  left_join(meanflux, by = "Port") %>% 
+  mutate(flux_error = (flux - meanflux) / meanflux) %>% 
+  group_by(Port, N_per_month, frac) %>% 
   summarise(n = n(), 
             flux_mean = mean(flux), 
             flux_sd = sd(flux),
@@ -139,11 +157,14 @@ x %>%
             flux_error_sd = sd(flux_error)) ->
   y
 
-ggplot(y, aes(frac, flux_error_mean)) + 
+ggplot(y, aes(N_per_month, flux_error_mean)) + 
   geom_line() + 
   geom_ribbon(aes(ymin = flux_error_mean - flux_error_sd, 
                   ymax = flux_error_mean + flux_error_sd), alpha = 0.5) +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 1))
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
+  scale_x_continuous(breaks = c(1, 4, 10, 20)) +
+  coord_trans(x = "log10") + 
+  facet_wrap(~Port)
 ```
 
 
