@@ -1,0 +1,155 @@
+---
+title: "Soil respiration variability and correlation across a wide range of temporal scales"
+author: "Ben Bond-Lamberty"
+date: "28 October 2019"
+output: html_document
+---
+
+## Introduction
+
+* Noodling
+
+
+```{r setup, include=FALSE}
+library(drake)
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(lubridate)
+library(kableExtra)
+library(lattice)
+library(cowplot)  # 0.9.4
+theme_set(theme_cowplot())
+
+N_HISTOGRAM_BINS <- 20
+START_DATE <- "2017-10-01"
+END_DATE <- "2099-08-01"
+
+readd("con_licor_data") %>% 
+  filter(Timestamp >= START_DATE, Timestamp < END_DATE) %>% 
+  arrange(Timestamp, Port) ->
+  cld
+
+message("Data limits: ", START_DATE, " to ", END_DATE)
+```
+
+
+## Methods
+
+```{r filtering, echo=FALSE}
+cld %>% 
+  filter(R2 > 0.75, !is.na(Flux)) %>%  # probably a chamber closing problem otherwise
+  group_by(week(Timestamp)) %>% 
+  mutate(mad = abs(Flux - median(Flux,  na.rm = TRUE)) / mad(Flux, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  filter(mad <= 4) %>% 
+  ungroup() ->
+  cld_clean
+removed_cld <- nrow(cld) - nrow(cld_clean)
+```
+
+Continuous data: `r nrow (cld)` observations; `r removed_cld` (`r round(removed_cld / nrow(cld) * 100, 0)`%) removed because of chamber closure or other problems. Final data is `r nrow(cld_clean)` observations.
+
+Have data for `r length(unique(yday(cld_clean$Timestamp)))` unique days of the year.
+
+```{r missing-dates, echo=FALSE}
+# Insert missing dates
+cld_clean %>% 
+  mutate(Year = year(Timestamp), Month = month(Timestamp),
+         Yday = yday(Timestamp), Hour = hour(Timestamp)) %>% 
+  # complete() will fill in a few impossible dates, generating warnings below
+  complete(Year, Month = 1:12, Yday = 1:365, Hour = 0:23, Port = 1:8) %>% 
+  mutate(Timestamp = if_else(is.na(Timestamp), 
+                             suppressWarnings(ymd_h(paste(Year, Month, Yday, Hour))),
+                             Timestamp)) %>%
+  # complete() also adds 'missing' data before and after we measured; remove
+  filter(!is.na(Timestamp),
+         Timestamp >= min(cld_clean$Timestamp),
+         Timestamp <= max(cld_clean$Timestamp)) %>% 
+  select(Timestamp, Year, Month, Yday, Hour, Port, Flux) ->
+  cld_clean_hourly
+```
+
+
+```{r continuous-plot, echo=FALSE,fig.height=8}
+cld_clean_hourly %>% 
+  mutate(Year = as.factor(year(Timestamp))) %>% 
+  ggplot(aes(yday(Timestamp), Flux, color = Year)) + 
+  geom_line(alpha = 0.75) + facet_grid(Port ~ .) +
+  ggtitle("A. Continuous data")
+```
+
+
+```{r continuous-collar-cv, echo=FALSE}
+cld_clean_hourly %>% 
+  mutate(Year = as.factor(year(Timestamp)),
+         Hour = hour(Timestamp)) %>% 
+  group_by(Year, Yday, Hour) %>% 
+  summarise(Flux_cv = sd(Flux) / mean(Flux)) %>% 
+  ungroup() ->
+  cld_cv
+
+cld_cv %>% 
+  ggplot(aes(Yday, Flux_cv, color = Year)) + 
+  geom_line() +
+  ggtitle("B. Collar-to-collar CV")
+
+cld_clean_hourly %>% 
+  mutate(Month = month(Timestamp),
+         Hour = hour(Timestamp)) %>% 
+  group_by(Month, Hour) %>% 
+  summarise(Flux_cv = sd(Flux, na.rm = TRUE) / mean(Flux, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  ggplot(aes(Hour, Flux_cv, color = Month, group = Month)) + 
+  geom_line() +
+  ggtitle("B. Collar-to-collar CV")
+```
+
+As we changing sampling frequency, how does our estimate of Rs_annual change?
+
+```{r monte-carlo, cache=TRUE}
+cld_clean_hourly %>% 
+  arrange(Timestamp) %>% 
+  group_by(Port) %>% 
+  mutate(Flux_approx = approx(Timestamp, Flux, xout = Timestamp)$y) %>% 
+  filter(!is.na(Flux_approx)) ->
+  cld_clean_gapfill
+
+compute_frac_mean <- function(frac, df) {
+  df %>% 
+    sample_frac(frac) %>% 
+    pull(Flux_approx) %>% 
+    mean()
+}
+
+set.seed(12345)
+N_SAMPLES <- 100
+meanflux <- mean(cld_clean_gapfill$Flux_approx)
+x <- tibble(frac = rep(seq(0.01, 1, by = 0.05), times = N_SAMPLES),
+            flux = sapply(frac, compute_frac_mean, cld_clean_gapfill),
+            flux_error = (flux - meanflux) / meanflux)
+x %>% 
+  group_by(frac) %>% 
+  summarise(n = n(), 
+            flux_mean = mean(flux), 
+            flux_sd = sd(flux),
+            flux_error_mean = mean(flux_error),
+            flux_error_sd = sd(flux_error)) ->
+  y
+
+ggplot(y, aes(frac, flux_error_mean)) + 
+  geom_line() + 
+  geom_ribbon(aes(ymin = flux_error_mean - flux_error_sd, 
+                  ymax = flux_error_mean + flux_error_sd), alpha = 0.5) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 1))
+```
+
+
+
+## Session
+
+```{r, echo=FALSE}
+sessionInfo()
+```
