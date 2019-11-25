@@ -239,14 +239,15 @@ bind_rows(results) %>%
             flux_error_95upr = quantile(flux_error, 0.975)) ->
   y
 
-ggplot(y, aes(N_per_month, flux_error_mean)) + 
-  geom_line() + 
+ggplot(y, aes(N_per_month, flux_error_mean, group = Port)) + 
+  geom_hline(yintercept = 0) + #geom_line() + 
   geom_ribbon(aes(ymin = flux_error_95lwr, 
-                  ymax = flux_error_95upr), alpha = 0.5) +
+                  ymax = flux_error_95upr), 
+              color = "darkgrey", linetype = 2, alpha = 0.2) +
   scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
   scale_x_continuous(breaks = c(1, 4, 10, 30, 720)) +
-  coord_trans(x = "log10") + 
-  facet_wrap(~Port)
+  coord_trans(x = "log10") +
+  xlab("Measurements per month") + ylab("Error in annual estimate") #+ facet_wrap(~Port)
 ```
 
 
