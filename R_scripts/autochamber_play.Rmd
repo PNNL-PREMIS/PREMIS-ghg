@@ -1,5 +1,5 @@
 ---
-title: "Soil respiration variability and correlation across a wide range of temporal scales"
+title: "Soil respiration: gap-filling and annual flux estimation"
 author: "Ben Bond-Lamberty"
 date: "28 October 2019"
 output: html_document
@@ -119,6 +119,24 @@ cld_clean_hourly %>%
 
 ## Gapfilling
 
+>A second challenge is posed by a large component of random error. It originates from intrinsic fine-scale processes such as microbial metabolic pathways, gas diffusion, or microbial population dynamics and, to a smaller extent, from instrumentation (Lavoie et al., 2015; Pérez-Priego et al., 2015) (see section 2.2 for terminology). Random error is usually assumed to be normally distributed, however, violation of this assumption poses problems for analysis and aggregation across space and time. A first problem is the increasing variance with increasing flux, which violates the assumption of homoscedasticity of variance, which is the base of many statistical tests. A second problem is the occurrence of strong tails, i.e., higher probability of large absolute errors (Savage et al., 2008; Cueva et al., 2015; Lavoie et al., 2015) compared to the normal assumption. This is often associated with hot spots and hot moments, i.e., locations or times where large fluxes occur at a small scale (Leon et al., 2014; Vargas et al., 2018). To overcome these problems, Savage et al. (2008) proposed using the Laplace distribution. If this proposal is applicable depends on how the data will be used. For instance, model-data integration studies can use the Laplace assumption by using a cost-function that is based on the median absolute deviation rather than the squared difference (Richardson et al., 2006). However, other statistical methods still rely on the normal assumption. For instance, using mixed effects models (Pinheiro and Bates, 2000; Zuur et al., 2009) in aggregating measurements across several chambers requires the normal assumption for a random effect to represent grouping in the data.
+
+>A simple method to estimate the error terms is daily differencing, excluding days with and after rain events (Savage et al., 2008). The daily differencing method assumes that records 24 hours apart represent similar environmental conditions and hence differences in the observed flux can be used to estimate the random error...
+
+>An alternative method is the Lookup-Table approach (LUT). It is commonly used in the marginal distribution sampling method (Reichstein et al., 2005)...
+
+>A third alternative is modeling the base flux by its relationship with ancillary observations, such as temperature. We tried modeling the CO2 efflux temperature relationship with varying basal respiration (Gomez-Casanovas et al., 2013; Reichstein et al., 2005)...
+
+>Contrary to the short term aggregation, distribution of annually aggregated fluxes of each chamber did not differ between the two approaches (Fig. 5). 
+
+https://www.geosci-instrum-method-data-syst-discuss.net/gi-2019-10/
+
+Also Gomez-Casanovas et al. (2013), http://dx.doi.org/10.1111/gcb.12127
+
+If we aggregate chamber to annual fluxes and then compute a mean, versus compute a mean and then aggregate to annual flux, how does that affect things? See Wutzler et al. link above:
+
+>The "space first" alternative yielded lower uncertainty estimates because it wrongly assumed true replicates when in reality there are only pseudo-spatial replicates (Fig. 6), i.e. locations did not change between successive measurements.
+
 ```{r gapfill}
 # Compute s.d. of the log values, by port and month
 cld_clean_hourly %>% 
@@ -184,21 +202,13 @@ print(p)
 
 As we changing sampling frequency, how does our estimate of Rs_annual change?
 
-```{r monte-carlo, cache=TRUE}
+```{r bootstrap, cache=TRUE}
 compute_frac_mean <- function(frac, df) {
-  df %>% 
-    sample_frac(frac) %>% 
-    pull(Flux_approx_noise) %>% 
-    mean()
+  mean(df$Flux_approx_noise[sample.int(nrow(df), nrow(df) * frac)])
 }
 
-# This isn't what we want
-# Want to compute the time length of the series; sample some fraction;
-# and then adjust to an annual (or monthly or whatever) rate
-# We want the "sample per year" variable to go to 365 * 24
-
 set.seed(12345)
-N_MC <- 100
+N_MC <- 1000
 cld_clean_gapfill_noise %>% 
   group_by(Port) %>% 
   summarise(meanflux = mean(Flux_approx, na.rm = TRUE)) ->
@@ -208,25 +218,31 @@ results <- list()
 for(p in unique(cld_clean_gapfill_noise$Port)) {
   x <- filter(cld_clean_gapfill_noise, Port == p, !is.na(Flux_approx_noise))
   results[[p]] <- tibble(Port = p,
-                         frac = rep(c(0.001, seq(0.01, 1, by = 0.05), 1.0), times = N_MC),
-                         N_per_month = 365.25 * 24 / 12 * frac,
+                         frac = rep(c(seq(0.001, 0.01, by = 0.002), 
+                                      seq(0.01, 1, by = 0.075), 
+                                      1.0), times = N_MC),
                          flux = sapply(frac, compute_frac_mean, x))
 }
+
 bind_rows(results) %>% 
   left_join(meanflux, by = "Port") %>% 
-  mutate(flux_error = (flux - meanflux) / meanflux) %>% 
+  # these are hourly data, so a fraction of 1 means ~730 times per month
+  mutate(N_per_month = 365.25 * 24 / 12 * frac,
+         flux_error = (flux - meanflux) / meanflux) %>% 
   group_by(Port, N_per_month, frac) %>% 
   summarise(n = n(), 
             flux_mean = mean(flux), 
             flux_sd = sd(flux),
             flux_error_mean = mean(flux_error),
-            flux_error_sd = sd(flux_error)) ->
+            flux_error_sd = sd(flux_error),
+            flux_error_95lwr = quantile(flux_error, 0.025),
+            flux_error_95upr = quantile(flux_error, 0.975)) ->
   y
 
 ggplot(y, aes(N_per_month, flux_error_mean)) + 
   geom_line() + 
-  geom_ribbon(aes(ymin = flux_error_mean - flux_error_sd, 
-                  ymax = flux_error_mean + flux_error_sd), alpha = 0.5) +
+  geom_ribbon(aes(ymin = flux_error_95lwr, 
+                  ymax = flux_error_95upr), alpha = 0.5) +
   scale_y_continuous(labels = scales::percent_format(accuracy = 1)) +
   scale_x_continuous(breaks = c(1, 4, 10, 30, 720)) +
   coord_trans(x = "log10") + 
