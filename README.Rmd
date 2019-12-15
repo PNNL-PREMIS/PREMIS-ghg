@@ -96,19 +96,34 @@ daily_treatment_means %>%
   mutate(lbl = if_else(transplant_effect < 0.05, "*", "")) ->
   salinity_signif
 
-
-daily_treatment_means %>% 
+p <- daily_treatment_means %>% 
   filter(!is.na(meanFlux), !is.na(sdFlux), meanFlux > 0) %>% 
   ggplot(aes(x = Timestamp, y = meanFlux, color = Experiment, group = Group)) +
   geom_errorbar(aes(ymin = meanFlux - sdFlux, ymax = meanFlux + sdFlux)) +
   geom_point() +
   geom_line(aes(linetype = ControlGroup)) +
   facet_grid(Dest_Elevation ~ Dest_Salinity) +
-  ggtitle("Flux over time - destination plots") +
   labs(x = "Date", y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   geom_text(data = salinity_signif, color = "black", group = 1, size = 8,
             aes(x = as.POSIXct(Date), y = 18, label = lbl))
+
+print(p)
+ggsave("~/Desktop/p.png", p)
+ggsave("~/Desktop/p.pdf", p)
+
+# True controls versus transplant controls
+daily_treatment_means %>% 
+  filter(Experiment=="Control", meanFlux > 0) %>% 
+  select(Date, Destination_Plot, ControlGroup, meanFlux) %>% 
+  mutate(Year = as.factor(year(Date))) %>% 
+  pivot_wider(names_from = ControlGroup, values_from = meanFlux) %>% 
+  ggplot(aes(`Control (true)`, Transplant, color = Year)) + 
+  geom_point() + 
+  geom_abline() + 
+  geom_smooth(method = "lm", linetype = 2, show.legend = FALSE) + 
+  xlab(expression(Undisturbed~control~flux~(µmol~CO[2]~m^-2~s^-1))) +
+  ylab(expression(Transplant~control~flux~(µmol~CO[2]~m^-2~s^-1)))
 ```
 
 ### Soil temperature versus CO2 flux for all cores
@@ -169,7 +184,7 @@ weather_data %>%
   labs(x = "Date")
 ```
 
-### Soil moisure at 20CM and 2CM depth
+### Soil moisture at 20 cm and 2 cm depth
 ```{r soil_moisture, echo = FALSE}
 weather_data %>% 
   filter(Sensor_Group == "Water Content") %>% 
