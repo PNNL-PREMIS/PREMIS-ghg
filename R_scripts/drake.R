@@ -21,6 +21,7 @@ source("process_licor_data.R")
 source("inventory.R")
 source("weatherdat.R")
 source("litter.R")
+source("datahub.R")
 
 do_filedigest <- function(dir) digest::digest(list.files(dir)) # helper function
 
@@ -68,7 +69,7 @@ plan <- drake_plan(
   
   # ----- Litter data -----
   litter_data = target(command = read_litter_data("../litter_data"),
-                      trigger = trigger(change = do_filedigest("../litter_data"))),
+                       trigger = trigger(change = do_filedigest("../litter_data"))),
   
   # ----- Proximity data for SP's proximity analysis manuscript -----
   prox_data = read_csv(file_in("../inventory_data/collar_proximity.csv"), col_types = "ccidccdcc"),
@@ -78,7 +79,7 @@ plan <- drake_plan(
     knitr_in("proximity_results.Rmd"),
     output_file = file_out("proximity_results.html"),
     quiet = TRUE),
-
+  
   # ----- Global soil respiration database -----
   srdb = read.csv(file_in("../ancillary_data/srdb-data.csv"), stringsAsFactors = FALSE),
   # 
@@ -89,10 +90,19 @@ plan <- drake_plan(
   #   quiet = TRUE),
   # 
   # ----- BBL's temporal scaling report -----
-  ts_report = rmarkdown::render(
-    knitr_in("temporal_scaling.Rmd"),
-    output_file = file_out("temporal_scaling.html"),
-    quiet = TRUE)
+  # ts_report = rmarkdown::render(
+  #   knitr_in("temporal_scaling.Rmd"),
+  #   output_file = file_out("temporal_scaling.html"),
+  #   quiet = TRUE),
+  #
+  # ----- BBL exploratory -----
+  # autochamber_play = rmarkdown::render(
+  #   knitr_in("autochamber_play.Rmd"),
+  #   output_file = file_out("autochamber_play.html"),
+  #   quiet = TRUE),
+  
+  # Generate the data to update PNNL's DataHub system
+  datahub = make_datahub()
 )
 
 message("Now type `make(plan)` at command line")
