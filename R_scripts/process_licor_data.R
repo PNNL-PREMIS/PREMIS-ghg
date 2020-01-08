@@ -23,7 +23,7 @@ process_licor_data <- function(raw_data, collar_data, plot_data, temp_data) {
   
   temp_data %>%
     mutate(Date = mdy(Date, tz = "America/New_York")) ->
-    temp_data
+    temp_data_time
   
   cat("Joining datasets and calculating...\n")
   
@@ -60,7 +60,7 @@ process_licor_data <- function(raw_data, collar_data, plot_data, temp_data) {
   # Here we merge licor data with these 5cm temperatures
   licorDat %>% 
     mutate(Date = floor_date(Timestamp, unit = "day")) %>% 
-    left_join(temp_data, by = c("Date", "Collar")) -> 
+    left_join(temp_data_time, by = c("Date", "Collar")) -> 
     licorDat
     
   # Replace error T5 data
@@ -81,7 +81,7 @@ process_licor_data <- function(raw_data, collar_data, plot_data, temp_data) {
            Origin_Elevation = factor(Origin_Elevation, levels = HML),
            Dest_Salinity = factor(Dest_Salinity, levels = HML),
            Dest_Elevation = factor(Dest_Elevation, levels = HML),
-           Date = paste(month(Timestamp), "/", day(Timestamp)),
+           Date = as_date(Timestamp),
            Group = paste(Origin_Plot, "->", Destination_Plot),
            Group = if_else(Experiment == "Control", "Control", Group))
 }
