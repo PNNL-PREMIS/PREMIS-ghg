@@ -86,7 +86,7 @@ model_stats <- function(mods, dat, which) {
     geom_point(alpha = 0.75, na.rm = TRUE) + 
     geom_smooth(method = "lm", se = FALSE, linetype = "dashed") +
     geom_smooth(stat="smooth", method = "lm", group = 1, color = "grey30") +
-    ylab(expression(Residual~(µmol~m^-2~s^-1))) +
+    ylab(expression(Residual~(mol~m^-2~s^-1))) +
     xlab(expression(Basal~area~(m^2))) +
     ylim(c(-1,1))
   print(p)
@@ -127,6 +127,7 @@ prox_data <- readd("prox_data")
 prox_data %>%
   select(-Date) %>%
   left_join(tree_data, by = c("Site", "Plot", "Tag"), na_matches = "never") %>%
+  mutate(DBH = as.numeric(DBH)) %>% 
   # Replace DBH with recorded value for non-tagged trees
   mutate(DBH_cm = if_else(is.na(Tag), No_tag_DBH, DBH_cm_2018),
          Species_code = if_else(is.na(Tag), No_tag_species, Species_code),
@@ -136,7 +137,7 @@ prox_data %>%
 
 
 ### Prep work: compute cumulative basal area for each collar
-```{r basal-area-fig, fig.width = 9, echo = FALSE}
+```{r basal-area-fig, fig.width = 7, echo = FALSE}
 
 # Calculate cumulative basal area at each distance 
 BA_dat <- list()
@@ -172,10 +173,15 @@ p_inset <- p + xlim(c(0, 5)) + ylim(c(0, 1.25)) +
   theme(legend.position = "none",
         axis.title = element_blank())
 
-fig2 <- ggdraw() +
-  draw_plot(p + geom_line(size = 1, na.rm = TRUE)) +
-  draw_plot(p_inset, 0.1, 0.65, width = 0.45, height = 0.3)
-print(fig2)
+p + geom_line(size = 1, na.rm = TRUE) + 
+  theme(legend.position = c(0.3, 0.8), legend.key.size = unit(0.9, "cm"), legend.direction = "horizontal") -> p2
+
+save_plot("proximity_figures/Figure3.png", p2)
+print(p2)
+#fig2 <- ggdraw() +
+#  draw_plot(p + geom_line(size = 1, na.rm = TRUE)) +
+#  draw_plot(p_inset, 0.1, 0.65, width = 0.45, height = 0.3)
+#print(fig2)
 #save_plot("proximity_figures/Figure3.png", fig2)
 ```
 
@@ -184,6 +190,7 @@ print(fig2)
 ```{r site-info, echo = FALSE, warning = FALSE, message = FALSE}
 # BA by percentage
 tree_data %>%
+  mutate(DBH = as.numeric(DBH)) %>% 
   group_by(Site, Salinity, Species) %>%
   summarise(n = n(),
             BA_species = sum(calc_BA(DBH_cm_2018), na.rm = TRUE)) %>%
@@ -192,6 +199,7 @@ tree_data %>%
 
 ##SP TO ADD COMMENTS AND CONSTANTS FOR CLARITY
 tree_data %>% 
+  mutate(DBH = as.numeric(DBH)) %>% 
   group_by(Salinity, Elevation) %>% 
   summarise(n = n(), 
             Plot_area_m2 = mean(Plot_area_m2), 
@@ -243,7 +251,7 @@ licor_daily_data %>%
   facet_grid(~Dest_Site) +
   ggtitle("Figure 3") +
   labs(x = "Date", 
-       y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
+       y = expression(Flux~(umol~CO[2]~m^-2~s^-1))) +
   ylim(c(0, 20)) +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ggsave("proximity_figures/Figure2.png")
