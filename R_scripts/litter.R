@@ -7,7 +7,7 @@ library(dplyr)
 
 # Read in litter directory and combine to one data frame
 read_litter_data <- function(path) {
-  litter_data <- list.files(path = path, full.names = TRUE) %>% 
+  litter_data <- list.files(path = path, pattern = "*.csv", full.names = TRUE) %>% 
   lapply(read_csv) %>% 
   bind_rows()
     
