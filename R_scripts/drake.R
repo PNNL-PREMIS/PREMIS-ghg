@@ -71,14 +71,14 @@ plan <- drake_plan(
   litter_data = target(command = read_litter_data("../litter_data"),
                        trigger = trigger(change = do_filedigest("../litter_data"))),
   
-  # ----- Proximity data for SP's proximity analysis manuscript -----
-  prox_data = read_csv(file_in("../inventory_data/collar_proximity.csv"), col_types = "ccidccdcc"),
-  
-  # Proximity analysis report
-  prox_report = rmarkdown::render(
-    knitr_in("proximity_results.Rmd"),
-    output_file = file_out("proximity_results.html"),
-    quiet = TRUE),
+  # # ----- Proximity data for SP's proximity analysis manuscript -----
+  # prox_data = read_csv(file_in("../inventory_data/collar_proximity.csv"), col_types = "ccidccdcc"),
+  # 
+  # # Proximity analysis report
+  # prox_report = rmarkdown::render(
+  #   knitr_in("proximity_results.Rmd"),
+  #   output_file = file_out("proximity_results.html"),
+  #   quiet = TRUE),
   
   # ----- Global soil respiration database -----
   srdb = read.csv(file_in("../ancillary_data/srdb-data.csv"), stringsAsFactors = FALSE),
