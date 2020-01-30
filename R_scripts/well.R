@@ -44,6 +44,7 @@ hsle_20190913 %>%
 
 # Form one dataset
 bind_rows(hsle_full, hsle_1, hsle_2) -> HSLE_20180716_20190913
+HSLE_20180716_20190913$Plot <- "HSLE"
 
 write.csv(HSLE_20180716_20190913, "../well_data/HSLE_20180716-20190913.csv")
 
@@ -72,5 +73,16 @@ msle_20200124 %>%
   head(-2) -> msle
 
 bind_rows(msle_full, msle) -> MSLE_20180716_20200124
+MSLE_20180716_20200124$Plot <- "MSLE"
+
 write.csv(MSLE_20180716_20200124, "../well_data/MSLE_20180716-20200124.csv")
 
+read_csv("../well_data/LSLE_20180716-20190828.csv", skip = 1) %>% 
+  mutate(Timestamp = mdy_hms(`Date Time, GMT-04:00`, tz = "America/New_York")) %>% 
+  rename(Low_Range = `Low Range, μS/cm (LGR S/N: 20370964_duplicate_duplicate_duplicate_duplicate_duplicate, SEN S/N: 20370964)`,
+         High_Range = `High Range, μS/cm (LGR S/N: 20370964_duplicate_duplicate_duplicate_duplicate_duplicate, SEN S/N: 20370964)`,
+         Temp_degF = `Temp, °F (LGR S/N: 20370964_duplicate_duplicate_duplicate_duplicate_duplicate, SEN S/N: 20370964)`) %>% 
+  select(Timestamp, Low_Range, High_Range, Temp_degF) -> lsle
+lsle$Plot <- "LSLE"
+
+write.csv(lsle, "../well_data/LSLE_20180716-20190828.csv")

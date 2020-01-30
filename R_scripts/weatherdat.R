@@ -34,17 +34,15 @@ read_single_well <- function(filename) {
   stopifnot(file.exists(filename))
   
   cat("Reading", filename, "...\n")
-  # The first line of the file holds the plot name
-  readLines(filename, n = 1) %>% 
-    gsub("Plot Title: ", "", .) %>% 
-    gsub('"', '', .) ->
-    plot
-  
-  read_csv(filename, skip = 2,
-           col_names = c("#", "Timestamp", "Low_Range", "High_Range", "Temp",
-                         paste0("X", 1:8)),
-           col_types = "icdddcccccccc") %>% 
-    dplyr::select(Timestamp, Low_Range, High_Range, Temp) %>% 
-    mutate(Timestamp = mdy_hms(Timestamp),
-           Plot = plot)
+# The first line of the file holds the plot name
+#  readLines(filename, n = 1) %>% 
+#    gsub("Plot Title: ", "", .) %>% 
+#    gsub('"', '', .) ->
+#    plot
+  read_csv(filename)
+#   read_csv(filename,
+#            col_names = c("N", "Timestamp", "Low_Range", "High_Range", "Temp"),
+#            col_types = "dDddd") %>% 
+# #    dplyr::select(Timestamp, Low_Range, High_Range, Temp) %>% 
+#     mutate(Timestamp = mdy_hms(Timestamp))
 }
