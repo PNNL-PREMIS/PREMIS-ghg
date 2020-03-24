@@ -14,7 +14,7 @@ knitr::opts_chunk$set(
   fig.width = 9
 )
 options(tibble.print_min = 5, tibble.print_max = 5)
-PATH <- "./R_scripts/"
+PATH <- "./R_scripts/.drake/"
 ```
 
 # PREMIS-ghg
@@ -63,8 +63,8 @@ licor_daily_data %>%
   mutate(Experiment = if_else(Origin_Plot == Destination_Plot, "Control", Experiment),
          Dest_Elevation = paste(Dest_Elevation, "elevation"),
          Dest_Salinity = paste(Dest_Salinity, "salinity"),
-         Dest_Elevation = factor(Dest_Elevation, levels = c("High elevation", "Medium elevation", "Low elevation")),
-         Dest_Salinity = factor(Dest_Salinity, levels = c("Low salinity", "Medium salinity", "High salinity"))) ->
+         Dest_Elevation = factor(Dest_Elevation, levels = c("Low elevation", "Medium elevation", "High elevation")),
+         Dest_Salinity = factor(Dest_Salinity, levels = c("High salinity", "Medium salinity", "Low salinity"))) ->
   daily_treatment_means
 ```
 
@@ -81,16 +81,49 @@ readd("collar_data", path = PATH) %>%
 
 ### CO2 flux over time
 ```{r co2_time, echo = FALSE, warning = FALSE}
+# Check of significant transplant effect by sampling date
+library(broom)
+library(lubridate)
 daily_treatment_means %>% 
-  filter(!is.na(meanFlux), !is.na(sdFlux)) %>% 
+  # filter(Destination_Plot %in% c("HSLE", "MSLE", "LSLE"),
+  #        Origin_Plot %in% c("HSLE", "MSLE", "LSLE")) %>%
+  group_by(Dest_Elevation, Dest_Salinity, year(Date), month(Date)) %>% 
+  do(data.frame(Date = mean(.$Date),
+                transplant_effect = tryCatch(anova(lm(meanFlux ~ Origin_Plot, data = .))$`Pr(>F)`[1],
+                                             error = function(e) NA))) %>% 
+  ungroup() %>% 
+  filter(!is.na(transplant_effect)) %>% 
+  mutate(lbl = if_else(transplant_effect < 0.05, "*", "")) ->
+  salinity_signif
+
+p <- daily_treatment_means %>% 
+  filter(!is.na(meanFlux), !is.na(sdFlux), meanFlux > 0) %>% 
   ggplot(aes(x = Timestamp, y = meanFlux, color = Experiment, group = Group)) +
   geom_errorbar(aes(ymin = meanFlux - sdFlux, ymax = meanFlux + sdFlux)) +
   geom_point() +
   geom_line(aes(linetype = ControlGroup)) +
   facet_grid(Dest_Elevation ~ Dest_Salinity) +
-  ggtitle("Flux over time - destination plots") +
   labs(x = "Date", y = expression(Flux~(µmol~CO[2]~m^-2~s^-1))) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  geom_text(data = salinity_signif, color = "black", group = 1, size = 8,
+            aes(x = as.POSIXct(Date), y = 18, label = lbl))
+
+print(p)
+ggsave("~/Desktop/p.png", p)
+ggsave("~/Desktop/p.pdf", p)
+
+# True controls versus transplant controls
+daily_treatment_means %>% 
+  filter(Experiment=="Control", meanFlux > 0) %>% 
+  select(Date, Destination_Plot, ControlGroup, meanFlux) %>% 
+  mutate(Year = as.factor(year(Date))) %>% 
+  pivot_wider(names_from = ControlGroup, values_from = meanFlux) %>% 
+  ggplot(aes(`Control (true)`, Transplant, color = Year)) + 
+  geom_point() + 
+  geom_abline() + 
+  geom_smooth(method = "lm", linetype = 2, show.legend = FALSE) + 
+  xlab(expression(Undisturbed~control~flux~(µmol~CO[2]~m^-2~s^-1))) +
+  ylab(expression(Transplant~control~flux~(µmol~CO[2]~m^-2~s^-1)))
 ```
 
 ### Soil temperature versus CO2 flux for all cores
@@ -151,7 +184,7 @@ weather_data %>%
   labs(x = "Date")
 ```
 
-### Soil moisure at 20CM and 2CM depth
+### Soil moisture at 20 cm and 2 cm depth
 ```{r soil_moisture, echo = FALSE}
 weather_data %>% 
   filter(Sensor_Group == "Water Content") %>% 
@@ -195,11 +228,11 @@ ggplot(tree_data, aes(DBH, fill = Species)) +
 litter_data <- readd('litter_data', path = PATH)
 litter_data %>% 
   filter(Litter_Type == "M_leaf_oak" | Litter_Type == "M_leaf_beech" | 
-         Litter_Type == "M_leaf_other" | Litter_Type == "M_leaf_tulip") %>% 
+           Litter_Type == "M_leaf_other" | Litter_Type == "M_leaf_tulip") %>% 
   group_by(Date_collected, Plot, Litter_Type) %>% 
   summarise(Mass_g = mean(Mass_g)) %>% 
   ungroup() -> litter_mean
-  
+
 litter_mean %>% 
   arrange(Plot, Litter_Type, Date_collected) %>% 
   group_by(Plot, Litter_Type) %>% 
