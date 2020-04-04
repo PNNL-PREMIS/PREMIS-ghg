@@ -217,7 +217,7 @@ readd("well_data", path = PATH) %>%
 ### Histogram of trees by DBH
 ```{r inventory, echo = FALSE, warning = FALSE}
 tree_data <- readd("tree_data", path = PATH)
-ggplot(tree_data, aes(DBH_cm_2018, fill = Species)) + 
+ggplot(tree_data, aes(DBH, fill = Species)) + 
   geom_histogram(position = "stack", binwidth = 5) + 
   facet_grid(Salinity ~ Elevation) +
   labs(x = "DBH (cm)", y = "Count")
