@@ -4,17 +4,17 @@
 
 # Function to parse multi-year inventory into long format
 read_inventory <- function(path) {
-  inventory_wide <- read_csv(path, col_types = "cccccdccdccc")
+  inventory_wide <- read_csv(path, col_types = "cccccdccdccdccc")
   
   # Gather columns from multiple years 
   inventory_wide %>%
     gather("Type", "Value", matches("_[0-9]{4}$")) %>% 
     separate(Type, into = c("Category", "Unit", "Year"), sep = "_")  %>% 
-    select(-Unit, - Year) %>%
+    dplyr::select(-Unit, -Year) %>%
     group_by(Category) %>% 
     mutate(grouped_id = row_number()) %>% 
     spread(Category, Value) %>% 
-    select(-grouped_id) 
+    dplyr::select(-grouped_id) 
 
 }
 
@@ -38,5 +38,5 @@ make_tree_data <- function(inventory_data, species_codes, plot_data) {
   
   trees %>% 
     filter(Site == "SERC") %>% # temporary - only handle SERC
-    left_join(select(plot_data, Site, Plot, Plot_area_m2), by = c("Site", "Plot")) 
+    left_join(dplyr::select(plot_data, Site, Plot, Plot_area_m2), by = c("Site", "Plot")) 
 }
