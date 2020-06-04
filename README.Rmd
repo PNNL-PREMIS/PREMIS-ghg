@@ -216,11 +216,17 @@ readd("well_data", path = PATH) %>%
 
 ### Histogram of trees by DBH
 ```{r inventory, echo = FALSE, warning = FALSE}
-tree_data <- readd("tree_data", path = PATH)
-ggplot(tree_data, aes(DBH, fill = Species)) + 
-  geom_histogram(position = "stack", binwidth = 5) + 
+readd("tree_data", path = PATH) %>% 
+  group_by(Salinity, Elevation, Species) %>% 
+  summarise(n = n()) -> tree_data
+  
+ggplot(tree_data, aes(fill = Species, values = n)) +
+  geom_waffle(color = "white", size = 0.25, n_rows = 10, flip = TRUE) +
   facet_grid(Salinity ~ Elevation) +
-  labs(x = "DBH (cm)", y = "Count")
+  theme(panel.grid = element_blank(),
+        axis.text.x = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank())
 ```
 
 ### Litter data
