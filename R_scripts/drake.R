@@ -66,6 +66,9 @@ plan <- drake_plan(
   raw_con_licor_data = target(command = read_licor_dir("../LI-8100A_data/longterm_dat/"),
                               trigger = trigger(change = do_filedigest("../LI-8100A_data/longterm_dat/"))),
   con_licor_data = process_continuous_data(raw_con_licor_data),
+  # Read 7810 data
+  licor_7810_data = target(command = read_7810_dir("../LI-7810_data/"),
+                           trigger = trigger(change = do_filedigest("../LI-7810_data/"))),
   
   # ----- Litter data -----
   litter_data = target(command = read_litter_data("../litter_data"),
@@ -104,5 +107,4 @@ plan <- drake_plan(
   # Generate the data to update PNNL's DataHub system
   datahub = make_datahub()
 )
-
 message("Now type `make(plan)` at command line")

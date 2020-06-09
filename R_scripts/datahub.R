@@ -52,7 +52,7 @@ make_datahub <- function() {
                               "Timestamp" = "Timestamp in YYYY-MM-DDTHH:MM:SSZ (ISO 8601) format",
                               "Label" = "Internal reference; ignore",
                               "Port" = "Multiplexer port number, integer",
-                              "Flux" = "Soil surface CO2 flux, µmol/m2/s",
+                              "CO2_flux" = "Soil surface CO2 flux, µmol/m2/s",
                               "R2" = "IRGA model-fitting R2 (see LI-8100A manual)",
                               "Tcham" = "Temperature in chamber, degC",
                               "V1" = "Internal reference; ignore",
@@ -64,7 +64,7 @@ make_datahub <- function() {
                               "Comments" = "Comments"))
   
   readd("licor_daily_data") %>% 
-    select(Timestamp, Collar, Origin_Plot, Destination_Plot, meanFlux, sdFlux, meanSM, meanT5, meanT20) ->
+    select(Timestamp, Collar, Origin_Plot, Destination_Plot, mean_CO2_flux, sd_CO2_flux, meanSM, meanT5, meanT20) ->
     licor_daily_data
   
   write_df(licor_daily_data)
@@ -75,8 +75,8 @@ make_datahub <- function() {
                               "Collar" = "Transplant collar number",
                               "Origin_Plot" = "Origin plot of transplants",
                               "Destination_Plot" = "Destination plot of transplants",
-                              "meanFlux" = "Mean of soil surface CO2 flux, µmol/m2/s",
-                              "sdFlux" = "Standard deviation of  soil surface CO2 flux, µmol/m2/s",
+                              "mean_CO2_flux" = "Mean of soil surface CO2 flux, µmol/m2/s",
+                              "sd_CO2_flux" = "Standard deviation of  soil surface CO2 flux, µmol/m2/s",
                               "meanSM" = "Soil moisture, volumetric (normally 0-1)",
                               "meanT5" = "Soil temperature at 5 cm, degC",
                               "meanT20" = "Soil temperature at 20 cm, degC"

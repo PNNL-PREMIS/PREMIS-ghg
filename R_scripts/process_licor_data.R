@@ -95,8 +95,8 @@ calculate_licor_daily_data <- function(licor_data) {
              Dest_Elevation, Origin_Plot, Origin_Salinity, Origin_Elevation, Collar) %>%
     summarise(n = n(), 
               Timestamp = mean(Timestamp),
-              meanFlux = mean(Flux), 
-              sdFlux = sd(Flux), 
+              mean_CO2_flux = mean(CO2_flux), 
+              sd_CO2_flux = sd(CO2_flux), 
               meanSM = mean(SMoisture), 
               meanT5 = mean(T5), 
               meanT20 = mean(T20)) %>% 

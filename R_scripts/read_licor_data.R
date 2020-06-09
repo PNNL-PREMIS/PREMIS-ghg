@@ -22,7 +22,7 @@ read_licor8100_data <- function(filename, debug = FALSE) {
                     Timestamp = as_datetime(NA),
                     Label = NA_character_,
                     Port = NA_integer_,
-                    Flux = NA_character_,
+                    CO2_flux = NA_character_,
                     R2 = NA_character_,
                     Tcham = NA_real_,
                     V1 = NA_real_, V2 = NA_real_, V3 = NA_real_, V4 = NA_real_,
@@ -77,7 +77,7 @@ read_licor8100_data <- function(filename, debug = FALSE) {
     results$Timestamp[i] <- mean(df$Date)
     results$Label[i] <- find_parse(record, "^Label:\t")
     results$Port[i] <- find_parse(record, "^Port#:\t")
-    results$Flux[i] <- find_parse(record, "^Exp_Flux:\t")
+    results$CO2_flux[i] <- find_parse(record, "^Exp_Flux:\t")
     results$R2[i] <- find_parse(record, "^Exp_R2:\t")
     results$Tcham[i] <- mean(df$Tcham[index])
     results$V1[i] <- mean(df$V1[index])
@@ -88,13 +88,13 @@ read_licor8100_data <- function(filename, debug = FALSE) {
     results$Cdry[i] <- mean(df$Cdry[index])
     results$Comments[i] <- find_parse(record, "^Comments:\t")
     if(debug) cat(as.character(results$Timestamp[i]), results$Label[i], 
-                  results$Port[i], results$Flux[i], results$Comments[i], "\n")
+                  results$Port[i], results$CO2_flux[i], results$Comments[i], "\n")
   }
   
   # Clean up and return
   results %>% 
     mutate(Port = as.integer(Port),
-           Flux = as.numeric(Flux),
+           CO2_flux = as.numeric(CO2_flux),
            R2 = as.numeric(R2))
 }
 
@@ -118,4 +118,15 @@ read_temp_dir <- function(path) {
     group_by(Date, Collar) %>%
     summarise(T5 = mean(T5)) %>%
     ungroup
+}
+
+read_7810_dir <- function(path) {
+  stopifnot(dir.exists(path))
+  files <- list.files(path, pattern = ".txt", full.names = TRUE)
+  
+  lapply(files, read_tsv, col_types = "Tddcddddd") %>% 
+    bind_rows() %>% 
+    rename(Timestamp = Date_IV, Collar = `File Name`, soil_cond = soilp_c_IV,
+           SMoisture = soilp_m_IV, temp_soil = soilp_t_IV, CO2_flux = Exp_Flux, CH4_flux = `Exp_Flux[2]`) %>% 
+    dplyr::select(-X9)
 }

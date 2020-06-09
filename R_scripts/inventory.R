@@ -10,11 +10,11 @@ read_inventory <- function(path) {
   inventory_wide %>%
     gather("Type", "Value", matches("_[0-9]{4}$")) %>% 
     separate(Type, into = c("Category", "Unit", "Year"), sep = "_")  %>% 
-    dplyr::select(-Unit, -Year) %>%
+    select(-Unit, -Year) %>%
     group_by(Category) %>% 
     mutate(grouped_id = row_number()) %>% 
     spread(Category, Value) %>% 
-    dplyr::select(-grouped_id) 
+    select(-grouped_id) 
 
 }
 
@@ -38,5 +38,5 @@ make_tree_data <- function(inventory_data, species_codes, plot_data) {
   
   trees %>% 
     filter(Site == "SERC") %>% # temporary - only handle SERC
-    left_join(dplyr::select(plot_data, Site, Plot, Plot_area_m2), by = c("Site", "Plot")) 
+    left_join(select(plot_data, Site, Plot, Plot_area_m2), by = c("Site", "Plot")) 
 }
