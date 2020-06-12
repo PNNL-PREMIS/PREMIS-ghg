@@ -120,7 +120,7 @@ read_temp_dir <- function(path) {
     ungroup
 }
 
-read_7810_dir <- function(path) {
+read_7810_dir <- function(path, collar_data, plot_data) {
   stopifnot(dir.exists(path))
   files <- list.files(path, pattern = ".txt", full.names = TRUE)
   
@@ -128,5 +128,8 @@ read_7810_dir <- function(path) {
     bind_rows() %>% 
     rename(Timestamp = Date_IV, Collar = `File Name`, soil_cond = soilp_c_IV,
            SMoisture = soilp_m_IV, temp_soil = soilp_t_IV, CO2_flux = Exp_Flux, CH4_flux = `Exp_Flux[2]`) %>% 
-    dplyr::select(-X9)
+    dplyr::select(-X9) %>% 
+    filter(Timestamp > "2019-09-01 00:00:00") %>% 
+    left_join(collar_data, by = "Collar") %>% 
+    left_join(plot_data, by = "Plot")
 }
