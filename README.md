@@ -34,7 +34,7 @@ More info
 
 # Real-time data diagnostics
 
-**Last run: Wed Dec 11 09:27:14 2019**
+**Last run: Tue Jun 9 15:16:58 2020**
 
 | Site | Experiment           |  N |
 | :--- | :------------------- | -: |
@@ -54,7 +54,19 @@ More info
 
 ![](README_figures/README-co2_time-1.png)<!-- -->
 
+    #> Saving 9 x 5 in image
+    #> Saving 9 x 5 in image
+    #> `geom_smooth()` using formula 'y ~ x'
+
+![](README_figures/README-co2_time-2.png)<!-- -->
+
+### CH4
+
+![](README_figures/README-ch4-1.png)<!-- -->
+
 ### Soil temperature versus CO2 flux for all cores
+
+    #> `geom_smooth()` using formula 'y ~ x'
 
 ![](README_figures/README-q10-1.png)<!-- -->
 
@@ -76,7 +88,7 @@ More info
 
 ![](README_figures/README-air_temp-1.png)<!-- -->
 
-### Soil moisure at 20CM and 2CM depth
+### Soil moisture at 20 cm and 2 cm depth
 
 ![](README_figures/README-soil_moisture-1.png)<!-- -->
 
@@ -84,14 +96,14 @@ More info
 
     #> # A tibble: 201,733 x 7
     #> # Groups:   Site, Sensor_Depth, Sensor_Group [18]
-    #>   Site  Sensor_Depth Sensor_Group Timestamp               n meanValue
-    #>   <chr> <chr>        <chr>        <dttm>              <int>     <dbl>
-    #> 1 HSLE  20CM         Temp         2018-06-12 13:53:03     1      17.3
-    #> 2 HSLE  20CM         Temp         2018-06-12 14:08:03     1      17.3
-    #> 3 HSLE  20CM         Temp         2018-06-12 14:23:03     1      17.3
-    #> 4 HSLE  20CM         Temp         2018-06-12 14:38:03     1      17.4
-    #> 5 HSLE  20CM         Temp         2018-06-12 14:53:03     1      17.4
-    #> # … with 2.017e+05 more rows, and 1 more variable: sdValue <dbl>
+    #>   Site  Sensor_Depth Sensor_Group Timestamp               n meanValue sdValue
+    #>   <chr> <chr>        <chr>        <dttm>              <int>     <dbl>   <dbl>
+    #> 1 HSLE  20CM         Temp         2018-06-12 13:53:03     1      17.3      NA
+    #> 2 HSLE  20CM         Temp         2018-06-12 14:08:03     1      17.3      NA
+    #> 3 HSLE  20CM         Temp         2018-06-12 14:23:03     1      17.3      NA
+    #> 4 HSLE  20CM         Temp         2018-06-12 14:38:03     1      17.4      NA
+    #> 5 HSLE  20CM         Temp         2018-06-12 14:53:03     1      17.4      NA
+    #> # … with 2.017e+05 more rows
 
 ## Wells
 
@@ -107,6 +119,6 @@ More info
 
 ### Litter data
 
-    #> Warning: Removed 12 rows containing missing values (position_stack).
+    #> Warning: Removed 300 rows containing missing values (position_stack).
 
 ![](README_figures/README-litter-1.png)<!-- -->

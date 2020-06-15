@@ -40,6 +40,7 @@ library(drake)
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+library(waffle)
 theme_set(theme_bw())
 ```
 
@@ -49,6 +50,7 @@ theme_set(theme_bw())
 licor_data <- readd("licor_data", path = PATH)
 licor_daily_data <- readd("licor_daily_data", path = PATH)
 weather_data <- readd("weather_data", path = PATH)
+licor_7810 <- readd('licor_7810_data', path = PATH)
 
 # Calculate treatments means and s.d.
 licor_daily_data %>% 
@@ -56,8 +58,8 @@ licor_daily_data %>%
   group_by(Experiment, Origin_Plot, Dest_Salinity, Dest_Elevation, 
            Destination_Plot, Date, Group, ControlGroup) %>%  
   summarise(Timestamp = mean(Timestamp), 
-            sdFlux = sd(meanFlux), 
-            meanFlux = mean(meanFlux), 
+            sd_CO2_flux = sd(mean_CO2_flux), 
+            mean_CO2_flux = mean(mean_CO2_flux), 
             meanSM = mean(meanSM)) %>% 
   ungroup %>% 
   mutate(Experiment = if_else(Origin_Plot == Destination_Plot, "Control", Experiment),
@@ -89,7 +91,7 @@ daily_treatment_means %>%
   #        Origin_Plot %in% c("HSLE", "MSLE", "LSLE")) %>%
   group_by(Dest_Elevation, Dest_Salinity, year(Date), month(Date)) %>% 
   do(data.frame(Date = mean(.$Date),
-                transplant_effect = tryCatch(anova(lm(meanFlux ~ Origin_Plot, data = .))$`Pr(>F)`[1],
+                transplant_effect = tryCatch(anova(lm(mean_CO2_flux ~ Origin_Plot, data = .))$`Pr(>F)`[1],
                                              error = function(e) NA))) %>% 
   ungroup() %>% 
   filter(!is.na(transplant_effect)) %>% 
@@ -97,9 +99,9 @@ daily_treatment_means %>%
   salinity_signif
 
 p <- daily_treatment_means %>% 
-  filter(!is.na(meanFlux), !is.na(sdFlux), meanFlux > 0) %>% 
-  ggplot(aes(x = Timestamp, y = meanFlux, color = Experiment, group = Group)) +
-  geom_errorbar(aes(ymin = meanFlux - sdFlux, ymax = meanFlux + sdFlux)) +
+  filter(!is.na(mean_CO2_flux), !is.na(sd_CO2_flux), mean_CO2_flux > 0) %>% 
+  ggplot(aes(x = Timestamp, y = mean_CO2_flux, color = Experiment, group = Group)) +
+  geom_errorbar(aes(ymin = mean_CO2_flux - sd_CO2_flux, ymax = mean_CO2_flux + sd_CO2_flux)) +
   geom_point() +
   geom_line(aes(linetype = ControlGroup)) +
   facet_grid(Dest_Elevation ~ Dest_Salinity) +
@@ -114,10 +116,10 @@ ggsave("~/Desktop/p.pdf", p)
 
 # True controls versus transplant controls
 daily_treatment_means %>% 
-  filter(Experiment=="Control", meanFlux > 0) %>% 
-  select(Date, Destination_Plot, ControlGroup, meanFlux) %>% 
+  filter(Experiment=="Control", mean_CO2_flux > 0) %>% 
+  select(Date, Destination_Plot, ControlGroup, mean_CO2_flux) %>% 
   mutate(Year = as.factor(year(Date))) %>% 
-  pivot_wider(names_from = ControlGroup, values_from = meanFlux) %>% 
+  pivot_wider(names_from = ControlGroup, values_from = mean_CO2_flux) %>% 
   ggplot(aes(`Control (true)`, Transplant, color = Year)) + 
   geom_point() + 
   geom_abline() + 
@@ -126,11 +128,20 @@ daily_treatment_means %>%
   ylab(expression(Transplant~control~flux~(µmol~CO[2]~m^-2~s^-1)))
 ```
 
+### CH4
+```{r ch4, echo = FALSE, warning = FALSE}
+licor_7810 %>% 
+  mutate() %>% 
+  ggplot(aes(x = temp_soil, y = log(CH4_flux))) + 
+  geom_point()
+
+```
+
 ### Soil temperature versus CO2 flux for all cores
 ```{r q10, echo = FALSE, warning = FALSE}
 licor_daily_data %>% 
-  filter(!is.na(meanT20), !is.na(meanFlux)) %>% 
-  ggplot(aes(x = meanT20, y = meanFlux, color = Dest_Elevation)) +
+  filter(!is.na(meanT20), !is.na(mean_CO2_flux)) %>% 
+  ggplot(aes(x = meanT20, y = mean_CO2_flux, color = Dest_Elevation)) +
   geom_point() + geom_smooth(method = "loess") +
   labs(x = "Temperature (°C)", y = expression(Flux~(µmol~CO[2]~m^-2~s^-1)))
 ```
@@ -153,7 +164,7 @@ daily_treatment_means %>%
 ```{r collar_cv, echo = FALSE, warning = FALSE}
 licor_data %>% 
   group_by(Date, Group, Collar) %>% 
-  summarise(CV = sd(Flux) / mean(Flux), 
+  summarise(CV = sd(CO2_flux) / mean(CO2_flux), 
             n = n(), 
             Timestamp = mean(Timestamp)) %>%
   filter(!is.na(CV)) %>% 
@@ -221,7 +232,7 @@ readd("tree_data", path = PATH) %>%
   summarise(n = n()) -> tree_data
   
 ggplot(tree_data, aes(fill = Species, values = n)) +
-  geom_waffle(color = "white", size = 0.25, n_rows = 10, flip = TRUE) +
+  geom_waffle(color = "white", size = 0.5, n_rows = 10, flip = TRUE) +
   facet_grid(Salinity ~ Elevation) +
   theme(panel.grid = element_blank(),
         axis.text.x = element_blank(),
