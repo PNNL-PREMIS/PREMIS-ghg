@@ -67,6 +67,9 @@ plan <- drake_plan(
                               trigger = trigger(change = do_filedigest("../LI-8100A_data/longterm_dat/"))),
   con_licor_data = process_continuous_data(raw_con_licor_data),
   
+  # 7810 (CO2 and CH4) data
+  li7810_data = read_li7810_dir("../LI-7810_data/"),
+    
   # ----- Litter data -----
   litter_data = target(command = read_litter_data("../litter_data"),
                        trigger = trigger(change = do_filedigest("../litter_data"))),

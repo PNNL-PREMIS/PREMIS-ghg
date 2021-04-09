@@ -119,3 +119,21 @@ read_temp_dir <- function(path) {
     summarise(T5 = mean(T5)) %>%
     ungroup
 }
+
+#----- Function to loop through directory and call function to read licor data -----
+read_li7810_dir <- function(path) {
+  stopifnot(dir.exists(path))
+  files <- list.files(path, pattern = ".txt$", full.names = TRUE)
+  x <- lapply(files, read_licor7810_data)
+  lapply(files, read_licor7810_data) %>% 
+    bind_rows()
+}
+
+read_licor7810_data <- function(filename, debug = FALSE) {
+  message(basename(filename))
+  read_table2(filename, skip = 1, 
+              col_names = c("x1", "x2", "date", "time", "x3", "CO2_flux", 
+                            "Collar", "CH4_flux", "T5", "SM5", "x4")) %>% 
+    select(-starts_with("x")) %>% 
+    filter(CO2_flux != 0, CH4_flux != 0)
+}
